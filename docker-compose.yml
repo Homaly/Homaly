@@ -1,0 +1,21 @@
+# Ambiente de desenvolvimento: docker compose up --build
+# Frontend em http://localhost:5173, backend em http://localhost:8000.
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules   # mantem as dependencias da imagem, nao as da maquina
+
+  backend:
+    build: ./backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"   # BACKEND_PORT no .env se a 8000 estiver ocupada
+    env_file: .env          # credenciais do MCP; nunca entra na imagem
+    environment:
+      APP_MODULE: backend.main:app
+    volumes:
+      - ./backend:/app
+      - /app/.venv          # mantem o ambiente Python da imagem

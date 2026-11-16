@@ -41,7 +41,15 @@ uv sync          # create .venv and install dependencies
 uv run backend   # run the entry point (backend:main in src/backend/__init__.py)
 ```
 
-Run from `frontend/` (copy `.env.example` to `.env` first):
+With Docker, from the repo root (development setup: bind mounts, Vite HMR, uvicorn `--reload`):
+
+```bash
+docker compose up --build   # frontend on :5173, backend on :${BACKEND_PORT:-8000}
+```
+
+The backend container runs `uvicorn $APP_MODULE` (default `backend.main:app`, set in `docker-compose.yml`), so it only starts once the backend declares FastAPI and uvicorn as dependencies and defines that app. It reads the root `.env`; the frontend reads `frontend/.env`.
+
+Without Docker, run from `frontend/` (copy `.env.example` to `.env` first):
 
 ```bash
 npm install
@@ -93,5 +101,13 @@ Documented in `docs/Desafio#3_Altice_Hackathon_MCP_ATC2026.pdf`; read it before 
 - **Tools:** 16, in four groups — Home (home, devices, rooms, status brief, detail report), Device (details, update capabilities, recommendations), Security (state, change state, alarm history), Scenarios (list, detail, create, activate, execute).
 - **Reading and acting on devices:** device state is read with the Home and Device tools; `UPDATE_DEVICE_CAPABILITIES` changes it (the guide's example changes a light's colour).
 - **No tool returns camera images.** The camera is reached through an RTSP stream outside the MCP (`CAMERA_RTSP_URL`).
+
+**Connecting a client.** Claude Code cannot use the server's OAuth (Keycloak only accepts the redirect `mcp-redirect.futurelabsinnovations.com:5434`, not `localhost`), so it uses `scripts/mcp_headers.sh` as a `headersHelper`: the script gets a token with a direct login (`grant_type=password`) and prints the headers, reading everything from `.env`. Register it once, from the repo root:
+
+```bash
+claude mcp add-json -s local connected-home "{\"type\":\"http\",\"url\":\"https://cognitive-home.futurelabsinnovations.com\",\"headersHelper\":\"'$PWD/scripts/mcp_headers.sh'\"}"
+```
+
+VS Code uses `.vscode/mcp.json` (asks for the API key on start; if the browser login gives 403, cancel and pick the URL handler alternative). The backend should obtain its token the same way as the script.
 
 The guide's examples come from Altice's own showroom home. What the team's kit actually exposes is not yet confirmed — check against the live server rather than assuming the examples hold.
