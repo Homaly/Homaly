@@ -57,12 +57,12 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 - **Contacto externo opcional:** uma pessoa de fora pode receber os alertas de uma casa por mensagem. As casas e as aplicações não ficam ligadas entre si.
 - **Tempo de espera antes de avisar o contacto externo:** cada casa tem um valor, cinco minutos por omissão, que pode ser zero para avisar ao mesmo tempo.
 - **O contacto externo só recebe anomalias de segurança e de bem-estar e rotina.**
-- **A casa pergunta antes de alarmar, por notificação no telemóvel**, por exemplo "esta luz está acesa há cinco horas, ainda estão a usar?". A pessoa responde na própria aplicação.
+- **A casa pergunta antes de alarmar, por notificação no telemóvel**, por exemplo "esta luz está acesa há cinco horas, ainda estão a usar?". A pessoa responde na própria aplicação. No MVP, o aviso só chega com a aplicação aberta; as notificações com a aplicação fechada (push) vêm mais tarde.
 - **A casa age com autorização:** quando a pessoa aceita na notificação, a casa executa a ação, por exemplo apagar a lâmpada.
 - **A lâmpada não pisca para avisar.**
 - **Conversa por texto na aplicação:** o responsável diz coisas à casa ("amanhã vamos de férias", "a empregada vem às terças") e a casa usa isso para não dar alarmes falsos.
 - **De onde vem o "normal":** dos sensores e das conversas com a casa sobre o dia a dia.
-- **Um aviso por porta aberta:** se a porta esquecida aberta (US08) já avisou, a porta aberta com a casa a arrefecer (US12) não envia outra notificação; acrescenta a descida de temperatura ao mesmo aviso.
+- **Um aviso por porta aberta:** a porta esquecida aberta (US08) e a porta aberta com a casa a arrefecer (US12) partilham um só aviso por cada abertura da porta. Se a US08 avisou primeiro, a US12 não envia outra notificação; acrescenta a descida de temperatura ao mesmo aviso. Se a US12 avisou primeiro e a porta continua aberta ao fim de cinco minutos, o mesmo aviso passa a ser de segurança, e pode então chegar ao contacto externo.
 - **Silenciar avisos depois de uma resposta (US02):** "está tudo bem" sem motivo fecha só aquela ocorrência; um motivo temporário silencia esse tipo de anomalia até ao fim do dia; um motivo recorrente passa a fazer parte da rotina até ser removido. A casa diz sempre o que vai ignorar e até quando, e espera confirmação. As anomalias de segurança nunca ficam silenciadas para além da ocorrência atual sem uma regra recorrente explícita.
 
 ### Como se constrói

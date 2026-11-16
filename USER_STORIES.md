@@ -109,6 +109,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 - **Dado** que a porta abriu, **quando** passam cinco minutos sem fechar, **então** recebo uma notificação.
 - **Dado** que a porta fecha antes dos cinco minutos, **então** não recebo nada.
 - **Dado** que este aviso já foi enviado, **quando** a temperatura começa a descer com a porta ainda aberta, **então** a casa acrescenta isso ao mesmo aviso em vez de enviar outro (ver US12).
+- **Dado** que a casa já avisou que a sala está a arrefecer com a porta aberta (US12), **quando** passam cinco minutos sem a porta fechar, **então** não recebo um segundo aviso: o existente passa a ser de segurança e diz que a porta está aberta há cinco minutos.
 
 **Dispositivos:** sensor de porta.
 
@@ -151,6 +152,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 - **Dado** que a porta está aberta, **quando** a temperatura desce dois graus desde que abriu, **então** recebo uma notificação com a descida.
 - **Dado** que a porta fecha, **então** a anomalia fica resolvida.
 - **Dado** que já recebi o aviso de porta esquecida aberta (US08) por esta mesma abertura, **então** não recebo uma segunda notificação: o aviso existente é atualizado com "e a sala já desceu 2 °C".
+- **Dado** que este aviso chegou primeiro, **quando** a porta continua aberta ao fim de cinco minutos, **então** o mesmo aviso passa a ser de segurança (ver US08).
 
 **Dispositivos:** sensor de porta, sensor de temperatura. A casa não sabe se o aquecimento está ligado; só vê a temperatura a descer.
 
