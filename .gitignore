@@ -1,4 +1,10 @@
 .env
+.env.*
+!.env.example
+# valores publicos do frontend, partilhados pela equipa
+!frontend/.env.development
+# o mesmo ficheiro sem o ponto, por engano
+env
 
 # Pycharm
 .idea/

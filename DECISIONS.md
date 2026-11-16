@@ -78,8 +78,8 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 - **Backend:** um único serviço em Python, com o agente de IA ligado ao servidor MCP da Altice, e uma base de dados simples.
 - **Quem decide que é anomalia:** regras simples detetam que algo fugiu ao padrão; a IA avalia o contexto (o histórico e o que foi dito na conversa), decide se vale a pena avisar e escreve a explicação.
 - **Dataset:** serve de histórico simulado da casa e de conjunto de casos para testar a deteção. Não se treina nenhum modelo de IA de raiz.
-- **Modelo de IA:** na segunda-feira pergunta-se à organização se há créditos; se não houver, usa-se o plano gratuito de um fornecedor.
-- **Código antes de segunda:** não se escreve código até as regras do hackathon serem confirmadas. Até lá, dividem-se as histórias pelos cinco.
+- **Leitura dos sensores:** os sensores não enviam eventos. O backend pergunta o estado dos dispositivos ao servidor MCP em intervalos regulares e deteta as mudanças comparando com a leitura anterior. O intervalo está por definir.
+- **Acesso ao servidor MCP:** a equipa já tem a API key. Fica no `.env`, que nunca é commitado.
 
 ### Onde ficam os dispositivos
 
@@ -89,9 +89,10 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 
 ### Equipa e tempo
 
-- 5 pessoas.
-- O desenvolvimento começa na segunda-feira, 16 de novembro de 2026.
-- Cerca de 4 dias, com apresentação de MVP no fim do segundo dia (por confirmar).
+- 5 pessoas. O trabalho é dividido por todos mais tarde.
+- A competição começou na segunda-feira, 16 de novembro de 2026, às 17:30 (online).
+- Quarta, 18: checkpoint obrigatório com os mentores (14:00–18:30) e entrega do Sumário Executivo até às 19:00.
+- Sexta, 20 (presencial, Fábrica Centro Ciência Viva de Aveiro): avaliação intermédia às 16:00, entrega da apresentação às 17:30 e apresentações finais às 18:00.
 
 ### Material disponível
 
@@ -112,6 +113,8 @@ O adaptador entregue com o kit é só um conversor de ficha, não um dispositivo
 
 - **Sem Authentik, RabbitMQ nem InfluxDB.**
 - **Histórico na demo:** a casa arranca com o dataset simulado pré-carregado e um relógio acelerado, para mostrar anomalias de rotina ao vivo.
+- **Leituras simuladas na demo:** poder injetar leituras falsas dos sensores (por exemplo, a sala abaixo de 16 graus), para mostrar ao vivo anomalias que não se conseguem provocar na sala.
+- **Base de dados:** SQLite, por ser um ficheiro sem servidor.
 - **Salvaguarda de sensor em silêncio:** se um sensor deixar de enviar dados, a casa não conclui que nada aconteceu.
 - **Perfil de quem vive na casa:** o responsável descreve as pessoas por palavras (idade, surdez, demência) e a casa ajusta que anomalias contam mais e como avisa.
 - **Formas de anomalia** (atravessam as classes): algo que não aconteceu, e algo que nunca acontece.
@@ -122,7 +125,8 @@ O adaptador entregue com o kit é só um conversor de ficha, não um dispositivo
 - A cena da demo (a equipa decide mais tarde).
 - A divisão das histórias pelos cinco (a equipa decide mais tarde).
 - Se as regras do hackathon permitem reaproveitar código escrito antes do evento.
-- A duração exata e a data da apresentação do MVP.
+- O modelo de IA e quem o fornece: a equipa está a ver como fazer (créditos da organização ou plano gratuito de um fornecedor).
+- De quanto em quanto tempo o backend pergunta o estado dos sensores ao servidor MCP.
 - Se o estado da lâmpada se consegue ler, e se muda de cor e de intensidade. O guia do MCP mostra que sim (estado, brilho e cor, lidos e alterados), num exemplo da Altice; falta confirmar com a nossa lâmpada.
 - Como a casa reconhece um veículo (US13): a matrícula sozinha parece demasiado simples; a equipa vai discutir.
 - O que a câmara fornece. Nenhuma das 16 ferramentas do guia do MCP devolve imagem; o `.env.example` prevê um stream RTSP fora do MCP. Falta confirmar com a nossa câmara.
