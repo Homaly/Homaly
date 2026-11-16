@@ -62,6 +62,8 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 - **A lâmpada não pisca para avisar.**
 - **Conversa por texto na aplicação:** o responsável diz coisas à casa ("amanhã vamos de férias", "a empregada vem às terças") e a casa usa isso para não dar alarmes falsos.
 - **De onde vem o "normal":** dos sensores e das conversas com a casa sobre o dia a dia.
+- **Um aviso por porta aberta:** se a porta esquecida aberta (US08) já avisou, a porta aberta com a casa a arrefecer (US12) não envia outra notificação; acrescenta a descida de temperatura ao mesmo aviso.
+- **Silenciar avisos depois de uma resposta (US02):** "está tudo bem" sem motivo fecha só aquela ocorrência; um motivo temporário silencia esse tipo de anomalia até ao fim do dia; um motivo recorrente passa a fazer parte da rotina até ser removido. A casa diz sempre o que vai ignorar e até quando, e espera confirmação. As anomalias de segurança nunca ficam silenciadas para além da ocorrência atual sem uma regra recorrente explícita.
 
 ### Como se constrói
 
