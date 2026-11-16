@@ -10,8 +10,8 @@ All project documents are written in European Portuguese. Keep that language whe
 
 | File | What it is |
 |------|------------|
-| `fichadesafio_alticelabs1.pdf` | The challenge brief (given by the organisers). |
-| `Desafio#3_Altice_Hackathon_MCP_ATC2026.pdf` | Altice's guide to the MCP server: connection, authentication, tools, examples (given). |
+| `docs/fichadesafio_alticelabs1.pdf` | The challenge brief (given by the organisers). |
+| `docs/Desafio#3_Altice_Hackathon_MCP_ATC2026.pdf` | Altice's guide to the MCP server: connection, authentication, tools, examples (given). |
 | `Guia de Participantes - ATC Hackathon 2026.pdf` | Participants' guide: timeline, deliverables, evaluation criteria (given). |
 | `templates/` | Official templates for the executive summary (.docx) and the presentation (.pptx). |
 | `DECISIONS.md` | The team's decisions. Only the "Decidido" section is settled; "Proposto" and "Em aberto" are not. |
@@ -45,7 +45,7 @@ Deliverables and the rest of the participants' guide must be in Portuguese.
 
 ## The MCP server
 
-Documented in `Desafio#3_Altice_Hackathon_MCP_ATC2026.pdf`; read it before writing integration code.
+Documented in `docs/Desafio#3_Altice_Hackathon_MCP_ATC2026.pdf`; read it before writing integration code.
 
 - **Transport:** HTTP, at the URL in `MCP_URL`.
 - **Authentication:** OAuth through Keycloak with the team's account, plus an `X-API-Key` header and an `X-Client-Type` header. Values live in `.env`; never write them into code, documents or commits.
