@@ -62,6 +62,7 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 - **A lâmpada não pisca para avisar.**
 - **Conversa por texto na aplicação:** o responsável diz coisas à casa ("amanhã vamos de férias", "a empregada vem às terças") e a casa usa isso para não dar alarmes falsos.
 - **De onde vem o "normal":** dos sensores e das conversas com a casa sobre o dia a dia.
+- **Casa vazia sobe o alerta:** se a casa devia estar vazia (férias ditas à casa, ou alarme armado em modo ausente), a porta abrir a qualquer hora é um alerta de segurança imediato, e o contacto externo é avisado sem tempo de espera (US01, US07).
 - **Um aviso por porta aberta:** a porta esquecida aberta (US08) e a porta aberta com a casa a arrefecer (US12) partilham um só aviso por cada abertura da porta. Se a US08 avisou primeiro, a US12 não envia outra notificação; acrescenta a descida de temperatura ao mesmo aviso. Se a US12 avisou primeiro e a porta continua aberta ao fim de cinco minutos, o mesmo aviso passa a ser de segurança, e pode então chegar ao contacto externo.
 - **Silenciar avisos depois de uma resposta (US02):** "está tudo bem" sem motivo fecha só aquela ocorrência; um motivo temporário silencia esse tipo de anomalia até ao fim do dia; um motivo recorrente passa a fazer parte da rotina até ser removido. A casa diz sempre o que vai ignorar e até quando, e espera confirmação. As anomalias de segurança nunca ficam silenciadas para além da ocorrência atual sem uma regra recorrente explícita.
 
@@ -71,7 +72,9 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 - **Aproveitar** o que for útil desse projeto: fluxos existentes e, possivelmente, o frontend. Origem: `/home/simas/Documents/2º Ano/2º Semestre/IES/ies2526-group-project-ies2526_g403`.
 - **Aplicação: página web**, feita para telemóvel.
 - **Frontend:** React, Vite e TypeScript.
-- **Aviso ao contacto externo:** não tem de ser SMS; basta um meio de aviso. Um bot de Telegram simula o serviço de SMS.
+- **Aviso ao contacto externo: por SMS, como a Uber faz com os contactos de confiança.** A SMS traz um link para uma página simples com o alerta, que se abre sem instalar nada. Na página, o contacto só vê o alerta e o estado atual; não responde nem age.
+- **Envio das SMS: [textbee](https://github.com/vernu/textbee)**, gratuito e open-source. Uma app Android num telemóvel com cartão SIM envia as SMS que o backend pede por API. As SMS saem do número desse telemóvel, que é o de um colega da equipa, e gastam o tarifário dele.
+- **Na demo:** no telemóvel que recebe a SMS, o número do colega fica gravado como "Homaly". O telemóvel que envia tem de estar ligado, com internet e com a app do textbee aberta. Em produção, as SMS sairiam com o remetente "Homaly", por um fornecedor de SMS ou pela própria Altice, que é operadora.
 - **Backend:** um único serviço em Python, com o agente de IA ligado ao servidor MCP da Altice, e uma base de dados simples.
 - **Quem decide que é anomalia:** regras simples detetam que algo fugiu ao padrão; a IA avalia o contexto (o histórico e o que foi dito na conversa), decide se vale a pena avisar e escreve a explicação.
 - **Dataset:** serve de histórico simulado da casa e de conjunto de casos para testar a deteção. Não se treina nenhum modelo de IA de raiz.
@@ -121,5 +124,5 @@ O adaptador entregue com o kit é só um conversor de ficha, não um dispositivo
 - Se as regras do hackathon permitem reaproveitar código escrito antes do evento.
 - A duração exata e a data da apresentação do MVP.
 - Se o estado da lâmpada se consegue ler, e se muda de cor e de intensidade. O guia do MCP mostra que sim (estado, brilho e cor, lidos e alterados), num exemplo da Altice; falta confirmar com a nossa lâmpada.
+- Como a casa reconhece um veículo (US13): a matrícula sozinha parece demasiado simples; a equipa vai discutir.
 - O que a câmara fornece. Nenhuma das 16 ferramentas do guia do MCP devolve imagem; o `.env.example` prevê um stream RTSP fora do MCP. Falta confirmar com a nossa câmara.
-- Como a casa reconhece um veículo (US13): pela matrícula ou pelo aspeto (tipo e cor).

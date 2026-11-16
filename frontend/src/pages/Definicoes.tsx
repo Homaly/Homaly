@@ -12,12 +12,12 @@ function Formulario({ inicial }: { inicial: Defs }) {
   const guardar = useGuardarDefinicoes();
   const { showToast } = useToast();
   const [nome, setNome] = useState(inicial.contacto?.nome ?? '');
-  const [telegram, setTelegram] = useState(inicial.contacto?.telegram ?? '');
+  const [telemovel, setTelemovel] = useState(inicial.contacto?.telemovel ?? '');
   const [espera, setEspera] = useState(String(inicial.esperaMinutos));
 
   const esperaNum = Number(espera);
   const esperaValida = espera !== '' && Number.isInteger(esperaNum) && esperaNum >= 0;
-  const contactoIncompleto = (nome.trim() === '') !== (telegram.trim() === '');
+  const contactoIncompleto = (nome.trim() === '') !== (telemovel.trim() === '');
 
   const submeter = (contacto: Defs['contacto']) =>
     guardar.mutate(
@@ -32,7 +32,7 @@ function Formulario({ inicial }: { inicial: Defs }) {
     <form
       onSubmit={e => {
         e.preventDefault();
-        submeter(nome.trim() ? { nome: nome.trim(), telegram: telegram.trim() } : null);
+        submeter(nome.trim() ? { nome: nome.trim(), telemovel: telemovel.trim() } : null);
       }}
       className="space-y-6"
     >
@@ -40,7 +40,7 @@ function Formulario({ inicial }: { inicial: Defs }) {
         <div>
           <h2 className="font-semibold">Contacto externo</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Recebe no Telegram os alertas de segurança e de bem-estar quando não responde a tempo. Opcional.
+            Recebe por SMS os alertas de segurança e de bem-estar quando não responde a tempo. Opcional.
           </p>
         </div>
         <label className="block space-y-1">
@@ -48,8 +48,16 @@ function Formulario({ inicial }: { inicial: Defs }) {
           <input value={nome} onChange={e => setNome(e.target.value)} className={campo} placeholder="Ex.: Vizinha Ana" />
         </label>
         <label className="block space-y-1">
-          <span className="text-sm">Telegram</span>
-          <input value={telegram} onChange={e => setTelegram(e.target.value)} className={campo} />
+          <span className="text-sm">Telemóvel</span>
+          <input
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={telemovel}
+            onChange={e => setTelemovel(e.target.value)}
+            className={campo}
+            placeholder="Ex.: 912 345 678"
+          />
         </label>
         {inicial.contacto && (
           <button
@@ -57,7 +65,7 @@ function Formulario({ inicial }: { inicial: Defs }) {
             disabled={guardar.isPending}
             onClick={() => {
               setNome('');
-              setTelegram('');
+              setTelemovel('');
               submeter(null);
             }}
             className="text-sm font-semibold text-red-500 disabled:opacity-50"
@@ -86,7 +94,7 @@ function Formulario({ inicial }: { inicial: Defs }) {
       </section>
 
       {contactoIncompleto && (
-        <p className="text-xs text-accent-orange">Preencha o nome e o Telegram, ou deixe os dois vazios.</p>
+        <p className="text-xs text-accent-orange">Preencha o nome e o telemóvel, ou deixe os dois vazios.</p>
       )}
       <button
         type="submit"

@@ -36,7 +36,7 @@ Além das anomalias: conversa por texto com a casa, notificações com resposta,
 
 - **Frontend:** página web para telemóvel, em React, Vite e TypeScript.
 - **Backend:** um único serviço em Python, com o agente de IA ligado ao servidor MCP da Altice, e uma base de dados simples.
-- **Contacto externo:** bot de Telegram, a simular o SMS.
+- **Contacto externo:** SMS com link para uma página com o alerta, enviada pelo textbee a partir de um telemóvel Android da equipa.
 - **Dados:** um dataset simulado dá à casa o histórico que não vai existir, e serve para testar a deteção.
 - **Dispositivos:** sensor de porta na porta da rua; lâmpada e sensor de temperatura na sala; câmara apontada à entrada de veículos.
 
@@ -61,7 +61,7 @@ Uma por pessoa; falta decidir quem fica com qual.
 2. **Motor de anomalias:** regras de deteção e dataset simulado.
 3. **IA:** avaliação do contexto, explicações e conversa com a casa.
 4. **Aplicação:** página web e notificações.
-5. **Avisos externos e demo:** bot de Telegram, histórico, cena da demo e pitch.
+5. **Avisos externos e demo:** SMS pelo textbee, página do alerta para o contacto externo, histórico, cena da demo e pitch.
 
 ## Perguntas para a Altice na segunda
 
@@ -76,7 +76,7 @@ Uma por pessoa; falta decidir quem fica com qual.
 
 - **Estado da lâmpada:** se não se conseguir ler, a anomalia da luz acesa sai do MVP.
 - **Câmara:** o veículo desconhecido depende do stream RTSP e de um modelo de visão que reconheça veículos. Se não funcionar a tempo, sai do MVP.
-- **Notificações web:** podem falhar em alguns telemóveis. Testar no primeiro dia; o bot de Telegram serve de alternativa.
+- **Notificações web:** podem falhar em alguns telemóveis. Testar no primeiro dia.
 - **Anomalias de rotina:** dependem do histórico simulado e de um relógio acelerado para se mostrarem ao vivo.
 - **Um só sensor de porta:** não distingue entrar de sair, por isso a casa pergunta em vez de afirmar.
 

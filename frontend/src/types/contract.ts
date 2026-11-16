@@ -33,7 +33,7 @@ export interface MensagemConversa {
 }
 
 export interface Definicoes {
-  contacto: { nome: string; telegram: string } | null;
+  contacto: { nome: string; telemovel: string } | null;
   esperaMinutos: number;
 }
 

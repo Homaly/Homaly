@@ -89,7 +89,7 @@ Constraints taken from the brief:
 
 - **Frontend:** a PWA made for mobile, in React, Vite and TypeScript. See `docs/frontend-design.md`.
 - **Backend:** a single Python service holding the AI agent connected to the Altice MCP server, with a simple database. Scaffold only.
-- **External contact alerts:** a Telegram bot, standing in for SMS.
+- **External contact alerts:** SMS sent through [textbee](https://github.com/vernu/textbee) (an Android phone acting as an SMS gateway), carrying a link to a simple alert page.
 - **Data:** a simulated dataset provides the home's history and the test cases for detection. No model is trained from scratch.
 
 ## The MCP server

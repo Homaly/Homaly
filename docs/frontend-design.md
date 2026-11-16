@@ -66,7 +66,7 @@ interface Evento {
 
 interface MensagemConversa { id: string; autor: 'pessoa' | 'casa'; texto: string; em: string }
 
-interface Definicoes { contacto: { nome: string; telegram: string } | null; esperaMinutos: number }
+interface Definicoes { contacto: { nome: string; telemovel: string } | null; esperaMinutos: number }
 ```
 
 | Pedido | Para quê |
@@ -118,6 +118,5 @@ Com `VITE_USE_MOCKS=true`, a camada `api/` devolve uns poucos dados fixos (algum
 
 ## Em aberto
 
-- **Contacto externo no Telegram:** o bot só escreve a quem lhe falou primeiro, e conhece as pessoas por um `chat_id` numérico. O campo `telegram` fica como texto livre até se decidir o fluxo com o bot.
 - **Login:** decide-se depois do pitch.
 - **Contrato:** confirmar com o colega do backend, que diz já ter os endpoints feitos mas ainda não fez push.

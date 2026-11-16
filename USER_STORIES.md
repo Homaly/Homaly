@@ -7,7 +7,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 ## Personagens
 
 - **Responsável da casa:** a única pessoa com acesso à aplicação de uma casa. Normalmente vive lá, mas pode não viver: na casa de uma mãe idosa que vive sozinha, o responsável é o filho.
-- **Contacto externo:** pessoa de fora que o responsável escolheu para receber alertas quando ele não responde (por exemplo, um vizinho ou outro familiar). Não tem a aplicação; recebe mensagens por um bot de Telegram.
+- **Contacto externo:** pessoa de fora que o responsável escolheu para receber alertas quando ele não responde (por exemplo, um vizinho ou outro familiar). Não tem a aplicação; recebe os alertas por SMS, com um link para uma página com o alerta, sem instalar nada.
 
 ## Resumo
 
@@ -35,6 +35,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 
 **Critérios de aceitação**
 - **Dado** que escrevo "amanhã vamos de férias uma semana", **então** a casa confirma o que percebeu e durante esse período não avisa que a porta não abriu.
+- **Dado** que disse à casa que vamos de férias, **quando** a porta abre durante esse período, **então** a casa trata-o como alerta de segurança (US07), em vez de o ignorar.
 - **Dado** que escrevo "a empregada vem às terças à tarde", **então** a casa deixa de tratar a porta a abrir nesse período como anomalia.
 - **Dado** que a casa não percebeu a mensagem, **então** pede para eu a dizer de outra forma, sem assumir nada.
 
@@ -66,7 +67,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 **Como** responsável da casa, **quero** indicar uma pessoa de fora que receba os alertas da minha casa, **para** alguém saber quando eu não respondo.
 
 **Critérios de aceitação**
-- **Dado** que indico um contacto, **então** ele passa a receber os alertas desta casa pelo bot de Telegram.
+- **Dado** que indico um contacto (nome e número de telemóvel), **então** ele passa a receber os alertas desta casa por SMS.
 - **Dado** que removo o contacto, **então** ele deixa de receber alertas.
 - **Dado** que não indico ninguém, **então** a aplicação funciona normalmente, só com os moradores.
 
@@ -75,7 +76,8 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 **Como** contacto externo, **quero** receber uma mensagem clara quando a casa de alguém de quem cuido estranha alguma coisa, **para** poder ligar ou ir lá.
 
 **Critérios de aceitação**
-- **Dado** que há uma anomalia que me deve chegar, **então** recebo uma mensagem com o que aconteceu, a que horas e o que é habitual.
+- **Dado** que há uma anomalia que me deve chegar, **então** recebo uma SMS com o que aconteceu, a que horas e o que é habitual.
+- **Dado** que recebo a SMS, **então** ela traz um link para uma página com o alerta e o estado atual, que abro sem instalar nada. A página é só de leitura.
 - **Dado** que a anomalia é de segurança ou de bem-estar e rotina, **quando** o responsável não responde dentro do tempo de espera da casa (cinco minutos por omissão), **então** recebo a mensagem.
 - **Dado** que o tempo de espera da casa é zero, **então** recebo a mensagem ao mesmo tempo que o responsável.
 - **Dado** que a anomalia é de eficiência energética ou de saúde e conforto, **então** não recebo nada.
@@ -93,13 +95,14 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 
 ### US07 — Porta aberta a uma hora anormal (Segurança)
 
-**Como** responsável da casa, **quero** ser avisado quando a porta da rua abre a uma hora em que nunca abre, **para** saber se entrou ou saiu alguém que não devia.
+**Como** responsável da casa, **quero** ser avisado quando a porta da rua abre a uma hora em que nunca abre, ou enquanto a casa devia estar vazia, **para** saber se entrou ou saiu alguém que não devia.
 
 **Critérios de aceitação**
 - **Dado** que no histórico a porta nunca abre entre a meia-noite e as 6h, **quando** abre às 3h10, **então** recebo uma notificação de imediato.
 - **Dado** que avisei antes que ia chegar tarde, **então** a casa não avisa.
+- **Dado** que a casa devia estar vazia (disse à casa que vamos de férias, ou o alarme está armado em modo ausente), **quando** a porta abre a qualquer hora, **então** recebo uma notificação de imediato e o contacto externo é avisado ao mesmo tempo, sem esperar o tempo de espera da casa.
 
-**Dispositivos:** sensor de porta.
+**Dispositivos:** sensor de porta. O estado do alarme lê-se pelo servidor MCP (`GET_HOME_SECURITY_STATE`).
 
 ### US08 — Porta esquecida aberta (Segurança)
 
