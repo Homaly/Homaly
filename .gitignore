@@ -1,2 +1,9 @@
 .env
 ficheiros_apoio.zip
+
+# IDE (configuracao local de cada pessoa)
+.idea/
+
+# Python
+__pycache__/
+.venv/
