@@ -1,7 +1,7 @@
 # Decisões
 
 Hackathon by Aveiro Tech City, Desafio #3 (Altice Labs): "Connected Home, Reimagined".
-Última atualização: 2026-11-15.
+Última atualização: 2026-11-16.
 
 Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolhas feitas pela equipa; as entradas em "Proposto" são sugestões ainda não aceites nem rejeitadas. As user stories do MVP estão em `USER_STORIES.md`.
 
@@ -25,18 +25,18 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 
 | Classe | Anomalias | Dispositivos |
 |--------|-----------|--------------|
-| Segurança | Porta aberta a uma hora em que nunca abre; porta esquecida aberta; alguém visto com a casa vazia | Porta, câmara |
+| Segurança | Porta aberta a uma hora em que nunca abre; porta esquecida aberta; alguém visto com a casa vazia; veículo desconhecido na entrada de veículos | Porta, câmara |
 | Bem-estar e rotina | Nenhuma atividade até à hora habitual; ninguém na cozinha às horas das refeições; vários dias sem sair; movimento repetido de madrugada; saiu e não voltou à hora de sempre | Porta, câmara, lâmpada |
 | Saúde e conforto | Casa fria ou quente demais durante horas | Temperatura |
 | Eficiência energética | Lâmpada acesa há demasiado tempo; porta aberta com a temperatura a cair | Lâmpada, porta, temperatura |
 | Estado da própria casa | Um sensor deixou de comunicar; o gateway ficou sem ligação | Gateway, todos |
 
 - **Entram no MVP quatro classes:** segurança, bem-estar e rotina, saúde e conforto, e eficiência energética.
-- **Anomalias do MVP (seis):**
+- **Anomalias do MVP (sete):**
 
   | Classe | Anomalias no MVP | Dispositivos |
   |--------|------------------|--------------|
-  | Segurança | A porta abriu a uma hora em que nunca abre; a porta ficou aberta mais de cinco minutos | Porta |
+  | Segurança | A porta abriu a uma hora em que nunca abre; a porta ficou aberta mais de cinco minutos; veículo desconhecido na entrada de veículos | Porta, câmara |
   | Bem-estar e rotina | A porta não abriu até à hora habitual | Porta |
   | Saúde e conforto | Casa abaixo de 16 graus durante horas | Temperatura |
   | Eficiência energética | Lâmpada acesa há demasiado tempo; porta aberta com a temperatura a cair | Lâmpada, porta, temperatura |
@@ -80,6 +80,7 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 
 - **Sensor de porta:** na porta da rua.
 - **Lâmpada e sensor de temperatura:** na mesma divisão, a sala.
+- **Câmara:** apontada à entrada de veículos da casa (ver US13).
 
 ### Equipa e tempo
 
@@ -93,7 +94,7 @@ Uma unidade de cada:
 
 | Dispositivo | Papel |
 |-------------|-------|
-| Câmara | Sensor (fora do MVP) |
+| Câmara | Sensor (no MVP, só para o veículo desconhecido) |
 | Sensor de temperatura | Sensor |
 | Sensor de abertura de porta | Sensor |
 | Detetor de fumo | Sensor (posto de parte) |
@@ -117,6 +118,6 @@ O adaptador entregue com o kit é só um conversor de ficha, não um dispositivo
 - A divisão das histórias pelos cinco (a equipa decide mais tarde).
 - Se as regras do hackathon permitem reaproveitar código escrito antes do evento.
 - A duração exata e a data da apresentação do MVP.
-- Se o estado da lâmpada se consegue ler, e se muda de cor e de intensidade.
-- O que a câmara fornece através do servidor MCP: fotografia a pedido, vídeo ou só eventos.
-- Que mais expõe o servidor MCP (aguarda-se o documento técnico da Altice).
+- Se o estado da lâmpada se consegue ler, e se muda de cor e de intensidade. O guia do MCP mostra que sim (estado, brilho e cor, lidos e alterados), num exemplo da Altice; falta confirmar com a nossa lâmpada.
+- O que a câmara fornece. Nenhuma das 16 ferramentas do guia do MCP devolve imagem; o `.env.example` prevê um stream RTSP fora do MCP. Falta confirmar com a nossa câmara.
+- Como a casa reconhece um veículo (US13): pela matrícula ou pelo aspeto (tipo e cor).

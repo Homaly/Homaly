@@ -1,7 +1,7 @@
 # Plano
 
 Hackathon by Aveiro Tech City, Desafio #3 (Altice Labs): "Connected Home, Reimagined".
-Versão de 2026-11-15. Detalhe em `DECISIONS.md` e `USER_STORIES.md`.
+Versão de 2026-11-16. Detalhe em `DECISIONS.md` e `USER_STORIES.md`.
 
 ## O que vamos construir
 
@@ -18,14 +18,14 @@ Uma casa que repara: aprende o que é habitual e avisa quando algo foge a isso.
 
 | Classe | Anomalias | Dispositivos |
 |--------|-----------|--------------|
-| Segurança | A porta abriu a uma hora em que nunca abre; a porta ficou aberta mais de cinco minutos | Porta |
+| Segurança | A porta abriu a uma hora em que nunca abre; a porta ficou aberta mais de cinco minutos; veículo desconhecido na entrada de veículos | Porta, câmara |
 | Bem-estar e rotina | A porta não abriu até à hora habitual | Porta |
 | Saúde e conforto | Casa abaixo de 16 graus durante horas | Temperatura |
 | Eficiência energética | Luz acesa há demasiado tempo; porta aberta com a temperatura a cair | Lâmpada, porta, temperatura |
 
-Além das anomalias: conversa por texto com a casa, notificações com resposta, contacto externo e histórico. São doze user stories no total.
+Além das anomalias: conversa por texto com a casa, notificações com resposta, contacto externo e histórico. São treze user stories no total.
 
-**Fora do MVP:** câmara, detetor de fumo, automatizações, e as classes Estado da própria casa, Sono e noite, e Visitas e cuidadores.
+**Fora do MVP:** as restantes anomalias da câmara, detetor de fumo, automatizações, e as classes Estado da própria casa, Sono e noite, e Visitas e cuidadores.
 
 ## Quem usa
 
@@ -38,17 +38,17 @@ Além das anomalias: conversa por texto com a casa, notificações com resposta,
 - **Backend:** um único serviço em Python, com o agente de IA ligado ao servidor MCP da Altice, e uma base de dados simples.
 - **Contacto externo:** bot de Telegram, a simular o SMS.
 - **Dados:** um dataset simulado dá à casa o histórico que não vai existir, e serve para testar a deteção.
-- **Dispositivos:** sensor de porta na porta da rua; lâmpada e sensor de temperatura na sala.
+- **Dispositivos:** sensor de porta na porta da rua; lâmpada e sensor de temperatura na sala; câmara apontada à entrada de veículos.
 
 ## Calendário
 
 | Quando | O que se faz |
 |--------|--------------|
 | **Antes de segunda** | Ler as user stories; dividir o trabalho pelos cinco; escolher a cena da demo; adiantar o dataset simulado. Não se escreve código até confirmarmos as regras. |
-| **Segunda de manhã** | Fazer as perguntas à Altice; ligar ao servidor MCP e ler a porta, a temperatura e a lâmpada; montar o esqueleto da aplicação; testar as notificações no telemóvel da demo. |
+| **Segunda de manhã** | Fazer as perguntas à Altice; ligar ao servidor MCP e ler a porta, a temperatura e a lâmpada; abrir o stream da câmara; montar o esqueleto da aplicação; testar as notificações no telemóvel da demo. |
 | **Segunda à tarde** | Primeira anomalia de ponta a ponta: porta aberta mais de cinco minutos, do sensor até à notificação. |
-| **Terça** | Restantes cinco anomalias; conversa com a casa; contacto externo; histórico. Ensaio e apresentação do MVP ao fim do dia. |
-| **Quarta** | Câmara e anomalias que ficaram de fora; afinar a deteção com o dataset. |
+| **Terça** | Restantes seis anomalias, incluindo o veículo desconhecido (câmara); conversa com a casa; contacto externo; histórico. Ensaio e apresentação do MVP ao fim do dia. |
+| **Quarta** | Restantes anomalias da câmara e as outras que ficaram de fora; afinar a deteção com o dataset. |
 | **Quinta** | Polir, ensaiar o pitch e apresentar. |
 
 A duração de quatro dias e o MVP ao segundo dia estão por confirmar.
@@ -75,6 +75,7 @@ Uma por pessoa; falta decidir quem fica com qual.
 ## Riscos
 
 - **Estado da lâmpada:** se não se conseguir ler, a anomalia da luz acesa sai do MVP.
+- **Câmara:** o veículo desconhecido depende do stream RTSP e de um modelo de visão que reconheça veículos. Se não funcionar a tempo, sai do MVP.
 - **Notificações web:** podem falhar em alguns telemóveis. Testar no primeiro dia; o bot de Telegram serve de alternativa.
 - **Anomalias de rotina:** dependem do histórico simulado e de um relógio acelerado para se mostrarem ao vivo.
 - **Um só sensor de porta:** não distingue entrar de sair, por isso a casa pergunta em vez de afirmar.

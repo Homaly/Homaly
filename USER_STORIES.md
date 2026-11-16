@@ -1,6 +1,6 @@
 # User stories do MVP
 
-Hackathon by Aveiro Tech City, Desafio #3 (Altice Labs). Versão de 2026-11-15.
+Hackathon by Aveiro Tech City, Desafio #3 (Altice Labs). Versão de 2026-11-16.
 
 Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que estas histórias assentam estão em `DECISIONS.md`.
 
@@ -25,6 +25,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 | US10 | Casa fria durante horas | Saúde e conforto | Temperatura |
 | US11 | Luz acesa há demasiado tempo | Eficiência energética | Lâmpada, porta |
 | US12 | Porta aberta com a casa a arrefecer | Eficiência energética | Porta, temperatura |
+| US13 | Veículo desconhecido na entrada | Segurança | Câmara |
 
 ## Histórias transversais
 
@@ -148,8 +149,21 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 
 **Dispositivos:** sensor de porta, sensor de temperatura.
 
+### US13 — Veículo desconhecido na entrada (Segurança)
+
+**Como** responsável da casa, **quero** ser avisado quando a câmara vê na entrada de veículos um veículo que a casa não conhece, **para** saber se está lá alguém que não devia.
+
+**Critérios de aceitação**
+- **Dado** que a câmara vê na entrada de veículos um veículo que não corresponde a nenhum dos conhecidos, **quando** ele lá permanece mais de dois minutos, **então** recebo uma notificação com a imagem, a hora e a descrição do veículo.
+- **Dado** que o veículo é um dos conhecidos da casa, **então** não recebo nada.
+- **Dado** que respondo que o veículo é conhecido ("é o carro do meu irmão"), **então** a casa guarda-o e não volta a avisar quando ele aparecer.
+- **Dado** que avisei antes que vinha alguém de carro (US01), **então** a casa não avisa.
+- **Dado** que não respondo dentro do tempo de espera da casa, **então** o contacto externo é avisado (US05).
+
+**Dispositivos:** câmara, apontada à entrada de veículos. A imagem vem do stream RTSP da câmara, fora do servidor MCP. Os dois minutos são um valor a afinar, para não avisar por quem só faz inversão de marcha. Falta decidir como a casa reconhece um veículo: pela matrícula ou pelo aspeto (tipo e cor), conforme a qualidade da imagem.
+
 ## Limites conhecidos
 
 - **Um sensor de porta não distingue entrar de sair.** A casa não sabe ao certo se há alguém lá dentro; só sabe que a porta abriu e fechou. Por isso a US11 pergunta em vez de afirmar que a pessoa saiu.
 - **As anomalias de rotina precisam de histórico.** Na demo, esse histórico vem do dataset simulado.
-- **Fora do MVP:** as anomalias que dependem da câmara, a classe Estado da própria casa, a classe Sono e noite, o fumo e as automatizações.
+- **Fora do MVP:** as restantes anomalias que dependem da câmara, a classe Estado da própria casa, a classe Sono e noite, o fumo e as automatizações.
