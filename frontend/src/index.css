@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #06bcf9;
+  --color-background-light: #f5f8f8;
+  --color-background-dark: #0f1e23;
+  --color-card-dark: #1a2e35;
+  --color-accent-orange: #fa5f38;
+  --color-accent-green: #0bda57;
+  --font-display: "Space Grotesk", sans-serif;
+}
+
+@layer base {
+  button, [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes icon-flip-in {
+  from { opacity: 0; transform: rotate(-90deg) scale(0.5); }
+  to   { opacity: 1; transform: rotate(0deg) scale(1); }
+}
+
+@layer utilities {
+  .animate-toast-in {
+    animation: toast-in 0.18s ease-out forwards;
+  }
+  .animate-icon-flip-in {
+    animation: icon-flip-in 0.25s ease-out forwards;
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #21404a;
+    border-radius: 10px;
+  }
+}

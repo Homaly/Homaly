@@ -27,7 +27,7 @@ All project documents and deliverables are written in European Portuguese (the o
 
 - **Documents:** the decisions, plan and user stories listed below.
 - **Backend:** a scaffold only, in `backend/` — a Python 3.12 project managed with [uv](https://docs.astral.sh/uv/), `src/` layout, package `backend`, no dependencies yet. `backend/src/main.py` is PyCharm boilerplate, not the entry point.
-- **Frontend:** not started.
+- **Frontend:** a PWA for mobile in `frontend/` — React 19, Vite, TypeScript, Tailwind v4, react-router, TanStack Query, vite-plugin-pwa. Design and API contract in `docs/frontend-design.md`; the contract types live in `frontend/src/types/contract.ts`. With `VITE_USE_MOCKS=true` it runs on fixed fake data (`src/api/mock.ts`) without the backend.
 - **Tests, linting, CI:** none yet.
 
 Update this section when any of these change, rather than assuming they exist.
@@ -39,6 +39,14 @@ Run from `backend/`:
 ```bash
 uv sync          # create .venv and install dependencies
 uv run backend   # run the entry point (backend:main in src/backend/__init__.py)
+```
+
+Run from `frontend/` (copy `.env.example` to `.env` first):
+
+```bash
+npm install
+npm run dev      # dev server on port 5173
+npm run build    # type-check and production build
 ```
 
 ## Project documents
@@ -71,7 +79,7 @@ Constraints taken from the brief:
 
 ## Chosen stack
 
-- **Frontend:** a web page made for mobile, in React, Vite and TypeScript. Not started.
+- **Frontend:** a PWA made for mobile, in React, Vite and TypeScript. See `docs/frontend-design.md`.
 - **Backend:** a single Python service holding the AI agent connected to the Altice MCP server, with a simple database. Scaffold only.
 - **External contact alerts:** a Telegram bot, standing in for SMS.
 - **Data:** a simulated dataset provides the home's history and the test cases for detection. No model is trained from scratch.
