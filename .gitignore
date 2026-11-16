@@ -1,7 +1,6 @@
 .env
-ficheiros_apoio.zip
 
-# IDE (configuracao local de cada pessoa)
+# Pycharm
 .idea/
 
 # Python
