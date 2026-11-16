@@ -44,8 +44,11 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 
 **Critérios de aceitação**
 - **Dado** que a casa detetou uma anomalia, **então** recebo uma notificação com o que aconteceu, o que é habitual e a que classe pertence.
-- **Dado** que respondo "está tudo bem", **então** a anomalia fica resolvida e registada.
-- **Dado** que explico o motivo ("fiquei em casa doente"), **então** a casa guarda a explicação e não repete o aviso pelo mesmo motivo.
+- **Dado** que respondo "está tudo bem" sem dar motivo, **então** a anomalia fica resolvida e registada, mas só esta ocorrência: se voltar a acontecer, a casa avisa outra vez.
+- **Dado** que explico o motivo, **então** a casa diz o que vai deixar de avisar e até quando (por exemplo, "não volto a avisar sobre a porta até amanhã, ok?"), e só aplica depois de eu confirmar.
+- **Dado** que o motivo é temporário ("fiquei em casa doente"), **então** a casa deixa de avisar sobre esse tipo de anomalia até ao fim do dia.
+- **Dado** que o motivo é recorrente ("a empregada vem às terças"), **então** passa a fazer parte da rotina da casa (US01) até eu o remover.
+- **Dado** que a anomalia é de segurança, **então** a casa nunca a silencia para além da ocorrência atual, a não ser com uma regra recorrente explícita.
 
 ### US03 — Autorizar a casa a agir
 
@@ -105,6 +108,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 **Critérios de aceitação**
 - **Dado** que a porta abriu, **quando** passam cinco minutos sem fechar, **então** recebo uma notificação.
 - **Dado** que a porta fecha antes dos cinco minutos, **então** não recebo nada.
+- **Dado** que este aviso já foi enviado, **quando** a temperatura começa a descer com a porta ainda aberta, **então** a casa acrescenta isso ao mesmo aviso em vez de enviar outro (ver US12).
 
 **Dispositivos:** sensor de porta.
 
@@ -146,8 +150,9 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 **Critérios de aceitação**
 - **Dado** que a porta está aberta, **quando** a temperatura desce dois graus desde que abriu, **então** recebo uma notificação com a descida.
 - **Dado** que a porta fecha, **então** a anomalia fica resolvida.
+- **Dado** que já recebi o aviso de porta esquecida aberta (US08) por esta mesma abertura, **então** não recebo uma segunda notificação: o aviso existente é atualizado com "e a sala já desceu 2 °C".
 
-**Dispositivos:** sensor de porta, sensor de temperatura.
+**Dispositivos:** sensor de porta, sensor de temperatura. A casa não sabe se o aquecimento está ligado; só vê a temperatura a descer.
 
 ### US13 — Veículo desconhecido na entrada (Segurança)
 
