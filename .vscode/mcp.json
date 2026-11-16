@@ -1,0 +1,24 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "connected-home-api-key",
+      "description": "X-API-Key do MCP Connected Home (MCP_API_KEY no .env)",
+      "password": true
+    }
+  ],
+  "servers": {
+    "connected-home": {
+      "type": "http",
+      "url": "https://cognitive-home.futurelabsinnovations.com",
+      "headers": {
+        "X-Client-Type": "core",
+        "Content-Type": "application/json",
+        "X-API-Key": "${input:connected-home-api-key}"
+      },
+      "oauth": {
+        "clientId": "mcp-client"
+      }
+    }
+  }
+}
