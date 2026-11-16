@@ -78,7 +78,8 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 - **Backend:** um único serviço em Python, com o agente de IA ligado ao servidor MCP da Altice, e uma base de dados simples.
 - **Quem decide que é anomalia:** regras simples detetam que algo fugiu ao padrão; a IA avalia o contexto (o histórico e o que foi dito na conversa), decide se vale a pena avisar e escreve a explicação.
 - **Dataset:** serve de histórico simulado da casa e de conjunto de casos para testar a deteção. Não se treina nenhum modelo de IA de raiz.
-- **Leitura dos sensores:** os sensores não enviam eventos. O backend pergunta o estado dos dispositivos ao servidor MCP em intervalos regulares e deteta as mudanças comparando com a leitura anterior. O intervalo está por definir.
+- **Leitura dos sensores:** os sensores não enviam eventos. O backend pergunta o estado dos dispositivos ao servidor MCP em intervalos regulares e deteta as mudanças comparando com a leitura anterior. O intervalo está por definir. Confirmado nas leituras de 2026-11-16: o servidor não tem subscrições e não dá a hora a que cada valor mudou (ver `docs/mcp-dispositivos.md`).
+- **User-Agent próprio nos pedidos ao MCP:** o servidor está atrás do Cloudflare, que recusa os pedidos com o User-Agent por omissão das bibliotecas. O backend envia `homaly-backend/0.1`.
 - **Acesso ao servidor MCP:** a equipa já tem a API key. Fica no `.env`, que nunca é commitado.
 
 ### Onde ficam os dispositivos
@@ -98,16 +99,17 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 
 Uma unidade de cada:
 
-| Dispositivo | Papel |
-|-------------|-------|
-| Câmara | Sensor (no MVP, só para o veículo desconhecido) |
-| Sensor de temperatura | Sensor |
-| Sensor de abertura de porta | Sensor |
-| Detetor de fumo | Sensor (posto de parte) |
-| Lâmpada | Único dispositivo que a casa consegue comandar |
-| Gateway | Liga os dispositivos à rede |
+| Dispositivo | Papel | O que o MCP dá |
+|-------------|-------|----------------|
+| Câmara | Sensor (no MVP, só para o veículo desconhecido) | Deteção de movimento e de som; nenhuma imagem |
+| Sensor de temperatura | Sensor | Temperatura e humidade |
+| Sensor de abertura de porta | Sensor | Estado `normal` ou `alarm` |
+| Detetor de fumo | Sensor (posto de parte) | Estado `normal` ou `alarm` |
+| Lâmpada | Dispositivo que a casa consegue comandar | Ligada ou desligada, brilho, cor e tom do branco; lê-se e altera-se |
+| Tomada (Plug) | Dispositivo que a casa consegue comandar | Ligada ou desligada, potência, tensão, corrente e consumo de hoje e de ontem |
+| Gateway (Security hub) | Liga os dispositivos à rede | Estado do alarme, Wi-Fi e rede móvel |
 
-O adaptador entregue com o kit é só um conversor de ficha, não um dispositivo da casa.
+O que cada dispositivo devolve, com os ids, está em `docs/mcp-dispositivos.md`. O que se pensava ser só um adaptador aparece no servidor como uma tomada inteligente com medição de consumo.
 
 ## Proposto, ainda não aceite
 
@@ -127,6 +129,8 @@ O adaptador entregue com o kit é só um conversor de ficha, não um dispositivo
 - Se as regras do hackathon permitem reaproveitar código escrito antes do evento.
 - O modelo de IA e quem o fornece: a equipa está a ver como fazer (créditos da organização ou plano gratuito de um fornecedor).
 - De quanto em quanto tempo o backend pergunta o estado dos sensores ao servidor MCP.
-- Se o estado da lâmpada se consegue ler, e se muda de cor e de intensidade. O guia do MCP mostra que sim (estado, brilho e cor, lidos e alterados), num exemplo da Altice; falta confirmar com a nossa lâmpada.
+- Se a lâmpada está ligada à rede: lê-se o estado, o brilho e a cor, mas não comunica desde 4 de novembro, por isso o estado que o servidor mostra pode estar desatualizado.
+- Se `sensorState: alarm` no sensor de porta quer dizer porta aberta. Confirma-se abrindo e fechando a porta.
+- O que fazer com a tomada inteligente: é um segundo dispositivo que a casa pode comandar e mede consumo, o que interessa à eficiência energética. As user stories ainda dizem que a lâmpada é o único dispositivo comandável (US03).
 - Como a casa reconhece um veículo (US13): a matrícula sozinha parece demasiado simples; a equipa vai discutir.
-- O que a câmara fornece. Nenhuma das 16 ferramentas do guia do MCP devolve imagem; o `.env.example` prevê um stream RTSP fora do MCP. Falta confirmar com a nossa câmara.
+- A imagem da câmara: o MCP só dá deteção de movimento e de som, sem imagem; a imagem vem do stream RTSP (`CAMERA_RTSP_URL`), que ainda não foi testado.

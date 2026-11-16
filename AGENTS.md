@@ -63,6 +63,7 @@ npm run build    # type-check and production build
 |------|------------|
 | `docs/fichadesafio_alticelabs1.pdf` | The challenge brief (given by the organisers). |
 | `docs/Desafio#3_Altice_Hackathon_MCP_ATC2026.pdf` | Altice's guide to the MCP server: connection, authentication, tools, examples (given). |
+| `docs/mcp-dispositivos.md` | What the live MCP server actually returns for the team's kit: tools, device ids, value formats, open checks. |
 | `docs/Guia de Participantes - ATC Hackathon 2026.pdf` | Participants' guide: timeline, deliverables, evaluation criteria (given). |
 | `templates/` | Official templates for the executive summary (.docx) and the presentation (.pptx). |
 | `DECISIONS.md` | The team's decisions. Only the "Decidido" section is settled; "Proposto" and "Em aberto" are not. |
@@ -98,7 +99,9 @@ Documented in `docs/Desafio#3_Altice_Hackathon_MCP_ATC2026.pdf`; read it before 
 
 - **Transport:** HTTP, at the URL in `MCP_URL`.
 - **Authentication:** OAuth through Keycloak with the team's account, plus an `X-API-Key` header and an `X-Client-Type` header. Values live in `.env`; never write them into code, documents or commits.
-- **Tools:** 16, in four groups — Home (home, devices, rooms, status brief, detail report), Device (details, update capabilities, recommendations), Security (state, change state, alarm history), Scenarios (list, detail, create, activate, execute).
+- **Tools:** 18 on the live server (the guide lists 16; `get_device_timers` and `post_timer_device` are extra), in four groups — Home, Device, Security, Scenarios. `patch_home_security_status` is annotated read-only but changes the alarm state.
+- **User-Agent:** the server sits behind Cloudflare, which rejects (403, error 1010) requests carrying a library's default User-Agent such as `Python-urllib`. Send our own, e.g. `homaly-backend/0.1`.
+- **No events:** the server exposes no resources or subscriptions, and values carry no change timestamp; poll and diff.
 - **Reading and acting on devices:** device state is read with the Home and Device tools; `UPDATE_DEVICE_CAPABILITIES` changes it (the guide's example changes a light's colour).
 - **No tool returns camera images.** The camera is reached through an RTSP stream outside the MCP (`CAMERA_RTSP_URL`).
 
@@ -110,4 +113,4 @@ claude mcp add-json -s local connected-home "{\"type\":\"http\",\"url\":\"https:
 
 VS Code uses `.vscode/mcp.json` (asks for the API key on start; if the browser login gives 403, cancel and pick the URL handler alternative). The backend should obtain its token the same way as the script.
 
-The guide's examples come from Altice's own showroom home. What the team's kit actually exposes is not yet confirmed — check against the live server rather than assuming the examples hold.
+The guide's examples come from Altice's own showroom home. What the team's kit actually exposes was read on 2026-11-16 and is recorded in `docs/mcp-dispositivos.md`; it lists what is still unconfirmed.
