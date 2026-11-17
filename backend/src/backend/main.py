@@ -19,8 +19,10 @@ async def _vida(app: FastAPI):
     relogio.partilhado()
     # O ciclo das regras (Vila): só com CICLO=1, para os testes e a PWA não lerem o MCP.
     parar = ciclo.arrancar() if os.environ.get("CICLO") == "1" else None
-    # O contacto externo (US05) envia as SMS que o ciclo agenda; arranca e pára com ele.
-    parar_contacto = contacto_externo.arrancar() if parar is not None else None
+    # O contacto externo (US05) envia as SMS que o ciclo agenda; arranca com ele, ou com
+    # HOMALY_DEV=1, para as anomalias de /dev/anomalias?contacto=true também chegarem a sair.
+    com_contacto = parar is not None or os.environ.get("HOMALY_DEV") == "1"
+    parar_contacto = contacto_externo.arrancar() if com_contacto else None
     yield
     if parar is not None:
         parar.set()

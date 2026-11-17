@@ -17,13 +17,16 @@ O textbee que falha tenta-se mais duas vezes, 30 s e 60 s depois. O envio reserv
 """
 
 import logging
+import os
 import secrets
 import threading
 from collections.abc import Callable
 from datetime import datetime, timedelta
+from urllib.parse import urlsplit
 
-from backend import anomalias, definicoes, relogio
+from backend import anomalias, definicoes
 from backend.contrato import Anomalia
+from backend.contrato import agora as _agora_real
 
 from . import envios, mensagens, sms
 
@@ -32,18 +35,19 @@ registo = logging.getLogger(__name__)
 CLASSES = {"seguranca", "bem_estar"}  # as únicas que chegam ao contacto externo
 TENTATIVAS = 3
 INTERVALO_S = 5.0
+ESPERA_NO_LIMITE = timedelta(minutes=1)  # no limite de SMS por hora (SMS_MAXIMO_HORA), volta a ver
 
 Relogio = Callable[[], datetime]
 
 
-def _agora_partilhado() -> datetime:
-    return relogio.partilhado().agora()
-
-
 class ContactoExterno:
-    """O contacto externo real, para o `avisos.publicar`."""
+    """O contacto externo real, para o `avisos.publicar`.
 
-    def __init__(self, agora: Relogio = _agora_partilhado) -> None:
+    Os prazos (tempo de espera, novas tentativas) contam em tempo real, mesmo com o relógio da app
+    acelerado (RELOGIO_FATOR): são o tempo que o responsável tem para responder e o do textbee.
+    """
+
+    def __init__(self, agora: Relogio = _agora_real) -> None:
         self._agora = agora
 
     def agendar(self, anomalia: Anomalia, imediato: bool = False) -> None:
@@ -69,17 +73,25 @@ class ContactoExterno:
         if envio is None:
             return
         if envio.estado == "pendente":
-            _cancelar(anomalia.id, "resolveu-se antes do fim do tempo de espera")
-        elif envio.estado in ("a_enviar", "enviada") and envio.resolvido is None:
+            if _cancelar(anomalia.id, "resolveu-se antes do fim do tempo de espera"):
+                return
+            # A thread reservou-o entre a leitura e o cancelamento: o alerta está a sair.
+            envio = envios.obter(anomalia.id)
+            if envio is None:
+                return
+        if envio.estado in ("a_enviar", "enviada") and envio.resolvido is None:
             # A meio do envio: se o alerta sair, a de resolvido sai a seguir; se falhar, o alerta
             # é cancelado na volta seguinte (já está resolvida) e a de resolvido nunca sai.
             agora = self._agora()
             envios.mudar(anomalia.id, resolvido="pendente", resolvido_em=agora, enviar_em=agora)
 
 
-def _cancelar(anomalia_id: str, motivo: str) -> None:
+def _cancelar(anomalia_id: str, motivo: str) -> bool:
+    """Cancela o alerta se ainda estiver `pendente`; devolve se cancelou."""
     if envios.mudar(anomalia_id, so_se_estado="pendente", estado="cancelada", motivo=motivo):
         registo.info("SMS ao contacto externo cancelada (%s): %s", anomalia_id[:8], motivo)
+        return True
+    return False
 
 
 def _espera_depois_de_falhar(tentativas: int) -> timedelta:
@@ -92,7 +104,7 @@ def verificar(agora: datetime | None = None) -> None:
 
     Um envio que rebenta com um erro inesperado fica `falhou` e não trava os outros.
     """
-    agora = agora or _agora_partilhado()
+    agora = agora or _agora_real()
     for envio in envios.pendentes():
         if envio.enviar_em <= agora:
             _isolado(_enviar_alerta, envio, agora, resolvido=False)
@@ -130,6 +142,13 @@ def _enviar_alerta(envio: envios.Envio, agora: datetime) -> None:
     tentativas = envio.tentativas + 1
     try:
         sms.enviar(defs.contacto.telemovel, texto)
+    except sms.LimiteSMS as e:
+        # Não é uma falha: espera que a hora liberte um lugar, sem gastar tentativas.
+        envios.mudar(
+            envio.anomalia_id, so_se_estado="a_enviar", estado="pendente", enviar_em=agora + ESPERA_NO_LIMITE, motivo=str(e)
+        )
+        registo.warning("SMS ao contacto externo à espera do limite por hora: %s", e)
+        return
     except sms.ErroSMS as e:
         desiste = tentativas >= TENTATIVAS
         envios.mudar(
@@ -178,6 +197,10 @@ def _enviar_resolvido(envio: envios.Envio, agora: datetime) -> None:
     tentativas = envio.tentativas_resolvido + 1
     try:
         sms.enviar(envio.telemovel, texto)
+    except sms.LimiteSMS as e:
+        envios.mudar(envio.anomalia_id, enviar_em=agora + ESPERA_NO_LIMITE)
+        registo.warning("SMS de resolvido à espera do limite por hora: %s", e)
+        return
     except sms.ErroSMS as e:
         envios.mudar(
             envio.anomalia_id,
@@ -201,8 +224,23 @@ def recuperar() -> None:
         registo.warning("%d envio(s) ao contacto externo ficaram a meio; voltam a tentar", quantos)
 
 
+def avisar_se_link_local() -> None:
+    """Com o textbee ligado, um link para localhost não abre no telemóvel do contacto."""
+    if not os.environ.get("TEXTBEE_API_KEY", "").strip():
+        return
+    maquina = urlsplit(mensagens.url_publico()).hostname or ""
+    if maquina in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+        registo.warning(
+            "As SMS vão sair com links para %s, que o telemóvel do contacto não abre. "
+            "Põe em HOMALY_URL_PUBLICO o IP do portátil na rede (ex.: http://192.168.1.20:8000) "
+            "ou um túnel público.",
+            mensagens.url_publico(),
+        )
+
+
 def arrancar(intervalo: float = INTERVALO_S, agora: Relogio | None = None) -> Callable[[], None]:
     """Uma thread que chama `verificar()` de `intervalo` em `intervalo` segundos; devolve `parar`."""
+    avisar_se_link_local()
     recuperar()
     parar = threading.Event()
 

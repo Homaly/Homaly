@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from fastapi import APIRouter
 
-from . import anomalias, eventos, tempo_real
+from . import anomalias, avisos, eventos, tempo_real
 from .contrato import AcaoProposta, Anomalia, Evento, TextoEm
 from .dependencias import obter_agora as agora
 from .ia.avaliar import registar_us
@@ -17,13 +17,18 @@ router = APIRouter(prefix="/dev", tags=["desenvolvimento"])
 
 
 @router.post("/anomalias", response_model=Anomalia, response_model_exclude_none=True)
-def criar_anomalia(anomalia: Anomalia, us: str | None = None) -> Anomalia:
+def criar_anomalia(anomalia: Anomalia, us: str | None = None, contacto: bool = False) -> Anomalia:
     """Grava a anomalia (ou atualiza a que tem o mesmo id) e envia-a pelo WebSocket.
 
     `?us=US11` diz que regra a gerou: a US02 precisa disso para silenciar e a US03 para agir.
+    `?contacto=true` passa-a pelo `avisos.publicar`, como o ciclo: se for de segurança ou de
+    bem-estar, o contacto externo recebe a SMS no fim do tempo de espera (US05).
     """
     if us:
         registar_us(anomalia.id, us)  # antes de guardar: o evento do histórico diz o dispositivo
+    if contacto:
+        avisos.publicar(anomalia)  # grava, envia pelo WebSocket e agenda a SMS
+        return anomalia
     anomalias.guardar(anomalia)
     tempo_real.enviar_anomalia(anomalia)
     return anomalia

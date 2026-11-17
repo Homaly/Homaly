@@ -25,6 +25,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 |----------|----------|-------------|
 | `DB_PATH` | O ficheiro SQLite | `homaly.db`, na pasta onde o backend arranca |
 | `HOMALY_DEV` | Com `1`, liga os pedidos `/dev` | Desligado; o `docker-compose.yml` liga-o |
+| `RECARREGAR` | Com `0`, o backend arranca sem `--reload` (no Docker e no `uv run backend`). Na demo, gravar um ficheiro não o reinicia | `1` |
 | `MCP_URL`, `MCP_CLIENT_ID`, `MCP_CLIENT_TYPE`, `MCP_API_KEY`, `KEYCLOAK_USER`, `KEYCLOAK_PASSWORD` | A ligação ao MCP (`dispositivos`) | Obrigatórias para ler a casa real |
 | `CICLO` | Com `1`, a app corre o ciclo das regras numa thread, com as peças reais (`ciclo.arrancar`) | Desligado |
 | `RELOGIO_INICIO`, `RELOGIO_FATOR` | O relógio do ciclo e da API (um só por processo): começa a esta hora simulada (ISO 8601) e anda este número de vezes mais depressa, para a demo | A hora real |
@@ -33,7 +34,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `PORTA_MINUTOS`, `PORTA_QUEDA_GRAUS` | Os limites da regra da porta (US08, US12) | `5` minutos, `2` °C |
 | `FRIO_LIMITE_GRAUS`, `FRIO_MINUTOS` | Os limites da casa fria (US10) | `16` °C, `120` minutos |
 | `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID` | O textbee, que envia as SMS ao contacto externo (US05). Sem a chave, as SMS não saem: ficam no registo e em `GET /dev/sms` | Sem textbee |
-| `SMS_MAXIMO_HORA` | No máximo estas SMS por hora; acima disso, a SMS espera pela tentativa seguinte. A app não tem login, e isto impede que alguém gaste o tarifário do telemóvel do textbee | `10` (`0` tira o limite) |
+| `SMS_MAXIMO_HORA` | No máximo estas SMS por hora. Só contam as que o textbee aceitou (as recusadas, as sem ligação e as sem chave não gastam tarifário). No limite, a SMS volta a tentar de minuto a minuto, sem gastar as 3 tentativas, até a hora libertar um lugar. A app não tem login, e isto impede que alguém gaste o tarifário do telemóvel do textbee | `10` (`0` tira o limite) |
 | `HOMALY_URL_PUBLICO` | O início do link da SMS, para a página do alerta; o telemóvel do contacto tem de o alcançar | `http://localhost:8000` |
 | `IA_FORNECEDOR` | Que modelo de IA a casa usa. Só existe `falso`, que não usa nenhum: a casa fica com o resumo do desvio | `falso` |
 | `LUZ_HORAS` | US11: ao fim de quantas horas acesa a casa pergunta pela luz (na demo, por exemplo `0.05` = 3 min) | `5` |
@@ -57,10 +58,10 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `acoes.py` | `POST /anomalias/{id}/acao` (US03): aceitar executa a ação e resolve a anomalia; recusar resolve-a sem agir e, na US11 e na US14, não volta a perguntar até ao fim do dia. O comando é fixo por user story (`ACOES`: US11 apaga a lâmpada, US14 desliga a tomada), nunca vem do texto da IA. Usa `dispositivos.executar`; sem ele, um falso que só regista (só com `HOMALY_DEV=1`). |
 | `dependencias.py` | O que os routers recebem por `Depends` (o modelo, a hora); os testes substituem-no. |
 | `regras/` | Uma regra por história, cada uma com `verificar(leituras, contexto, agora) -> list[Desvio | Resolucao]` (a `Resolucao` diz como o problema acabou). `us11.py`: a luz acesa há `LUZ_HORAS` e a porta abriu e fechou depois de ela acender; o que lembra entre voltas fica na tabela `estado_luz`. Os casos de teste estão em `dados/us11.csv`. |
-| `ciclo.py` | O ciclo das regras: a cada volta, `dispositivos.ler()`, todas as regras, `ia.avaliar` para cada desvio novo e `avisos.publicar`. Com `CICLO=1`, corre numa thread da app; antes de mexer numa anomalia, lê-a da base de dados, para não reescrever uma que o responsável já resolveu. `python -m backend.ciclo dados/usNN.csv` (ou `--ao-vivo`) corre-o no terminal, só com as peças falsas de `falsos/` e com uma base de dados temporária (não mexe no `homaly.db`). |
+| `ciclo.py` | O ciclo das regras: a cada volta, `dispositivos.ler()`, todas as regras, `ia.avaliar` para cada desvio novo e `avisos.publicar`. Com `CICLO=1`, corre numa thread da app; antes de mexer numa anomalia, lê-a da base de dados, para não reescrever uma que o responsável já resolveu. No arranque, reconstrói as ocorrências a partir das anomalias ativas (`Ciclo.restaurar`), para um reinício não criar outra anomalia (e outra SMS) por cima da antiga; uma reconstruída só se fecha com a `Resolucao` da regra ou com a resposta. A US07 e a US09 não se reconstroem: só disparam num momento e não duplicam. `python -m backend.ciclo dados/usNN.csv` (ou `--ao-vivo`) corre-o no terminal, só com as peças falsas de `falsos/` e com uma base de dados temporária (não mexe no `homaly.db`). |
 | `avisos.py` | `avisos.publicar`: `anomalias.guardar`, `tempo_real.enviar_anomalia` e o contacto externo (`agendar`, com `imediato` quando a casa está vazia, e `resolvida`). Uma anomalia que chega já resolvida sem ter sido vista não agenda nada. |
 | `definicoes.py` | US04: `GET` e `PUT /definicoes` (contacto externo, tempo de espera e nome da casa); `definicoes.obter()`. O telemóvel fica no formato internacional (`+351912345678`). |
-| `contacto_externo/` | US05: `ContactoExterno` (o que o `avisos` usa) agenda a SMS para o fim do tempo de espera; `arrancar()` (com `CICLO=1`) envia de 5 em 5 s o que está na hora, pelo textbee (`sms.py`). Na hora de enviar volta a ver a anomalia: com resposta, resolvida, de outra classe ou sem contacto, não envia. Quem recebeu o alerta recebe a SMS de resolvido. O textbee que falha tenta outra vez 30 s e 60 s depois. A thread só arranca com o ciclo, porque sem ele não nascem alertas. Com o relógio acelerado (`RELOGIO_FATOR`), o tempo de espera e as 24 horas da página também correm mais depressa. `pagina.py`: `GET /a/{codigo}`, a página do alerta, sem login, válida 24 horas depois da última SMS. |
+| `contacto_externo/` | US05: `ContactoExterno` (o que o `avisos` usa) agenda a SMS para o fim do tempo de espera; `arrancar()` (com `CICLO=1`) envia de 5 em 5 s o que está na hora, pelo textbee (`sms.py`). Na hora de enviar volta a ver a anomalia: com resposta, resolvida, de outra classe ou sem contacto, não envia. Quem recebeu o alerta recebe a SMS de resolvido. O textbee que falha tenta outra vez 30 s e 60 s depois. A thread arranca com o ciclo (`CICLO=1`) ou com `HOMALY_DEV=1`, para os alertas de `/dev/anomalias?contacto=true` também saírem. Mesmo com o relógio acelerado (`RELOGIO_FATOR`), o tempo de espera, as novas tentativas e as 24 horas da página contam em tempo real: são o tempo de pessoas e do textbee, que não andam mais depressa. O texto das SMS fica com as horas (simuladas) da anomalia. `pagina.py`: `GET /a/{codigo}`, a página do alerta, sem login, válida 24 horas depois da última SMS. |
 | `habitual.py`, `relogio.py`, `afinacao.py` | O habitual da casa, do histórico simulado em `dados/historico.csv` (US07, US09, US14); o relógio, talvez acelerado; e a passagem do histórico pelas regras para contar falsos alarmes (`scripts/afinar.py`). |
 | `dev.py` | `/dev`: pôr anomalias e eventos à mão, para testar a PWA sem esperar pelo ciclo das regras (`POST /dev/exemplo` carrega os dados dos mocks). |
 | `dispositivos/` | A casa pelo MCP: `ler()` (um só `get_home_devices`, devolve `Leitura`s e grava um evento quando a porta, a lâmpada ou a tomada mudam), `executar(dispositivo, tipo, valor)` (lâmpada e tomada: `power` on/off; lâmpada: `brightness` 1–100; confirma lendo de novo), `alarme()`, `intervalo_s()` e `em_silencio()` (os dispositivos calados, cujas leituras ficam de fora). Falhas levantam `ErroDispositivos`. |
@@ -121,7 +122,7 @@ curl -X POST localhost:8000/dev/anomalias -H 'Content-Type: application/json' -d
 ```
 
 - `POST /dev/exemplo` carrega os mesmos dados dos mocks da PWA (pode correr-se várias vezes).
-- `POST /dev/anomalias` grava uma `Anomalia` e envia-a pelo WebSocket; com um `id` que já existe, atualiza-a. Com `?us=US11`, regista a user story (a US02 e a US03 precisam dela).
+- `POST /dev/anomalias` grava uma `Anomalia` e envia-a pelo WebSocket; com um `id` que já existe, atualiza-a. Com `?us=US11`, regista a user story (a US02 e a US03 precisam dela). Por omissão não avisa o contacto externo; com `?contacto=true` passa pelo `avisos.publicar`, como o ciclo, e uma de segurança ou de bem-estar agenda a SMS (US05). Assim mostra-se a US05 sem `CICLO=1` nem `/dev/leituras`.
 - `POST /dev/eventos` grava um `Evento` e envia-o pelo WebSocket.
 
 ## Testes
@@ -174,3 +175,11 @@ O telemóvel tem de estar ligado, com internet e com a app aberta. No telemóvel
 O link da SMS começa por `HOMALY_URL_PUBLICO`. Na demo, com o contacto na mesma rede Wi-Fi, é o IP do portátil (ex.: `http://192.168.1.20:8000`). Fora da rede, só com um túnel público, e aí muda-se só esta variável.
 
 Sem `TEXTBEE_API_KEY`, as SMS ficam em `GET /dev/sms` (com `HOMALY_DEV=1`), para se ver o texto e abrir o link.
+
+Para provocar um alerta ao contacto à mão (com `HOMALY_DEV=1`; o contacto e o tempo de espera vêm das Definições):
+
+```bash
+curl -X POST 'localhost:8000/dev/anomalias?contacto=true&us=US08' -H 'Content-Type: application/json' -d '{"classe": "seguranca", "titulo": "Porta aberta", "explicacao": "A porta da rua está aberta há mais de 5 minutos."}'
+```
+
+As anomalias que nascem do ciclo (com `CICLO=1`, por exemplo a partir de `/dev/leituras`) avisam o contacto sozinhas.

@@ -51,12 +51,21 @@ Regra = Callable[[list[Leitura], Contexto, datetime], list[Desvio | Resolucao]]
 # Histórias cuja anomalia só se resolve com a resposta do responsável.
 SO_COM_RESPOSTA = {"US07"}
 
+# Histórias que não se reconstroem depois de um reinício: só disparam num momento (US07: a
+# abertura; US09: a hora limite do dia) e não voltam a ver o mesmo desvio, por isso não duplicam.
+# Reconstruí-las engolia o desvio seguinte (a madrugada da noite seguinte, o dia seguinte).
+NAO_RECONSTRUIR = {"US07", "US09"}
+
 
 @dataclass
 class Ocorrencia:
     desvio: Desvio
     estado: Literal["ativa", "ignorada", "silenciada", "respondida"]
     anomalia: Anomalia | None = None
+    # Vem de antes de um reinício (Ciclo.restaurar): a regra pode estar calada até voltar a
+    # contar (a US14 guarda o estado em memória), por isso só se fecha com uma Resolucao da regra
+    # ou com a resposta do responsável, nunca por a regra não a ver.
+    reconstruida: bool = False
 
 
 def carregar_regras() -> list[Regra]:
@@ -108,6 +117,18 @@ class Ciclo:
         self.registar_historico = registar_historico
         self.obter_anomalia = obter_anomalia  # o estado atual na base de dados; None: só a memória
         self.ocorrencias: dict[str, Ocorrencia] = {}
+
+    def restaurar(self, ativas: Iterable[tuple[str, Anomalia]]) -> int:
+        """No arranque: as anomalias ativas (us, anomalia), da mais recente para a mais antiga,
+        voltam a ser ocorrências. Sem isto, as regras que guardam o estado em SQLite (porta, luz,
+        temperatura) continuavam a ver o desvio e o ciclo criava outra anomalia, com outra SMS,
+        deixando a antiga ativa para sempre. Devolve quantas reconstruiu."""
+        for us, anomalia in ativas:
+            if us in NAO_RECONSTRUIR or us in self.ocorrencias:
+                continue  # das repetidas, fica a mais recente
+            desvio = Desvio(us=us, classe=anomalia.classe, resumo="", habitual=None)
+            self.ocorrencias[us] = Ocorrencia(desvio, "ativa", anomalia, reconstruida=True)
+        return sum(o.reconstruida for o in self.ocorrencias.values())
 
     def passo(self, leituras: list[Leitura], agora: datetime) -> None:
         contexto = self.obter_contexto()
@@ -162,7 +183,12 @@ class Ciclo:
     def _continuar(self, ocorrencia: Ocorrencia, desvio: Desvio) -> None:
         anterior = ocorrencia.desvio
         ocorrencia.desvio = desvio
-        if (desvio.classe, desvio.resumo) == (anterior.classe, anterior.resumo):
+        if ocorrencia.reconstruida:
+            # O resumo de antes do reinício perdeu-se: só a classe diz se a anomalia mudou.
+            ocorrencia.reconstruida = False
+            if desvio.classe == anterior.classe:
+                return
+        elif (desvio.classe, desvio.resumo) == (anterior.classe, anterior.resumo):
             return
         if not self._atualizar(ocorrencia):
             return
@@ -175,8 +201,14 @@ class Ciclo:
         self, desvios: dict[str, Desvio], resolucoes: dict[str, Resolucao], agora: datetime
     ) -> None:
         for us in [us for us in self.ocorrencias if us not in desvios]:
-            ocorrencia = self.ocorrencias.pop(us)
             resolucao = resolucoes.get(us)
+            if self.ocorrencias[us].reconstruida and resolucao is None:
+                # A regra ainda não a voltou a ver: fica, a não ser que o responsável a tenha
+                # resolvido (senão o próximo desvio desta US passava por continuação dela).
+                if not self._atualizar(self.ocorrencias[us]):
+                    del self.ocorrencias[us]
+                continue
+            ocorrencia = self.ocorrencias.pop(us)
             if ocorrencia.estado != "ativa" or (resolucao is None and us in SO_COM_RESPOSTA):
                 continue
             if not self._atualizar(ocorrencia):
@@ -231,7 +263,7 @@ def real(relogio: Relogio) -> tuple[Ciclo, Callable[[], list[Leitura]]]:
     """O ciclo com as peças reais, e a leitura da casa pelo MCP, ambos com a hora do relógio."""
     from backend import anomalias, avisos, dispositivos, historico
     from backend.contexto.repositorio import carregar_contexto
-    from backend.ia.avaliar import avaliar
+    from backend.ia.avaliar import avaliar, us_da_anomalia
 
     ciclo = Ciclo(
         regras=carregar_regras(),
@@ -241,6 +273,10 @@ def real(relogio: Relogio) -> tuple[Ciclo, Callable[[], list[Leitura]]]:
         registar_historico=historico.registar_desvio,
         obter_anomalia=anomalias.obter,
     )
+    ativas = ((us_da_anomalia(a.id), a) for a in anomalias.listar("ativa"))
+    reconstruidas = ciclo.restaurar((us, a) for us, a in ativas if us is not None)
+    if reconstruidas:
+        registo.info("Reconstruídas %d ocorrência(s) a partir das anomalias ativas.", reconstruidas)
     return ciclo, lambda: dispositivos.ler(relogio.agora())
 
 

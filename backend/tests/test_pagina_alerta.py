@@ -41,7 +41,7 @@ def pedir(link: str, em):
     try:
         return api.get(link)
     finally:
-        pagina.agora = pagina._agora_partilhado
+        pagina.agora = pagina._agora_real
 
 
 def test_mostra_o_alerta_ainda_por_resolver(preparar):
