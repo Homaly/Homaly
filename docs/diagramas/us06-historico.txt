@@ -23,9 +23,18 @@ App->API: GET /eventos (a cache foi invalidada)
 API-->App: Evento[] atualizado
 end
 
+opt uma anomalia é guardada nova, ou passa a resolvida
+API->DB: guardar Evento com anomaliaId (o título, ou como se resolveu)
+API->>App: WS {tipo: 'evento', evento}
+end
+
+opt o ciclo vê um desvio e não avisa (silenciado, ou a IA achou que não valia a pena)
+API->DB: guardar Evento com o resumo e o motivo
+end
+
 R->App: abre uma anomalia (evento com anomaliaId)
 App->API: GET /anomalias/{id}
 API->DB: anomalia
 DB-->API: Anomalia
-API-->App: explicação da casa e resposta dada
+API-->App: explicação da casa, resposta dada e como se resolveu
 App-->R: mostra o detalhe da anomalia

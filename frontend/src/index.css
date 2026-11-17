@@ -3,16 +3,63 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
+  /* Paleta da marca: valores fixos. Os componentes usam os papéis abaixo, não estes. */
   --color-primary: #06bcf9;
   --color-background-light: #f5f8f8;
   --color-background-dark: #0f1e23;
   --color-card-dark: #1a2e35;
-  --color-accent-orange: #fa5f38;
-  --color-accent-green: #0bda57;
+
+  /* Papéis. Valores do tema claro; o .dark abaixo troca-os, por isso não é preciso dark: nos componentes.
+     Todos os textos passam WCAG AA (4,5:1) nos dois temas; field e o foco passam 3:1.
+     Os neutros puxam para o azul-petróleo da marca nos dois temas. */
+  --color-on-primary: #0f1e23;              /* texto sobre bg-primary */
+  --color-surface: #f5f8f8;                 /* fundo do ecrã */
+  --color-surface-container: #ffffff;       /* cartões, campos, barra de baixo, toasts */
+  --color-surface-tonal: #e2eaed;           /* botões secundários, chips, esqueletos */
+  --color-on-surface: #0f1e23;              /* texto principal */
+  --color-on-surface-variant: #35494f;      /* texto de apoio: descrições, explicações curtas */
+  --color-muted: #4e646c;                   /* metadados: horas, ajudas, separadores inativos */
+  --color-outline-variant: #d2dde1;         /* contornos de cartões e divisórias (decorativos) */
+  --color-field: #73888f;                   /* contorno dos campos (3:1) */
+
+  /* Tintas de estado (texto, ícones, contornos). Passam também sobre o fundo /10 e /15 da mesma cor.
+     Não usar text-primary: o ciano da marca só tem 2:1 sobre fundo claro.
+     Verde = correu bem; laranja = pede atenção; vermelho = erro ou perigo. As classes de anomalia não têm cor. */
+  --color-primary-ink: #006d93;
+  --color-accent-green: #07702f;
+  --color-accent-orange: #a3410a;
+  --color-danger: #b91f26;
+
   --font-display: "Space Grotesk", sans-serif;
 }
 
 @layer base {
+  .dark {
+    --color-surface: #0f1e23;
+    --color-surface-container: #1a2e35;
+    --color-surface-tonal: #24414b;
+    --color-on-surface: #e6eef0;
+    --color-on-surface-variant: #bccbd0;
+    --color-muted: #9aafb6;
+    --color-outline-variant: #2e4c57;
+    --color-field: #58808e;
+
+    --color-primary-ink: #06bcf9;
+    --color-accent-green: #0bda57;
+    --color-accent-orange: #ff7d57;
+    --color-danger: #ff7272;
+  }
+
+  ::placeholder {
+    color: var(--color-muted);
+    opacity: 1;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary-ink);
+    outline-offset: 2px;
+  }
+
   button, [role="button"] {
     cursor: pointer;
   }
@@ -31,12 +78,28 @@
   to   { opacity: 1; transform: rotate(0deg) scale(1); }
 }
 
+@keyframes check-pop {
+  0%   { opacity: 0; transform: scale(0.4); }
+  70%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 @layer utilities {
+  .animate-check-pop {
+    animation: check-pop 0.35s ease-out both;
+  }
   .animate-toast-in {
     animation: toast-in 0.18s ease-out forwards;
   }
   .animate-icon-flip-in {
     animation: icon-flip-in 0.25s ease-out forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-check-pop,
+    .animate-toast-in,
+    .animate-icon-flip-in {
+      animation: none;
+    }
   }
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;

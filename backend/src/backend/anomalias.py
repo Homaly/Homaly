@@ -2,18 +2,22 @@
 
 Quem publica uma anomalia (o `avisos.publicar`) chama `anomalias.guardar(a)` e depois
 `tempo_real.enviar_anomalia(a)`. Guardar outra vez uma anomalia com o mesmo id atualiza-a.
+Guardar uma anomalia nova, ou passá-la a resolvida, deixa também um evento no histórico (US06).
 
 Os pedidos `POST /anomalias/{id}/resposta` e `/silencio` são da US02 e ficam no router de quem a
 faz; podem usar `obter` e `guardar` daqui.
 """
 
+import logging
 from datetime import UTC
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
 
-from . import db
+from . import db, historico
 from .contrato import Anomalia
+
+registo = logging.getLogger(__name__)
 
 db.esquema(
     """
@@ -30,7 +34,8 @@ Estado = Literal["ativa", "resolvida"]
 
 
 def guardar(anomalia: Anomalia) -> None:
-    """Grava uma anomalia nova ou substitui a que tem o mesmo id."""
+    """Grava uma anomalia nova ou substitui a que tem o mesmo id, e regista-a no histórico."""
+    anterior = obter(anomalia.id)
     with db.ligar() as con:
         con.execute(
             """
@@ -47,6 +52,11 @@ def guardar(anomalia: Anomalia) -> None:
                 anomalia.model_dump_json(by_alias=True, exclude_none=True),
             ),
         )
+    try:
+        historico.anomalia_mudou(anterior, anomalia)
+    except Exception:
+        # O histórico nunca impede a anomalia de chegar ao responsável.
+        registo.exception("Não consegui registar a anomalia %s no histórico", anomalia.id)
 
 
 def obter(id: str) -> Anomalia | None:
