@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import anomalias, dev, eventos, tempo_real
 from .conversa import router as conversa
+from .dispositivos import simulacao
 from .resposta import router as resposta
 
 app = FastAPI(title="Homaly", description="A casa que repara.")
@@ -23,3 +24,4 @@ app.include_router(resposta.router)
 
 if os.environ.get("HOMALY_DEV") == "1":
     app.include_router(dev.router)
+    app.include_router(simulacao.router)  # leituras injetadas para a demo
