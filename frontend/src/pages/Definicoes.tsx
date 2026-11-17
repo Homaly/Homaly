@@ -13,17 +13,18 @@ function Formulario({ inicial }: { inicial: Defs }) {
   const [nome, setNome] = useState(inicial.contacto?.nome ?? '');
   const [telemovel, setTelemovel] = useState(inicial.contacto?.telemovel ?? '');
   const [espera, setEspera] = useState(String(inicial.esperaMinutos));
+  const [nomeCasa, setNomeCasa] = useState(inicial.nomeCasa ?? '');
 
   const esperaNum = Number(espera);
-  const esperaValida = espera !== '' && Number.isInteger(esperaNum) && esperaNum >= 0;
+  const esperaValida = espera !== '' && Number.isInteger(esperaNum) && esperaNum >= 0 && esperaNum <= 1440;
   const contactoIncompleto = (nome.trim() === '') !== (telemovel.trim() === '');
 
   const submeter = (contacto: Defs['contacto']) =>
     guardar.mutate(
-      { contacto, esperaMinutos: esperaNum },
+      { contacto, esperaMinutos: esperaNum, ...(nomeCasa.trim() ? { nomeCasa: nomeCasa.trim() } : {}) },
       {
         onSuccess: () => showToast('Definições guardadas', 'success'),
-        onError: () => showToast('Não foi possível guardar', 'error'),
+        onError: () => showToast('Não foi possível guardar. Confirme o número de telemóvel.', 'error'),
       }
     );
 
@@ -37,6 +38,22 @@ function Formulario({ inicial }: { inicial: Defs }) {
     >
       <section className="space-y-3">
         <div>
+          <h2 className="font-semibold">Nome da casa</h2>
+          <p className="text-sm text-muted">
+            É assim que o contacto externo reconhece a casa na SMS. Opcional.
+          </p>
+        </div>
+        <Campo
+          value={nomeCasa}
+          onChange={e => setNomeCasa(e.target.value)}
+          placeholder="Casa da D. Maria"
+          maxLength={60}
+          aria-label="Nome da casa"
+        />
+      </section>
+
+      <section className="space-y-3">
+        <div>
           <h2 className="font-semibold">Contacto externo</h2>
           <p className="text-sm text-muted">
             Recebe por SMS os alertas de segurança e de bem-estar quando não responde a tempo. Opcional.
@@ -44,7 +61,7 @@ function Formulario({ inicial }: { inicial: Defs }) {
         </div>
         <label className="block space-y-1">
           <span className="text-sm">Nome</span>
-          <Campo value={nome} onChange={e => setNome(e.target.value)} placeholder="Vizinha Ana" />
+          <Campo value={nome} onChange={e => setNome(e.target.value)} placeholder="Vizinha Ana" maxLength={60} />
         </label>
         <label className="block space-y-1">
           <span className="text-sm">Telemóvel</span>
@@ -84,6 +101,7 @@ function Formulario({ inicial }: { inicial: Defs }) {
           type="number"
           inputMode="numeric"
           min={0}
+          max={1440}
           step={1}
           value={espera}
           onChange={e => setEspera(e.target.value)}

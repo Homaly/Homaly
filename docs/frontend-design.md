@@ -74,7 +74,7 @@ interface Evento {
 
 interface MensagemConversa { id: string; autor: 'pessoa' | 'casa'; texto: string; em: string }
 
-interface Definicoes { contacto: { nome: string; telemovel: string } | null; esperaMinutos: number }
+interface Definicoes { contacto: { nome: string; telemovel: string } | null; esperaMinutos: number; nomeCasa?: string }
 ```
 
 | Pedido | Para quê |
