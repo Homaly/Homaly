@@ -31,6 +31,9 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `POLLING_SEGUNDOS` | De quanto em quanto tempo ler a casa (`dispositivos.intervalo_s()`) | `10` |
 | `PORTA_MINUTOS`, `PORTA_QUEDA_GRAUS` | Os limites da regra da porta (US08, US12) | `5` minutos, `2` °C |
 | `FRIO_LIMITE_GRAUS`, `FRIO_MINUTOS` | Os limites da casa fria (US10) | `16` °C, `120` minutos |
+| `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID` | O textbee, que envia as SMS ao contacto externo (US05). Sem a chave, as SMS não saem: ficam no registo e em `GET /dev/sms` | Sem textbee |
+| `SMS_MAXIMO_HORA` | No máximo estas SMS por hora; acima disso, a SMS espera pela tentativa seguinte. A app não tem login, e isto impede que alguém gaste o tarifário do telemóvel do textbee | `10` (`0` tira o limite) |
+| `HOMALY_URL_PUBLICO` | O início do link da SMS, para a página do alerta; o telemóvel do contacto tem de o alcançar | `http://localhost:8000` |
 | `IA_FORNECEDOR` | Que modelo de IA a casa usa. Só existe `falso`, que não usa nenhum: a casa fica com o resumo do desvio | `falso` |
 | `LUZ_HORAS` | US11: ao fim de quantas horas acesa a casa pergunta pela luz (na demo, por exemplo `0.05` = 3 min) | `5` |
 
@@ -54,7 +57,9 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `dependencias.py` | O que os routers recebem por `Depends` (o modelo, a hora); os testes substituem-no. |
 | `regras/` | Uma regra por história, cada uma com `verificar(leituras, contexto, agora) -> list[Desvio | Resolucao]` (a `Resolucao` diz como o problema acabou). `us11.py`: a luz acesa há `LUZ_HORAS` e a porta abriu e fechou depois de ela acender; o que lembra entre voltas fica na tabela `estado_luz`. Os casos de teste estão em `dados/us11.csv`. |
 | `ciclo.py` | O ciclo das regras: a cada volta, `dispositivos.ler()`, todas as regras, `ia.avaliar` para cada desvio novo e `avisos.publicar`. Com `CICLO=1`, corre numa thread da app; antes de mexer numa anomalia, lê-a da base de dados, para não reescrever uma que o responsável já resolveu. `python -m backend.ciclo dados/usNN.csv` (ou `--ao-vivo`) corre-o no terminal, só com as peças falsas de `falsos/` e com uma base de dados temporária (não mexe no `homaly.db`). |
-| `avisos.py` | `avisos.publicar`: `anomalias.guardar`, `tempo_real.enviar_anomalia` e o contacto externo (`agendar`, com `imediato` quando a casa está vazia, e `resolvida`), ainda falso. Uma anomalia que chega já resolvida sem ter sido vista não agenda nada. |
+| `avisos.py` | `avisos.publicar`: `anomalias.guardar`, `tempo_real.enviar_anomalia` e o contacto externo (`agendar`, com `imediato` quando a casa está vazia, e `resolvida`). Uma anomalia que chega já resolvida sem ter sido vista não agenda nada. |
+| `definicoes.py` | US04: `GET` e `PUT /definicoes` (contacto externo, tempo de espera e nome da casa); `definicoes.obter()`. O telemóvel fica no formato internacional (`+351912345678`). |
+| `contacto_externo/` | US05: `ContactoExterno` (o que o `avisos` usa) agenda a SMS para o fim do tempo de espera; `arrancar()` (com `CICLO=1`) envia de 5 em 5 s o que está na hora, pelo textbee (`sms.py`). Na hora de enviar volta a ver a anomalia: com resposta, resolvida, de outra classe ou sem contacto, não envia. Quem recebeu o alerta recebe a SMS de resolvido. O textbee que falha tenta outra vez 30 s e 60 s depois. A thread só arranca com o ciclo, porque sem ele não nascem alertas. Com o relógio acelerado (`RELOGIO_FATOR`), o tempo de espera e as 24 horas da página também correm mais depressa. `pagina.py`: `GET /a/{codigo}`, a página do alerta, sem login, válida 24 horas depois da última SMS. |
 | `habitual.py`, `relogio.py`, `afinacao.py` | O habitual da casa, do histórico simulado em `dados/historico.csv` (US07, US09, US14); o relógio, talvez acelerado; e a passagem do histórico pelas regras para contar falsos alarmes (`scripts/afinar.py`). |
 | `dev.py` | `/dev`: pôr anomalias e eventos à mão, para testar a PWA sem esperar pelo ciclo das regras (`POST /dev/exemplo` carrega os dados dos mocks). |
 | `dispositivos/` | A casa pelo MCP: `ler()` (um só `get_home_devices`, devolve `Leitura`s e grava um evento quando a porta, a lâmpada ou a tomada mudam), `executar(dispositivo, tipo, valor)` (lâmpada e tomada: `power` on/off; lâmpada: `brightness` 1–100; confirma lendo de novo), `alarme()` e `intervalo_s()`. Falhas levantam `ErroDispositivos`. |
@@ -148,3 +153,23 @@ curl -X DELETE localhost:8000/dev/leituras                           # todas
 ```
 
 Para a US10 na demo, junta-se `FRIO_MINUTOS=2` no `.env`.
+
+### SMS ao contacto externo (textbee)
+
+O textbee envia as SMS a partir de um telemóvel Android com cartão SIM (gasta o tarifário desse telemóvel). Para o ligar:
+
+1. Criar uma conta em [textbee.dev](https://textbee.dev).
+2. No telemóvel Android, instalar a app a partir de [textbee.dev/download](https://textbee.dev/download) (não está na Play Store) e dar-lhe as permissões de SMS.
+3. No painel do textbee, **Add device** e ler o código QR com a app: isso regista o telemóvel e cria a chave da API.
+4. Pôr a chave em `TEXTBEE_API_KEY` no `.env` (e `TEXTBEE_DEVICE_ID`, se houver mais de um telemóvel).
+5. Confirmar com uma SMS de teste:
+
+```bash
+set -a; . ../.env; set +a; uv run python -m backend.contacto_externo.teste_sms 912345678
+```
+
+O telemóvel tem de estar ligado, com internet e com a app aberta. No telemóvel que recebe, grava-se o número dele como "Homaly".
+
+O link da SMS começa por `HOMALY_URL_PUBLICO`. Na demo, com o contacto na mesma rede Wi-Fi, é o IP do portátil (ex.: `http://192.168.1.20:8000`). Fora da rede, só com um túnel público, e aí muda-se só esta variável.
+
+Sem `TEXTBEE_API_KEY`, as SMS ficam em `GET /dev/sms` (com `HOMALY_DEV=1`), para se ver o texto e abrir o link.
