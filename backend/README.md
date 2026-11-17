@@ -25,6 +25,10 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 |----------|----------|-------------|
 | `DB_PATH` | O ficheiro SQLite | `homaly.db`, na pasta onde o backend arranca |
 | `HOMALY_DEV` | Com `1`, liga os pedidos `/dev` | Desligado; o `docker-compose.yml` liga-o |
+| `MCP_URL`, `MCP_CLIENT_ID`, `MCP_CLIENT_TYPE`, `MCP_API_KEY`, `KEYCLOAK_USER`, `KEYCLOAK_PASSWORD` | A ligação ao MCP (`dispositivos`) | Obrigatórias para ler a casa real |
+| `POLLING_SEGUNDOS` | De quanto em quanto tempo ler a casa (`dispositivos.intervalo_s()`) | `10` |
+| `PORTA_MINUTOS`, `PORTA_QUEDA_GRAUS` | Os limites da regra da porta (US08, US12) | `5` minutos, `2` °C |
+| `FRIO_LIMITE_GRAUS`, `FRIO_MINUTOS` | Os limites da casa fria (US10) | `16` °C, `120` minutos |
 | `IA_FORNECEDOR` | Que modelo de IA a casa usa. Só existe `falso`, que não usa nenhum: a casa fica com o resumo do desvio | `falso` |
 | `LUZ_HORAS` | US11: ao fim de quantas horas acesa a casa pergunta pela luz (na demo, por exemplo `0.05` = 3 min) | `5` |
 
@@ -46,8 +50,12 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `resposta/` | `POST /anomalias/{id}/resposta` e `POST /anomalias/{id}/silencio`: a pessoa responde a uma anomalia e aceita ou recusa deixar de ser avisada (US02). |
 | `acoes.py` | `POST /anomalias/{id}/acao` (US03): aceitar executa a ação e resolve a anomalia; recusar resolve-a sem agir e, na US11 e na US14, não volta a perguntar até ao fim do dia. O comando é fixo por user story (`ACOES`: US11 apaga a lâmpada, US14 desliga a tomada), nunca vem do texto da IA. Usa `dispositivos.executar`; sem ele, um falso que só regista (só com `HOMALY_DEV=1`). |
 | `dependencias.py` | O que os routers recebem por `Depends` (o modelo, a hora); os testes substituem-no. |
-| `regras/` | Uma regra por história, cada uma com `verificar(leituras, contexto, agora) -> list[Desvio]`. `us11.py`: a luz acesa há `LUZ_HORAS` e a porta abriu e fechou depois de ela acender; o que lembra entre voltas fica na tabela `estado_luz`. Os casos de teste estão em `dados/us11.csv`. |
+| `regras/` | Uma regra por história, cada uma com `verificar(leituras, contexto, agora) -> list[Desvio | Resolucao]` (a `Resolucao` diz como o problema acabou). `us11.py`: a luz acesa há `LUZ_HORAS` e a porta abriu e fechou depois de ela acender; o que lembra entre voltas fica na tabela `estado_luz`. Os casos de teste estão em `dados/us11.csv`. |
 | `dev.py` | `/dev`: pôr anomalias e eventos à mão, enquanto o ciclo das regras não existe. |
+| `dispositivos/` | A casa pelo MCP: `ler()` (um só `get_home_devices`, devolve `Leitura`s e grava um evento quando a porta, a lâmpada ou a tomada mudam), `executar(dispositivo, tipo, valor)` (lâmpada e tomada: `power` on/off; lâmpada: `brightness` 1–100; confirma lendo de novo), `alarme()` e `intervalo_s()`. Falhas levantam `ErroDispositivos`. |
+| `dispositivos/simulacao.py` | `/dev/leituras`: leituras injetadas para a demo, por cima das reais. |
+| `regras/porta.py` | US08 e US12 num só aviso por abertura da porta; devolve `Resolucao` quando a porta fecha. |
+| `regras/temperatura.py` | US10: abaixo de 16 °C durante duas horas; devolve `Resolucao` quando volta a subir. |
 
 ## Como ligar o teu módulo
 
@@ -113,3 +121,24 @@ uv run pytest
 ```
 
 Os testes ficam em `tests/` e importam os auxiliares com `from tests.conftest import ...` (por exemplo `ModeloFixo`, um modelo que devolve sempre a resposta combinada, e `AGORA`). A fixture `bd` (automática) dá a cada teste um ficheiro SQLite novo, com as tabelas criadas.
+
+### Ler a casa real
+
+A partir de `backend/`, só lê, não muda nada:
+
+```bash
+set -a; . ../.env; set +a; uv run python -m backend.dispositivos
+```
+
+### Leituras injetadas (demo)
+
+Sobrepõem uma leitura real até serem removidas; o resto da casa continua real.
+
+```bash
+curl -X POST localhost:8000/dev/leituras -H 'Content-Type: application/json' -d '{"dispositivo": "temperatura", "tipo": "temperatureValue", "valor": 15}'
+curl localhost:8000/dev/leituras                                     # as que estão injetadas
+curl -X DELETE localhost:8000/dev/leituras/temperatura/temperatureValue
+curl -X DELETE localhost:8000/dev/leituras                           # todas
+```
+
+Para a US10 na demo, junta-se `FRIO_MINUTOS=2` no `.env`.

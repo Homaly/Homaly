@@ -66,3 +66,16 @@ class Desvio:
     resumo: str  # os factos, em português simples
     habitual: str | None
     imediato: bool = False  # casa vazia: alerta já, a IA não decide
+
+
+@dataclass(frozen=True)
+class Resolucao:
+    """Uma regra diz que o problema da sua US acabou, e como.
+
+    `regra.verificar()` devolve-a na volta em que vê o fim (ex.: a porta fechou); o ciclo põe o
+    `texto` na `resolucao` da anomalia ativa dessa US, em vez de um texto genérico.
+    """
+
+    us: str  # "US08"
+    texto: str  # ex.: "a porta fechou às 14:12"
+    em: datetime

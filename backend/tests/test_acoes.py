@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -153,7 +155,16 @@ def test_pedidos_invalidos(cliente):
     assert cliente.post(f"/anomalias/{_anomalia().id}/acao", json={}).status_code == 422
 
 
+def test_com_dispositivos_usa_o_executar_real():
+    from backend import dispositivos
+
+    assert acoes.obter_executar() is dispositivos.executar
+
+
 def test_sem_dispositivos_so_finge_em_desenvolvimento(monkeypatch):
+    # Simula um backend sem o módulo dispositivos (None em sys.modules faz o import falhar);
+    # nunca chama o executar real, que mudaria a lâmpada da casa.
+    monkeypatch.setitem(sys.modules, "backend.dispositivos", None)
     monkeypatch.setenv("HOMALY_DEV", "1")
     assert acoes.obter_executar()("lampada", "power", "off") is True
     monkeypatch.delenv("HOMALY_DEV")
