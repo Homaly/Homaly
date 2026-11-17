@@ -295,6 +295,29 @@ def test_a_thread_envia_e_para(enviadas):
     assert len(enviadas) == 1
 
 
+@pytest.mark.parametrize("url", ["", "http://localhost:8000", "http://127.0.0.1:8000"])
+def test_com_textbee_e_link_local_avisa_no_arranque(monkeypatch, caplog, url):
+    # O telemóvel do contacto não abre um link para localhost (é o próprio telemóvel).
+    monkeypatch.setenv("TEXTBEE_API_KEY", "chave")
+    monkeypatch.setenv("HOMALY_URL_PUBLICO", url)
+
+    contacto_externo.avisar_se_link_local()
+
+    assert "HOMALY_URL_PUBLICO" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "chave, url", [("", "http://localhost:8000"), ("chave", "http://192.168.1.20:8000")]
+)
+def test_sem_textbee_ou_com_ip_da_rede_nao_avisa(monkeypatch, caplog, chave, url):
+    monkeypatch.setenv("TEXTBEE_API_KEY", chave)
+    monkeypatch.setenv("HOMALY_URL_PUBLICO", url)
+
+    contacto_externo.avisar_se_link_local()
+
+    assert "HOMALY_URL_PUBLICO" not in caplog.text
+
+
 # Revisão: reinício, corridas e falhas
 
 
@@ -330,6 +353,73 @@ def test_resolvida_enquanto_a_sms_esta_a_sair_manda_depois_a_de_resolvido(monkey
         "Alerta de segurança às 15:00:",
         "Resolvido às 15:05: a porta fechou às 15:05.",
     ]
+
+
+def test_no_limite_de_sms_o_alerta_espera_sem_gastar_tentativas(monkeypatch, enviadas):
+    a = anomalia()
+    agendar(a)
+    bloqueado = [True]
+
+    def enviar(para, texto):
+        if bloqueado[0]:
+            raise sms.LimiteSMS("Chegou-se ao limite de 10 SMS por hora (SMS_MAXIMO_HORA)")
+        enviadas.append((para, texto))
+
+    monkeypatch.setattr(sms, "enviar", enviar)
+    for m in range(5, 30, 2):  # muito mais vezes do que as 3 tentativas
+        contacto_externo.verificar(minuto(m))
+    envio = envios.obter(a.id)
+    assert (envio.estado, envio.tentativas) == ("pendente", 0)
+
+    bloqueado[0] = False
+    contacto_externo.verificar(minuto(31))
+    assert len(enviadas) == 1
+    assert envios.obter(a.id).estado == "enviada"
+
+
+def test_no_limite_de_sms_o_resolvido_tambem_espera(monkeypatch, enviadas):
+    a = anomalia()
+    agendar(a)
+    contacto_externo.verificar(minuto(5))  # o alerta saiu
+    resolver(a, "a porta fechou às 15:10", minuto(10))
+    bloqueado = [True]
+    original = sms.enviar
+
+    def enviar(para, texto):
+        if bloqueado[0]:
+            raise sms.LimiteSMS("limite")
+        original(para, texto)
+
+    monkeypatch.setattr(sms, "enviar", enviar)
+    for m in range(10, 30, 2):
+        contacto_externo.verificar(minuto(m))
+    envio = envios.obter(a.id)
+    assert (envio.resolvido, envio.tentativas_resolvido) == ("pendente", 0)
+
+    bloqueado[0] = False
+    contacto_externo.verificar(minuto(31))
+    assert envios.obter(a.id).resolvido == "enviada"
+    assert len(enviadas) == 2
+
+
+def test_resolvida_no_instante_em_que_a_thread_reserva_o_envio_manda_a_de_resolvido(monkeypatch, enviadas):
+    # resolvida() lê o envio ainda `pendente`; antes de o cancelar, a thread reserva-o (`a_enviar`)
+    # e o alerta sai. Sem cuidado, o cancelamento falhava em silêncio e o resolvido nunca saía.
+    a = anomalia()
+    agendar(a)
+    ainda_pendente = envios.obter(a.id)
+    original = envios.obter
+    lidos = iter([ainda_pendente])
+    monkeypatch.setattr(envios, "obter", lambda i: next(lidos, None) or original(i))
+    envios.mudar(a.id, so_se_estado="pendente", estado="a_enviar", codigo="c" * 22)  # a thread reservou
+
+    resolver(a, "a porta fechou às 15:05", minuto(5))
+    # A thread acaba de enviar o alerta.
+    envios.mudar(a.id, so_se_estado="a_enviar", estado="enviada", telemovel=CONTACTO.telemovel, ultima_sms_em=minuto(5))
+    contacto_externo.verificar(minuto(5.1))
+
+    [(_, texto)] = enviadas
+    assert texto.splitlines()[1] == "Resolvido às 15:05: a porta fechou às 15:05."
 
 
 def test_falha_durante_o_envio_com_a_anomalia_resolvida_nao_manda_nada_depois(monkeypatch, enviadas):

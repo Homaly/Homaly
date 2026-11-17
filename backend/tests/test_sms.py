@@ -83,28 +83,82 @@ def test_a_chave_nunca_aparece_no_erro(monkeypatch):
     assert "chave-teste" not in str(erro.value)
 
 
+def aceita(pedido):
+    return httpx.Response(201, json={"data": {"success": True}})
+
+
+def texto(pedido: httpx.Request) -> str:
+    return json.loads(pedido.content)["message"]
+
+
 def test_no_maximo_sms_maximo_hora_por_hora(monkeypatch):
     monkeypatch.setenv("SMS_MAXIMO_HORA", "2")
+    pedidos = textbee(monkeypatch, aceita)
     agora = [1000.0]
     monkeypatch.setattr(sms, "_relogio", lambda: agora[0])
     sms.enviar("+351912345678", "1")
     sms.enviar("+351912345678", "2")
 
-    with pytest.raises(sms.ErroSMS, match="limite"):
+    with pytest.raises(sms.LimiteSMS, match="limite"):
         sms.enviar("+351912345678", "3")
 
     agora[0] += 3601  # passou uma hora
     sms.enviar("+351912345678", "4")
-    assert [f["texto"] for f in sms.falsas()] == ["1", "2", "4"]
+    assert [texto(p) for p in pedidos] == ["1", "2", "4"]
 
 
 def test_por_omissao_o_limite_e_dez(monkeypatch):
+    textbee(monkeypatch, aceita)
     monkeypatch.setattr(sms, "_relogio", lambda: 1000.0)
     for i in range(10):
         sms.enviar("+351912345678", str(i))
 
-    with pytest.raises(sms.ErroSMS, match="limite"):
+    with pytest.raises(sms.LimiteSMS, match="limite"):
         sms.enviar("+351912345678", "11")
+
+
+def test_o_limite_e_um_erro_de_sms():
+    assert issubclass(sms.LimiteSMS, sms.ErroSMS)
+
+
+def test_sem_chave_nao_gasta_o_limite(monkeypatch):
+    # Sem textbee não sai SMS nenhuma, por isso não se gasta tarifário.
+    monkeypatch.setenv("SMS_MAXIMO_HORA", "1")
+    monkeypatch.setattr(sms, "_relogio", lambda: 1000.0)
+    for i in range(3):
+        sms.enviar("+351912345678", str(i))
+
+    assert len(sms.falsas()) == 3
+
+
+def test_uma_sms_que_o_textbee_recusa_nao_gasta_o_limite(monkeypatch):
+    monkeypatch.setenv("SMS_MAXIMO_HORA", "1")
+    monkeypatch.setattr(sms, "_relogio", lambda: 1000.0)
+    respostas = iter([httpx.Response(500), httpx.Response(201)])
+    pedidos = textbee(monkeypatch, lambda p: next(respostas))
+
+    with pytest.raises(sms.ErroSMS):
+        sms.enviar("+351912345678", "falha")
+    sms.enviar("+351912345678", "passa")
+
+    assert [texto(p) for p in pedidos] == ["falha", "passa"]
+
+
+def test_uma_sms_sem_ligacao_ao_textbee_nao_gasta_o_limite(monkeypatch):
+    monkeypatch.setenv("SMS_MAXIMO_HORA", "1")
+    monkeypatch.setattr(sms, "_relogio", lambda: 1000.0)
+    tentativas = iter([httpx.ConnectError("sem rede"), None])
+
+    def responder(pedido):
+        erro = next(tentativas)
+        if erro:
+            raise erro
+        return httpx.Response(201)
+
+    textbee(monkeypatch, responder)
+    with pytest.raises(sms.ErroSMS):
+        sms.enviar("+351912345678", "falha")
+    sms.enviar("+351912345678", "passa")  # não levanta LimiteSMS
 
 
 def test_limite_invalido_diz_qual(monkeypatch):

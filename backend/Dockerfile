@@ -15,4 +15,5 @@ RUN uv sync --frozen
 # Modulo e objeto FastAPI a arrancar; muda-se no docker-compose.yml se o codigo for outro.
 ENV APP_MODULE=backend.main:app
 EXPOSE 8000
-CMD ["sh", "-c", "uv run uvicorn \"$APP_MODULE\" --host 0.0.0.0 --port 8000 --reload --app-dir src"]
+# RECARREGAR=0 (no .env) arranca sem --reload: na demo, gravar um ficheiro nao reinicia o backend.
+CMD ["sh", "-c", "if [ \"${RECARREGAR:-1}\" = 1 ]; then R=--reload; fi; exec uv run uvicorn \"$APP_MODULE\" --host 0.0.0.0 --port 8000 $R --app-dir src"]
