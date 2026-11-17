@@ -1,16 +1,27 @@
 """A aplicação FastAPI: `backend.main:app` (é o que o docker-compose.yml arranca)."""
 
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import acoes, anomalias, dev, eventos, tempo_real
+from . import acoes, anomalias, ciclo, dev, eventos, tempo_real
 from .conversa import router as conversa
 from .dispositivos import simulacao
 from .resposta import router as resposta
 
-app = FastAPI(title="Homaly", description="A casa que repara.")
+
+@asynccontextmanager
+async def _vida(app: FastAPI):
+    # O ciclo das regras (Vila): só com CICLO=1, para os testes e a PWA não lerem o MCP.
+    parar = ciclo.arrancar() if os.environ.get("CICLO") == "1" else None
+    yield
+    if parar is not None:
+        parar.set()
+
+
+app = FastAPI(title="Homaly", description="A casa que repara.", lifespan=_vida)
 
 # A PWA corre noutra origem (Vite em :5173, ou o telemóvel na rede local). Sem login nem cookies.
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

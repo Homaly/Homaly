@@ -26,6 +26,8 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `DB_PATH` | O ficheiro SQLite | `homaly.db`, na pasta onde o backend arranca |
 | `HOMALY_DEV` | Com `1`, liga os pedidos `/dev` | Desligado; o `docker-compose.yml` liga-o |
 | `MCP_URL`, `MCP_CLIENT_ID`, `MCP_CLIENT_TYPE`, `MCP_API_KEY`, `KEYCLOAK_USER`, `KEYCLOAK_PASSWORD` | A ligação ao MCP (`dispositivos`) | Obrigatórias para ler a casa real |
+| `CICLO` | Com `1`, a app corre o ciclo das regras numa thread, com as peças reais (`ciclo.arrancar`) | Desligado |
+| `RELOGIO_INICIO`, `RELOGIO_FATOR` | O relógio do ciclo: começa a esta hora simulada (ISO 8601) e anda este número de vezes mais depressa, para a demo | A hora real |
 | `POLLING_SEGUNDOS` | De quanto em quanto tempo ler a casa (`dispositivos.intervalo_s()`) | `10` |
 | `PORTA_MINUTOS`, `PORTA_QUEDA_GRAUS` | Os limites da regra da porta (US08, US12) | `5` minutos, `2` °C |
 | `FRIO_LIMITE_GRAUS`, `FRIO_MINUTOS` | Os limites da casa fria (US10) | `16` °C, `120` minutos |
@@ -51,6 +53,9 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `acoes.py` | `POST /anomalias/{id}/acao` (US03): aceitar executa a ação e resolve a anomalia; recusar resolve-a sem agir e, na US11 e na US14, não volta a perguntar até ao fim do dia. O comando é fixo por user story (`ACOES`: US11 apaga a lâmpada, US14 desliga a tomada), nunca vem do texto da IA. Usa `dispositivos.executar`; sem ele, um falso que só regista (só com `HOMALY_DEV=1`). |
 | `dependencias.py` | O que os routers recebem por `Depends` (o modelo, a hora); os testes substituem-no. |
 | `regras/` | Uma regra por história, cada uma com `verificar(leituras, contexto, agora) -> list[Desvio | Resolucao]` (a `Resolucao` diz como o problema acabou). `us11.py`: a luz acesa há `LUZ_HORAS` e a porta abriu e fechou depois de ela acender; o que lembra entre voltas fica na tabela `estado_luz`. Os casos de teste estão em `dados/us11.csv`. |
+| `ciclo.py` | O ciclo das regras: a cada volta, `dispositivos.ler()`, todas as regras, `ia.avaliar` para cada desvio novo e `avisos.publicar`. Com `CICLO=1`, corre numa thread da app; antes de mexer numa anomalia, lê-a da base de dados, para não reescrever uma que o responsável já resolveu. `python -m backend.ciclo dados/usNN.csv` (ou `--ao-vivo`) corre-o no terminal, só com as peças falsas de `falsos/`. |
+| `avisos.py` | `avisos.publicar`: `anomalias.guardar`, `tempo_real.enviar_anomalia` e o contacto externo (`agendar`, `resolvida`), ainda falso. |
+| `habitual.py`, `relogio.py`, `afinacao.py` | O habitual da casa, do histórico simulado em `dados/historico.csv` (US07, US09, US14); o relógio, talvez acelerado; e a passagem do histórico pelas regras para contar falsos alarmes (`scripts/afinar.py`). |
 | `dev.py` | `/dev`: pôr anomalias e eventos à mão, enquanto o ciclo das regras não existe. |
 | `dispositivos/` | A casa pelo MCP: `ler()` (um só `get_home_devices`, devolve `Leitura`s e grava um evento quando a porta, a lâmpada ou a tomada mudam), `executar(dispositivo, tipo, valor)` (lâmpada e tomada: `power` on/off; lâmpada: `brightness` 1–100; confirma lendo de novo), `alarme()` e `intervalo_s()`. Falhas levantam `ErroDispositivos`. |
 | `dispositivos/simulacao.py` | `/dev/leituras`: leituras injetadas para a demo, por cima das reais. |
