@@ -72,10 +72,31 @@ def test_titulo_so_com_espacos_e_invalido():
 
 def test_acao_proposta():
     resposta = {"avisar": True, "titulo": "T", "explicacao": "E", "acao": "Apagar a lâmpada"}
-    a = avaliar(desvio(), CONTEXTO_VAZIO, agora=AGORA, modelo=ModeloFixo(resposta))
+    a = avaliar(desvio(us="US11", classe="eficiencia"), CONTEXTO_VAZIO, agora=AGORA, modelo=ModeloFixo(resposta))
     assert a is not None
     assert a.acao_proposta is not None
     assert a.acao_proposta.descricao == "Apagar a lâmpada"
+
+
+def test_acao_que_a_casa_nao_sabe_fazer_cai():
+    resposta = {"avisar": True, "titulo": "T", "explicacao": "E", "acao": "Fechar a porta"}
+    a = avaliar(desvio(), CONTEXTO_VAZIO, agora=AGORA, modelo=ModeloFixo(resposta))  # US08
+    assert a is not None
+    assert a.acao_proposta is None
+
+
+def test_sem_modelo_propoe_a_acao_da_casa():
+    for us, descricao in [("US11", "Apagar a luz"), ("US14", "Desligar a tomada")]:
+        a = avaliar(desvio(us=us, classe="eficiencia"), CONTEXTO_VAZIO, agora=AGORA, modelo=ModeloFixo(None))
+        assert a is not None
+        assert a.acao_proposta is not None and a.acao_proposta.descricao == descricao
+
+
+def test_ia_sem_acao_numa_us_com_acao_fica_a_da_casa():
+    resposta = {"avisar": True, "titulo": "T", "explicacao": "E", "acao": None}
+    a = avaliar(desvio(us="US11", classe="eficiencia"), CONTEXTO_VAZIO, agora=AGORA, modelo=ModeloFixo(resposta))
+    assert a is not None
+    assert a.acao_proposta is not None and a.acao_proposta.descricao == "Apagar a luz"
 
 
 def test_acao_vazia_nao_propoe_nada():
