@@ -64,6 +64,7 @@ npm run build    # type-check and production build
 | `docs/fichadesafio_alticelabs1.pdf` | The challenge brief (given by the organisers). |
 | `docs/Desafio#3_Altice_Hackathon_MCP_ATC2026.pdf` | Altice's guide to the MCP server: connection, authentication, tools, examples (given). |
 | `docs/mcp-dispositivos.md` | What the live MCP server actually returns for the team's kit: tools, device ids, value formats, open checks. |
+| `docs/diagramas/` | Sequence diagrams (sequencediagram.org syntax): an overview plus one per user story, and the gaps found between the documents. Also the C4 architecture (`c4-arquitetura.drawio`: context, containers, backend components). |
 | `docs/Guia de Participantes - ATC Hackathon 2026.pdf` | Participants' guide: timeline, deliverables, evaluation criteria (given). |
 | `templates/` | Official templates for the executive summary (.docx) and the presentation (.pptx). |
 | `DECISIONS.md` | The team's decisions. Only the "Decidido" section is settled; "Proposto" and "Em aberto" are not. |

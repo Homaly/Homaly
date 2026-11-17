@@ -1,0 +1,60 @@
+title US07: porta aberta a uma hora anormal (Segurança)
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+participant "Servidor MCP\nAltice" as MCP
+participant "Porta da rua\n(sensor de contacto)" as Porta
+
+Porta->MCP: a porta abre (sensorState passa a alarm)
+note over MCP,Porta: Por confirmar: se alarm quer dizer porta aberta
+Disp->MCP: get_home_devices (ciclo de leitura)
+MCP-->Disp: sensorState: alarm
+Disp->Disp: antes estava normal: a porta abriu
+Disp->DB: guardar Evento "a porta abriu" (hora da leitura)
+Disp->MCP: get_home_security_status
+MCP-->Disp: status (AWAY: alarme armado em modo ausente)
+Disp->Motor: a porta abriu; estado do alarme
+Motor->DB: férias ditas à casa, rotinas e histórico de aberturas
+DB-->Motor: contexto
+
+alt a casa devia estar vazia (férias ditas à casa ou alarme em AWAY)
+Motor->IA: segurança: a porta abriu com a casa vazia
+note right of IA: Aqui a IA não decide se avisa:\no alerta é sempre imediato
+IA->LLM: escrever a explicação
+LLM-->IA: explicação
+IA->DB: guardar Anomalia (segurança, ativa)
+IA->Avisos: avisar já
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação imediata
+Avisos->Avisos: avisar o contacto externo ao mesmo tempo, sem tempo de espera
+ref over Avisos: SMS ao contacto externo (US05)
+else a porta abriu numa hora em que nunca abre (ex.: 3h10; no histórico, nunca entre as 0h e as 6h)
+Motor->IA: segurança: a porta abriu a uma hora anormal
+IA->DB: o que foi dito na conversa
+DB-->IA: contexto
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e explicação
+alt o responsável avisou antes (ex.: "vou chegar tarde")
+IA->DB: registar o desvio, sem aviso
+else nada no contexto explica a abertura
+IA->DB: guardar Anomalia (segurança, ativa)
+IA->Avisos: avisar já
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação imediata
+Avisos->Avisos: iniciar o tempo de espera da casa
+ref over Avisos: Contacto externo, se não houver resposta (US05)
+end
+else hora habitual ou prevista na rotina (ex.: a empregada às terças à tarde)
+note over Motor: Não é anomalia
+end

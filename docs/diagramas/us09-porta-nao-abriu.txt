@@ -1,0 +1,34 @@
+title US09: a porta não abriu à hora habitual (Bem-estar e rotina)
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+
+note over Motor,DB: Habitual, segundo o histórico: a porta abre antes das 10h.\nNa demo, o histórico vem do dataset simulado e o relógio é acelerado.
+Motor->Motor: são 10h30 (hora habitual + margem)
+Motor->DB: a porta abriu hoje?
+DB-->Motor: nenhum Evento "a porta abriu" desde a meia-noite
+Motor->IA: bem-estar e rotina: a porta ainda não abriu
+IA->DB: histórico e o que foi dito na conversa
+DB-->IA: contexto
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e explicação
+
+alt a casa sabe que hoje é diferente (férias, "vou ficar em casa")
+IA->DB: registar o desvio, sem aviso
+else nada no contexto explica
+IA->DB: guardar Anomalia (bem-estar e rotina, ativa)
+IA->Avisos: avisar
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação com a hora habitual e o que aconteceu hoje
+Avisos->Avisos: iniciar o tempo de espera da casa
+ref over Avisos: Contacto externo, se não houver resposta (US05)
+end

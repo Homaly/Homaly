@@ -1,0 +1,47 @@
+title US11: luz acesa há demasiado tempo (Eficiência energética)
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+participant "Servidor MCP\nAltice" as MCP
+participant "Lâmpada (sala)\ne sensor de porta" as Kit
+
+loop a cada ciclo de leitura
+Disp->MCP: get_home_devices
+MCP-->Disp: lâmpada (power) e porta (sensorState)
+Disp->Motor: estado da lâmpada e da porta
+end
+note over Motor: Lâmpada acesa desde as HH:MM;\ndepois disso, a porta abriu e fechou
+
+opt acesa há cinco horas (muito mais do que é costume) e a porta abriu e fechou depois
+Motor->IA: eficiência energética: luz acesa há cinco horas
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e pergunta
+IA->DB: guardar Anomalia (eficiência, ativa, acaoProposta: apagar a luz)
+IA->Avisos: avisar
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: "esta luz está acesa há cinco horas, ainda estão a usar?"\ncom o botão para apagar
+note right of App: Um só sensor de porta não distingue entrar de sair:\na casa pergunta em vez de afirmar que a pessoa saiu
+note over Avisos: Eficiência energética: o contacto externo não recebe nada
+alt aceita apagar
+R->App: toca em "Aceitar"
+ref over R,MCP: US03: a casa apaga a lâmpada e confirma o resultado
+else responde que ainda está a usar
+R->App: "ainda estou a usar"
+App->API: POST /anomalias/{id}/resposta {texto}
+API->IA: interpretar a resposta
+IA->DB: não voltar a perguntar sobre a luz hoje; anomalia resolvida
+API-->App: Anomalia (estado: resolvida)
+end
+end
+
+note over MCP,Kit: Por confirmar: a lâmpada não comunica desde 4 de novembro.\nSe o estado não se conseguir ler, esta anomalia sai do MVP.

@@ -1,0 +1,79 @@
+title US13: veículo desconhecido na entrada (Segurança)
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\ne de visão\n(por decidir)" as LLM
+participant "Servidor MCP\nAltice" as MCP
+participant "Câmara (entrada\nde veículos)" as Cam
+
+Cam->MCP: deteta movimento
+Disp->MCP: get_home_devices (ciclo de leitura)
+MCP-->Disp: motionDetected
+note over MCP,Cam: Por confirmar: o que aparece em motionDetected quando há movimento
+
+opt houve movimento na entrada de veículos
+Disp->Cam: captar uma imagem do stream RTSP (fora do MCP)
+Cam-->Disp: imagem
+Disp->DB: guardar a imagem (servida como imagemUrl)
+Disp->Motor: imagem nova
+Motor->IA: há um veículo? descrever
+IA->LLM: imagem
+LLM-->IA: descrição (tipo, cor, matrícula, se se ler)
+IA-->Motor: descrição do veículo
+note right of LLM: Por decidir: reconhecer pela matrícula\nou pelo aspeto (tipo e cor)
+Motor->DB: veículos conhecidos da casa
+DB-->Motor: lista
+
+alt é um veículo conhecido
+note over Motor: Não avisa
+else veículo desconhecido
+loop durante dois minutos (valor a afinar)
+Disp->Cam: nova imagem do stream RTSP
+Cam-->Disp: imagem
+Disp->Motor: imagem nova
+Motor->IA: o mesmo veículo continua lá?
+IA->LLM: imagem + descrição anterior
+LLM-->IA: sim ou não
+IA-->Motor: resposta
+end
+opt continua lá ao fim de dois minutos
+note over Motor: Quem só faz inversão de marcha não chega aqui
+Motor->IA: segurança: veículo desconhecido na entrada
+IA->DB: o que foi dito na conversa
+DB-->IA: contexto
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e explicação
+alt o responsável avisou que vinha alguém de carro (US01)
+IA->DB: registar o desvio, sem aviso
+else nada no contexto explica
+IA->DB: guardar Anomalia (segurança, ativa, imagemUrl, hora, descrição)
+IA->Avisos: avisar
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação com a imagem, a hora e a descrição do veículo
+Avisos->Avisos: iniciar o tempo de espera da casa
+ref over Avisos: Contacto externo, se não houver resposta (US05)
+opt responde que o veículo é conhecido
+R->App: "é o carro do meu irmão"
+App->API: POST /anomalias/{id}/resposta {texto}
+API->IA: interpretar a resposta
+IA->LLM: resposta + descrição do veículo
+LLM-->IA: veículo conhecido (o carro do irmão)
+IA->DB: guardar o veículo como conhecido; anomalia resolvida
+API-->App: Anomalia (estado: resolvida)
+note right of DB: Não volta a avisar quando ele aparecer
+end
+end
+end
+end
+end
+
+note over MCP,Cam: Por confirmar: o stream RTSP ainda não foi testado.\nSe a deteção de veículos não funcionar a tempo, esta anomalia sai do MVP.

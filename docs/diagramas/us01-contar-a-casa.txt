@@ -1,0 +1,44 @@
+title US01: contar à casa o dia a dia
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(ecrã Conversa)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST" as API
+control "Agente\nde IA" as IA
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+
+R->App: abre o separador Conversa
+App->API: GET /conversa
+API->DB: mensagens anteriores
+DB-->API: lista
+API-->App: MensagemConversa[]
+
+R->App: escreve uma mensagem
+App->API: POST /conversa {texto}
+API->DB: guardar a mensagem (autor: pessoa)
+API->IA: interpretar a mensagem
+IA->DB: rotina e contexto atuais
+DB-->IA: contexto
+IA->LLM: mensagem + contexto
+LLM-->IA: interpretação
+
+alt mudança temporária, ex.: "amanhã vamos de férias uma semana"
+IA->DB: guardar o período em que a casa devia estar vazia
+note right of DB: Durante esse período:\n- não avisa que a porta não abriu (US09)\n- a porta a abrir é alerta de segurança imediato (US07)
+IA-->API: confirma o que percebeu (o período de férias)
+else mudança recorrente, ex.: "a empregada vem às terças à tarde"
+IA->DB: guardar a regra recorrente na rotina da casa
+note right of DB: A porta a abrir às terças à tarde deixa de\nser anomalia, até a regra ser removida
+IA-->API: confirma o que percebeu (a regra recorrente)
+else a casa não percebeu
+note right of IA: Não guarda nada nem assume nada
+IA-->API: pede para dizer de outra forma
+end
+
+API->DB: guardar a resposta (autor: casa)
+API-->App: MensagemConversa (autor: casa)
+App-->R: mostra a resposta da casa
+
+note over R,LLM: O mesmo caminho serve para "vou chegar tarde" (US07), "vou ficar em casa" (US09)\ne "vem alguém de carro" (US13): a IA usa o que foi dito para não dar alarmes falsos

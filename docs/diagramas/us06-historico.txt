@@ -1,0 +1,31 @@
+title US06: ver o que aconteceu em casa
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(ecrã Histórico)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+
+R->App: abre o separador Histórico
+App->API: GET /eventos
+API->DB: eventos, do mais recente para o mais antigo
+DB-->API: Evento[]
+API-->App: Evento[]
+App-->R: lista por ordem (ou "Ainda não há eventos")
+
+opt chega um evento novo com o ecrã aberto
+Disp->DB: guardar Evento (mudança vista na leitura dos sensores)
+Disp->API: evento novo
+API->>App: WS {tipo: 'evento', evento}
+App->API: GET /eventos (a cache foi invalidada)
+API-->App: Evento[] atualizado
+end
+
+R->App: abre uma anomalia (evento com anomaliaId)
+App->API: GET /anomalias/{id}
+API->DB: anomalia
+DB-->API: Anomalia
+API-->App: explicação da casa e resposta dada
+App-->R: mostra o detalhe da anomalia

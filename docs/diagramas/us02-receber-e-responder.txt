@@ -1,0 +1,69 @@
+title US02: receber uma anomalia e responder
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+
+note over IA,DB: Antes: o motor detetou um desvio e a IA decidiu avisar (US07 a US13)
+IA->DB: guardar Anomalia (estado: ativa, classe, explicação)
+IA->Avisos: avisar o responsável
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação: o que aconteceu, o que é habitual e a classe
+note right of App: No MVP só chega com a aplicação aberta;\no push com a aplicação fechada fica para depois
+opt segurança ou bem-estar e rotina
+ref over Avisos: Tempo de espera e SMS ao contacto externo (US05)
+end
+
+R->App: abre a anomalia (Início ou Histórico)
+App->API: GET /anomalias/{id}
+API->DB: anomalia
+DB-->API: Anomalia
+API-->App: explicação, ação proposta e imagem, se houver
+R->App: escreve a resposta
+App->API: POST /anomalias/{id}/resposta {texto}
+API->Avisos: o responsável respondeu
+Avisos->Avisos: cancelar o tempo de espera, se ainda corre
+API->IA: interpretar a resposta
+IA->LLM: resposta + anomalia + contexto
+LLM-->IA: há motivo? é temporário ou recorrente?
+
+alt "está tudo bem", sem motivo
+IA->DB: anomalia resolvida e resposta registada
+note right of DB: Fecha só esta ocorrência:\nse voltar a acontecer, a casa avisa outra vez
+else com motivo
+IA-->API: proposta: o que deixa de avisar e até quando
+API-->App: "não volto a avisar sobre a porta até amanhã, ok?"
+note over App,API: O contrato ainda não tem campo para esta proposta\nnem pedido para a confirmar
+App-->R: mostra a proposta
+alt confirma
+R->App: confirma
+App->API: confirmação
+API->IA: aplicar
+alt motivo temporário, ex.: "fiquei em casa doente"
+alt anomalia de segurança
+IA->DB: fecha só esta ocorrência
+else outras classes
+IA->DB: silenciar este tipo de anomalia até ao fim do dia
+end
+else motivo recorrente, ex.: "a empregada vem às terças"
+IA->DB: guardar a regra recorrente na rotina (US01), até ser removida
+end
+else não confirma
+note over IA: Não silencia nada
+end
+IA->DB: anomalia resolvida e resposta registada
+end
+note over IA,DB: Segurança: nunca fica silenciada além da ocorrência atual,\na não ser com uma regra recorrente explícita
+
+API-->App: Anomalia (estado: resolvida, resposta)
+API->>App: WS {tipo: 'anomalia', anomalia}
+opt o contacto externo já tinha sido avisado
+ref over Avisos: SMS a dizer que está resolvida (US05)
+end

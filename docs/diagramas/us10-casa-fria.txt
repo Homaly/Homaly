@@ -1,0 +1,49 @@
+title US10: casa fria durante horas (Saúde e conforto)
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+participant "Servidor MCP\nAltice" as MCP
+participant "Sensor de\ntemperatura (sala)" as Temp
+
+Temp->MCP: a sala arrefece
+loop a cada ciclo de leitura
+Disp->MCP: get_home_devices
+MCP-->Disp: temperatureValue (ex.: 15,4 °C)
+Disp->DB: guardar a leitura
+Disp->Motor: temperatura atual
+end
+note over Motor: Abaixo de 16 °C desde as HH:MM
+
+opt continua abaixo de 16 °C ao fim de duas horas (valor a afinar)
+Motor->DB: temperatura habitual a esta hora
+DB-->Motor: valor habitual (histórico)
+Motor->IA: saúde e conforto: temperatura atual e habitual
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e explicação
+IA->DB: guardar Anomalia (saúde e conforto, ativa)
+IA->Avisos: avisar
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação com a temperatura atual e a habitual a esta hora
+note over Avisos: Saúde e conforto: o contacto externo não recebe nada
+end
+
+opt a temperatura volta a subir acima de 16 °C
+Disp->MCP: get_home_devices
+MCP-->Disp: temperatureValue
+Disp->Motor: temperatura atual
+Motor->DB: anomalia resolvida sozinha
+Motor->Avisos: anomalia resolvida
+Avisos->API: a anomalia mudou
+API->>App: WS {tipo: 'anomalia', anomalia} (estado: resolvida)
+end
+note over MCP,Temp: Na demo, a sala não arrefece a pedido:\nproposta de injetar leituras simuladas

@@ -1,0 +1,62 @@
+title US12: porta aberta com a casa a arrefecer (Eficiência energética)
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+participant "Servidor MCP\nAltice" as MCP
+participant "Porta da rua e sensor\nde temperatura (sala)" as Kit
+
+Kit->MCP: a porta abre
+Disp->MCP: get_home_devices (ciclo de leitura)
+MCP-->Disp: porta: alarm; temperatura T0
+Disp->Motor: a porta abriu; temperatura T0
+Motor->DB: guardar T0, a temperatura no momento em que a porta abriu
+
+loop a cada ciclo de leitura, enquanto a porta está aberta
+Disp->MCP: get_home_devices
+MCP-->Disp: porta e temperatura
+Disp->Motor: leituras atuais
+end
+
+opt a temperatura desceu dois graus desde que a porta abriu
+Motor->DB: já há aviso desta abertura?
+DB-->Motor: resposta
+alt já há o aviso de porta esquecida aberta (US08)
+Motor->IA: acrescentar a descida ao aviso existente
+IA->DB: atualizar a mesma Anomalia: "e a sala já desceu 2 °C"
+IA->Avisos: aviso atualizado, sem notificação nova
+Avisos->API: a anomalia mudou
+API->>App: WS {tipo: 'anomalia', anomalia} (mesmo id)
+App-->R: o aviso existente mostra a descida
+else ainda não há aviso
+Motor->IA: eficiência: porta aberta e sala a arrefecer
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e explicação
+IA->DB: guardar Anomalia (eficiência, ativa)
+IA->Avisos: avisar
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação com a descida
+note over Avisos: Eficiência energética: o contacto externo não recebe nada
+end
+end
+
+alt a porta fecha
+Disp->Motor: a porta fechou
+Motor->DB: anomalia resolvida
+Motor->Avisos: anomalia resolvida
+Avisos->API: a anomalia mudou
+API->>App: WS {tipo: 'anomalia', anomalia} (estado: resolvida)
+else este aviso chegou primeiro e a porta continua aberta ao fim de cinco minutos
+ref over IA,Motor: US08: o mesmo aviso passa a ser de segurança e pode chegar ao contacto externo
+end
+
+note over MCP,Kit: A casa não sabe se o aquecimento está ligado;\nsó vê a temperatura a descer

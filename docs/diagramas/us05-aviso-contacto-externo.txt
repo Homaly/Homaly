@@ -1,0 +1,55 @@
+title US05: ser avisado como contacto externo
+
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST" as API
+control "Avisos\n(espera e SMS)" as Avisos
+database "Base de\ndados" as DB
+end
+participant "textbee\n(API)" as TB
+participant "Telemóvel Android\n(app textbee, SIM\nde um colega)" as Android
+boundary "Página do alerta\n(só leitura)" as Pag
+actor "Contacto\nexterno" as CE
+
+note over Avisos: Há uma anomalia nova (US07 a US13)
+Avisos->DB: classe da anomalia, contacto e tempo de espera
+DB-->Avisos: definições da casa
+
+alt eficiência energética ou saúde e conforto, ou não há contacto
+note over Avisos,CE: O contacto externo não recebe nada
+else segurança ou bem-estar e rotina, com contacto
+alt a casa devia estar vazia e a porta abriu (US07), ou o tempo de espera é zero
+Avisos->Avisos: avisar já, ao mesmo tempo que o responsável
+else tempo de espera maior que zero (5 minutos por omissão)
+Avisos->Avisos: esperar o tempo de espera da casa
+alt o responsável respondeu a tempo (US02)
+Avisos->Avisos: cancelar; o contacto não recebe nada
+else sem resposta no fim do tempo de espera
+Avisos->Avisos: avisar agora
+end
+end
+opt o envio não foi cancelado
+Avisos->DB: criar o link para a página do alerta
+Avisos->TB: pedido de envio de SMS (número + texto)
+TB->Android: encaminha o pedido para a app
+Android->CE: SMS: o que aconteceu, a que horas, o que é habitual e o link
+Avisos->DB: registar que o contacto foi avisado
+end
+end
+note over TB,Android: Na demo, o telemóvel que envia tem de estar ligado, com internet\ne com a app do textbee aberta; o número fica gravado como "Homaly"
+
+== O contacto abre o link ==
+CE->Pag: abre o link da SMS, sem instalar nada
+Pag->API: pede o alerta (pedido ainda por definir no contrato)
+API->DB: alerta e estado atual da casa
+DB-->API: dados
+API-->Pag: alerta e estado atual
+Pag-->CE: mostra o alerta e o estado atual
+note right of Pag: Só leitura: o contacto não responde nem age
+
+== O responsável resolve a anomalia (US02) ==
+API->Avisos: anomalia resolvida
+opt o contacto já tinha sido avisado
+Avisos->TB: pedido de envio de SMS
+TB->Android: encaminha o pedido para a app
+Android->CE: segunda SMS: a anomalia está resolvida
+end

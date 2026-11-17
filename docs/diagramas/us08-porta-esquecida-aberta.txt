@@ -1,0 +1,60 @@
+title US08: porta esquecida aberta (Segurança)
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+participant "Servidor MCP\nAltice" as MCP
+participant "Porta da rua\n(sensor de contacto)" as Porta
+
+Porta->MCP: a porta abre
+Disp->MCP: get_home_devices (ciclo de leitura)
+MCP-->Disp: sensorState: alarm
+Disp->DB: guardar Evento "a porta abriu"
+Disp->Motor: a porta abriu às HH:MM
+Motor->DB: guardar esta abertura (um só aviso por abertura)
+
+loop a cada ciclo de leitura, enquanto a porta está aberta
+Disp->MCP: get_home_devices
+MCP-->Disp: sensorState
+Disp->Motor: estado da porta
+end
+
+alt a porta fecha antes dos cinco minutos
+Motor->DB: registar o fecho
+note over Motor: Não há aviso
+else passam cinco minutos sem a porta fechar
+Motor->DB: já há aviso desta abertura?
+DB-->Motor: resposta
+alt já há o aviso de eficiência da US12 (sala a arrefecer)
+Motor->IA: o aviso desta abertura passa a ser de segurança
+IA->LLM: reescrever a explicação
+LLM-->IA: "a porta está aberta há cinco minutos..."
+IA->DB: atualizar a mesma Anomalia (classe: segurança)
+IA->Avisos: aviso atualizado, sem notificação nova
+Avisos->API: a anomalia mudou
+API->>App: WS {tipo: 'anomalia', anomalia} (mesmo id)
+App-->R: o aviso existente passa a ser de segurança
+else ainda não há aviso
+Motor->IA: segurança: a porta está aberta há cinco minutos
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e explicação
+IA->DB: guardar Anomalia (segurança, ativa)
+IA->Avisos: avisar
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação
+end
+Avisos->Avisos: iniciar o tempo de espera da casa
+ref over Avisos: Contacto externo, se não houver resposta (US05)
+opt a temperatura desce com a porta ainda aberta
+ref over IA,Motor: US12: acrescenta a descida ao mesmo aviso, sem notificação nova
+end
+end

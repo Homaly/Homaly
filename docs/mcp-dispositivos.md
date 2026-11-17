@@ -42,6 +42,8 @@ São 18, não 16 como no guia. As duas a mais são `get_device_timers` e `post_t
 
 Cada valor vem dentro de `capabilities`, como `{"type": "temperatureValue", "value": 23.1}`. O código deve procurar pelo `type`, porque o campo `name` vem vazio.
 
+`get_home_devices` devolve todos os dispositivos com as `capabilities` numa só chamada (confirmado a 2026-11-17). Um ciclo de polling é, por isso, um único pedido.
+
 ## Hora das leituras
 
 - Cada dispositivo traz `lastCommunicationTime`, em milissegundos desde 1970. É a hora a que o dispositivo comunicou pela última vez, não a hora a que um valor mudou.

@@ -1,0 +1,33 @@
+title US04: escolher um contacto externo
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(ecrã Definições)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST" as API
+database "Base de\ndados" as DB
+end
+
+R->App: abre o separador Definições
+App->API: GET /definicoes
+API->DB: definições da casa
+DB-->API: contacto e tempo de espera
+API-->App: Definicoes {contacto, esperaMinutos}
+App-->R: mostra o contacto (ou nenhum) e o tempo de espera
+
+alt indica ou muda o contacto
+R->App: nome, número de telemóvel e tempo de espera
+App->API: PUT /definicoes {contacto: {nome, telemovel}, esperaMinutos}
+API->DB: guardar
+API-->App: Definicoes guardadas
+note right of DB: A partir daqui o contacto recebe por SMS os alertas\nde segurança e de bem-estar e rotina (US05)
+else remove o contacto
+R->App: remove o contacto
+App->API: PUT /definicoes {contacto: null, esperaMinutos}
+API->DB: guardar
+API-->App: Definicoes guardadas
+note right of DB: O contacto deixa de receber alertas
+else não indica ninguém
+note over R,DB: A aplicação funciona normalmente, só com o responsável
+end
+
+note over App,DB: Tempo de espera: 5 minutos por omissão; zero avisa o contacto ao mesmo tempo que o responsável

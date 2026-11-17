@@ -1,0 +1,109 @@
+title Homaly: visão geral da casa que repara
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (um só serviço em Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+participant "Keycloak" as KC
+participant "Servidor MCP\nAltice" as MCP
+participant "Dispositivos\ndo kit" as Kit
+participant "textbee\n(Android da equipa)" as SMS
+boundary "Página\ndo alerta" as Pag
+actor "Contacto\nexterno" as CE
+
+== Arranque ==
+Disp->KC: login direto (grant_type=password)\ncom as credenciais do .env
+KC-->Disp: token de acesso
+note over Disp,MCP: Cada pedido ao MCP leva o token, X-API-Key, X-Client-Type\ne o User-Agent homaly-backend/0.1 (o Cloudflare recusa o das bibliotecas)
+R->App: abre a aplicação (ecrã Início)
+App->API: GET /anomalias?estado=ativa
+API->DB: anomalias ativas
+DB-->API: lista
+API-->App: Anomalia[] (vazia: "Está tudo normal")
+App->API: liga ao WebSocket /ws
+
+== 0. O responsável conta à casa o dia a dia (US01) ==
+R->App: "amanhã vamos de férias uma semana"
+App->API: POST /conversa {texto}
+API->IA: interpretar a mensagem
+IA->LLM: mensagem + contexto da casa
+LLM-->IA: o que muda na rotina
+IA->DB: guardar o contexto (período, tipo de mudança)
+IA-->API: resposta da casa
+API-->App: MensagemConversa (autor: casa)
+App-->R: a casa confirma o que percebeu
+
+== 1. A casa lê os sensores e compara com o habitual ==
+Kit->MCP: o estado muda (porta, temperatura, lâmpada, câmara)
+note over MCP,Kit: O servidor não envia eventos\nnem dá a hora de cada mudança
+loop a cada N segundos (intervalo por definir)
+Disp->MCP: get_home_devices
+MCP-->Disp: capabilities de todos os dispositivos
+Disp->Disp: comparar com a leitura anterior
+opt houve mudanças
+Disp->DB: guardar Evento (com a hora da leitura)
+Disp->API: evento novo
+API->>App: WS {tipo: 'evento', evento}
+Disp->Motor: mudanças e leituras atuais
+Motor->DB: histórico, rotinas e silêncios
+DB-->Motor: o que é habitual
+Motor->Motor: aplicar as regras das sete anomalias do MVP
+end
+end
+
+== 2. A IA avalia o contexto e decide se vale a pena avisar ==
+opt as regras detetaram um desvio
+Motor->IA: desvio (classe, dispositivo, valores, o que é habitual)
+IA->DB: histórico e o que foi dito na conversa
+DB-->IA: contexto
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e explicação
+alt vale a pena avisar
+IA->DB: guardar Anomalia (estado: ativa)
+IA->Avisos: avisar o responsável
+else o contexto explica o desvio
+IA->DB: registar o desvio, sem aviso
+end
+end
+
+== 3. O responsável recebe a notificação e responde ==
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação na aplicação\n(no MVP, só com a aplicação aberta)
+opt segurança ou bem-estar e rotina, com contacto externo
+Avisos->Avisos: iniciar o tempo de espera da casa\n(5 minutos por omissão)
+end
+opt o responsável responde
+R->App: responde ou aceita a ação proposta
+App->API: POST /anomalias/{id}/resposta ou /acao
+API->Avisos: o responsável respondeu
+Avisos->Avisos: cancelar o tempo de espera
+API->IA: interpretar a resposta
+opt aceitou a ação
+API->Disp: executar a ação
+Disp->MCP: update_device_capabilities (ex.: apagar a lâmpada)
+MCP->Kit: comando
+MCP-->Disp: resultado
+end
+API->DB: guardar a resposta e o estado
+API-->App: Anomalia atualizada
+end
+ref over R,DB: Detalhe: US02 (responder) e US03 (autorizar a casa a agir)
+
+== 4. Sem resposta a tempo, o contacto externo recebe uma SMS ==
+opt o tempo de espera acabou sem resposta
+Avisos->SMS: pedido de envio (texto + link para a página do alerta)
+SMS->CE: SMS: o que aconteceu, a que horas e o que é habitual
+CE->Pag: abre o link, sem instalar nada
+Pag->API: pede o alerta
+API-->Pag: alerta e estado atual
+Pag-->CE: mostra o alerta (só de leitura)
+end
+ref over Avisos,CE: Detalhe: US05 (inclui a casa vazia, o tempo de espera zero e a SMS de resolvido)
