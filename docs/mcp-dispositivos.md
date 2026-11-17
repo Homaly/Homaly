@@ -48,6 +48,7 @@ Cada valor vem dentro de `capabilities`, como `{"type": "temperatureValue", "val
 
 - Cada dispositivo traz `lastCommunicationTime`, em milissegundos desde 1970. É a hora a que o dispositivo comunicou pela última vez, não a hora a que um valor mudou.
 - Não há hora por valor. Para saber quando a porta abriu, o backend tem de comparar cada leitura com a anterior.
+- **O servidor repete o último valor de um dispositivo que deixou de comunicar.** A 17 de novembro às 03:46, a porta, a temperatura e a tomada não comunicavam desde as 19:16 do dia anterior, e a lâmpada desde 4 de novembro; a porta continuava a aparecer `alarm` (aberta). Por isso o `dispositivos.ler()` deixa de fora os dispositivos que não comunicam há mais de `SENSOR_SILENCIO_MINUTOS` (60 por omissão).
 - Nesta leitura, a porta, a temperatura e o detetor de fumo comunicaram pela última vez às 19:16 de 16 de novembro, a câmara às 23:56 e a **lâmpada a 4 de novembro**.
 
 ## Segurança
