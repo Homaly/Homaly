@@ -34,13 +34,15 @@ import sys
 import threading
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Iterable, Literal
 
 from backend.contrato import Anomalia, TextoEm
 from backend.dispositivos.mcp import ErroDispositivos
 from backend.formatos import Contexto, Desvio, Leitura, Resolucao
+from backend.ia.avaliar import explicacao_do_desvio
 from backend.regras._comum import com_fuso
-from backend.relogio import Relogio
+from backend.relogio import Relogio, partilhado
 
 registo = logging.getLogger(__name__)
 
@@ -70,9 +72,22 @@ def carregar_regras() -> list[Regra]:
 
 
 def silenciado(desvio: Desvio, contexto: Contexto, agora: datetime) -> bool:
+    """Um silêncio dessa US. Um temporário (com 'ate') nunca cala segurança: só uma regra
+    recorrente explícita (sem 'ate') o faz, como no DECISIONS.md (ex.: recusar desligar a
+    tomada silencia a US14 até ao fim do dia, mas com a casa vazia a US14 é segurança e avisa)."""
     return any(
-        s.us == desvio.us and (s.ate is None or com_fuso(s.ate) > com_fuso(agora))
+        s.us == desvio.us
+        and (s.ate is None or (desvio.classe != "seguranca" and com_fuso(s.ate) > com_fuso(agora)))
         for s in contexto.silencios
+    )
+
+
+def _passou_a_seguranca(ocorrencia: Ocorrencia, desvio: Desvio) -> bool:
+    """Ex.: a tomada já gastava (eficiência, silenciada ou ignorada pela IA) e a casa ficou vazia."""
+    return (
+        ocorrencia.estado in ("silenciada", "ignorada")
+        and desvio.classe == "seguranca"
+        and ocorrencia.desvio.classe != "seguranca"
     )
 
 
@@ -81,7 +96,7 @@ class Ciclo:
         self,
         regras: list[Regra],
         avaliar: Callable[[Desvio, Contexto], Anomalia | None],
-        publicar: Callable[[Anomalia], None],
+        publicar: Callable[..., None],  # publicar(anomalia, imediato=False), como avisos.publicar
         obter_contexto: Callable[[], Contexto],
         registar_historico: Callable[[Desvio, str, datetime], None],
         obter_anomalia: Callable[[str], Anomalia | None] | None = None,
@@ -110,16 +125,12 @@ class Ciclo:
         self._acabar_ocorrencias(desvios, resolucoes, agora)
         for us, desvio in desvios.items():
             ocorrencia = self.ocorrencias.get(us)
+            if ocorrencia is not None and _passou_a_seguranca(ocorrencia, desvio):
+                ocorrencia = None  # calada como outra classe; como segurança é uma ocorrência nova
             if ocorrencia is None:
                 self._nova_ocorrencia(desvio, contexto, agora)
             elif ocorrencia.estado == "ativa":
                 self._continuar(ocorrencia, desvio)
-
-    def respondida(self, anomalia_id: str) -> None:
-        """O responsável resolveu a anomalia; a ocorrência fica fechada até o desvio desaparecer."""
-        for ocorrencia in self.ocorrencias.values():
-            if ocorrencia.anomalia is not None and ocorrencia.anomalia.id == anomalia_id:
-                ocorrencia.estado = "respondida"
 
     def _nova_ocorrencia(self, desvio: Desvio, contexto: Contexto, agora: datetime) -> None:
         if silenciado(desvio, contexto, agora):
@@ -133,7 +144,7 @@ class Ciclo:
             return
         anomalia.detetada_em = agora
         self.ocorrencias[desvio.us] = Ocorrencia(desvio, "ativa", anomalia)
-        self.publicar(anomalia)
+        self.publicar(anomalia, imediato=desvio.imediato)
 
     def _atualizar(self, ocorrencia: Ocorrencia) -> bool:
         """Traz a anomalia da base de dados; False se o responsável já a resolveu."""
@@ -157,7 +168,7 @@ class Ciclo:
             return
         assert ocorrencia.anomalia is not None
         ocorrencia.anomalia.classe = desvio.classe
-        ocorrencia.anomalia.explicacao = desvio.resumo
+        ocorrencia.anomalia.explicacao = explicacao_do_desvio(desvio)  # sem IA, mas com o habitual
         self.publicar(ocorrencia.anomalia)
 
     def _acabar_ocorrencias(
@@ -237,7 +248,7 @@ def arrancar() -> threading.Event:
     """Põe o ciclo real a correr numa thread da app; devolve o Event que o pára."""
     from backend import dispositivos
 
-    relogio = Relogio.do_ambiente()
+    relogio = partilhado()  # o mesmo que a API usa (dependencias.obter_agora)
     intervalo = dispositivos.intervalo_s()
     ciclo, ler = real(relogio)
     parar = threading.Event()
@@ -250,8 +261,13 @@ def arrancar() -> threading.Event:
 
 
 def main(argv: list[str]) -> None:
-    from backend import avisos, dispositivos, falsos
+    import tempfile
 
+    from backend import avisos, db, dispositivos, falsos
+
+    # O estado das regras (porta, US11, US10) vai para um ficheiro temporário, não para o
+    # homaly.db da app: correr um CSV não deixa rasto nas anomalias de desenvolvimento.
+    db.usar(str(Path(tempfile.mkdtemp(prefix="homaly-ciclo-")) / "ciclo.db"))
     avisos.configurar(falsos.avisos())  # por agora, com as peças falsas: só escreve no terminal
     if len(argv) != 1:
         sys.exit("uso: python -m backend.ciclo <ficheiro.csv> | --ao-vivo")

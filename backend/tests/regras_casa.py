@@ -18,6 +18,7 @@ class Registo:
         regra.reiniciar()
         self.avaliados: list[tuple[datetime, Desvio]] = []
         self.publicadas: list[tuple[datetime, str, str]] = []  # (quando, estado, classe)
+        self.resolucoes: list[str] = []  # o texto da resolução de cada anomalia resolvida
         self._agora: datetime | None = None
         self.ciclo = Ciclo(
             regras=[regra.verificar],
@@ -32,8 +33,10 @@ class Registo:
         return Anomalia(id=str(len(self.avaliados)), classe=desvio.classe, titulo="t",
                         explicacao=desvio.resumo, detetada_em=self._agora)
 
-    def _publicar(self, anomalia: Anomalia) -> None:
+    def _publicar(self, anomalia: Anomalia, imediato: bool = False) -> None:
         self.publicadas.append((self._agora, anomalia.estado, anomalia.classe))
+        if anomalia.resolucao is not None:
+            self.resolucoes.append(anomalia.resolucao.texto)
 
     def correr(self, ficheiro: str) -> "Registo":
         def lotes():

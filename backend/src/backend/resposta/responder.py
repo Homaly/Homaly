@@ -50,7 +50,7 @@ def responder(
         update={
             "estado": "resolvida",
             "resposta": TextoEm(texto=texto, em=agora),
-            "resolucao": TextoEm(texto="Resolvida por quem responde: " + texto, em=agora),
+            "resolucao": TextoEm(texto=f"Resolvida com a resposta «{texto}»", em=agora),
         }
     )
     dados = _perguntar(modelo, anomalia, texto, agora)

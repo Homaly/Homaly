@@ -9,7 +9,8 @@ from datetime import timedelta
 from fastapi import APIRouter
 
 from . import anomalias, eventos, tempo_real
-from .contrato import AcaoProposta, Anomalia, Evento, TextoEm, agora
+from .contrato import AcaoProposta, Anomalia, Evento, TextoEm
+from .dependencias import obter_agora as agora
 from .ia.avaliar import registar_us
 
 router = APIRouter(prefix="/dev", tags=["desenvolvimento"])

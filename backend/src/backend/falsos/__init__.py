@@ -81,8 +81,9 @@ def enviar_ws(anomalia: Anomalia) -> None:
 
 # contacto_externo (Candeias).
 class ContactoExterno:
-    def agendar(self, anomalia: Anomalia) -> None:
-        _log(f"contacto_externo.agendar {anomalia.id[:8]} ({anomalia.classe})")
+    def agendar(self, anomalia: Anomalia, imediato: bool = False) -> None:
+        extra = ", imediato" if imediato else ""
+        _log(f"contacto_externo.agendar {anomalia.id[:8]} ({anomalia.classe}{extra})")
 
     def cancelar(self, anomalia_id: str) -> None:
         _log(f"contacto_externo.cancelar {anomalia_id[:8]}")

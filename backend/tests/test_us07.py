@@ -36,3 +36,15 @@ def test_resumo_e_habitual():
 def test_sem_rotina_a_terca_as_22_avisa():
     r = Registo(us07, Contexto([], [], [], False)).correr("us07.csv")
     assert datetime(2026, 12, 1, 22, 0) in [quando for quando, _ in r.avaliados]
+
+
+def test_rotina_com_hora_e_relogio_com_fuso():
+    """No ciclo real, `agora` traz fuso (Relogio, contrato.agora); a rotina tem hora sem fuso."""
+    from datetime import timezone
+
+    from backend.regras import explicado_por_rotina
+
+    contexto = Contexto(ferias=[], rotinas=[EMPREGADA], silencios=[], casa_vazia=False)
+    terca_22h = datetime(2026, 11, 24, 22, 30, tzinfo=timezone.utc)
+    assert explicado_por_rotina(contexto, terca_22h)
+    assert not explicado_por_rotina(contexto, terca_22h.replace(hour=3))

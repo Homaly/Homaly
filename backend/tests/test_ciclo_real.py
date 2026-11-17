@@ -44,7 +44,7 @@ def test_nao_reescreve_uma_anomalia_que_o_responsavel_resolveu():
     publicadas: list[Anomalia] = []
     desvios = [Desvio(us="US08", classe="seguranca", resumo="porta aberta", habitual=None)]
 
-    def publicar(a: Anomalia) -> None:
+    def publicar(a: Anomalia, imediato: bool = False) -> None:
         publicadas.append(a)
         guardada[a.id] = a.model_copy(deep=True)
 
@@ -80,7 +80,7 @@ def test_uma_volta_que_falha_nao_para_o_ciclo():
     c = Ciclo(
         regras=[lambda l, ctx, agora: vistos.append(agora) or []],
         avaliar=lambda d, ctx: None,
-        publicar=lambda a: None,
+        publicar=lambda a, **k: None,
         obter_contexto=lambda: Contexto([], [], [], False),
         registar_historico=lambda d, m, a: None,
     )
