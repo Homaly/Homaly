@@ -42,6 +42,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `contexto/` | `repositorio.py`: o que a pessoa disse à casa (férias, rotinas, silêncios, conversa), guardado em SQLite. |
 | `conversa/` | `GET /conversa` e `POST /conversa`: a pessoa fala com a casa (US01). |
 | `resposta/` | `POST /anomalias/{id}/resposta` e `POST /anomalias/{id}/silencio`: a pessoa responde a uma anomalia e aceita ou recusa deixar de ser avisada (US02). |
+| `acoes.py` | `POST /anomalias/{id}/acao` (US03): aceitar executa a ação e resolve a anomalia; recusar resolve-a sem agir e, na US11 e na US14, não volta a perguntar até ao fim do dia. O comando é fixo por user story (`ACOES`: US11 apaga a lâmpada, US14 desliga a tomada), nunca vem do texto da IA. Usa `dispositivos.executar`; sem ele, um falso que só regista (só com `HOMALY_DEV=1`). |
 | `dependencias.py` | O que os routers recebem por `Depends` (o modelo, a hora); os testes substituem-no. |
 | `dev.py` | `/dev`: pôr anomalias e eventos à mão, enquanto o ciclo das regras não existe. |
 
@@ -97,7 +98,7 @@ curl -X POST localhost:8000/dev/anomalias -H 'Content-Type: application/json' -d
 ```
 
 - `POST /dev/exemplo` carrega os mesmos dados dos mocks da PWA (pode correr-se várias vezes).
-- `POST /dev/anomalias` grava uma `Anomalia` e envia-a pelo WebSocket; com um `id` que já existe, atualiza-a.
+- `POST /dev/anomalias` grava uma `Anomalia` e envia-a pelo WebSocket; com um `id` que já existe, atualiza-a. Com `?us=US11`, regista a user story (a US02 e a US03 precisam dela).
 - `POST /dev/eventos` grava um `Evento` e envia-o pelo WebSocket.
 
 ## Testes

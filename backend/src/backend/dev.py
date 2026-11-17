@@ -10,14 +10,20 @@ from fastapi import APIRouter
 
 from . import anomalias, eventos, tempo_real
 from .contrato import AcaoProposta, Anomalia, Evento, agora
+from .ia.avaliar import registar_us
 
 router = APIRouter(prefix="/dev", tags=["desenvolvimento"])
 
 
 @router.post("/anomalias", response_model=Anomalia, response_model_exclude_none=True)
-def criar_anomalia(anomalia: Anomalia) -> Anomalia:
-    """Grava a anomalia (ou atualiza a que tem o mesmo id) e envia-a pelo WebSocket."""
+def criar_anomalia(anomalia: Anomalia, us: str | None = None) -> Anomalia:
+    """Grava a anomalia (ou atualiza a que tem o mesmo id) e envia-a pelo WebSocket.
+
+    `?us=US11` diz que regra a gerou: a US02 precisa disso para silenciar e a US03 para agir.
+    """
     anomalias.guardar(anomalia)
+    if us:
+        registar_us(anomalia.id, us)
     tempo_real.enviar_anomalia(anomalia)
     return anomalia
 
@@ -74,8 +80,9 @@ def carregar_exemplo() -> dict:
         Evento(id="exemplo-e6", em=ha(60 * 10), dispositivo="Sala", descricao="15,4 °C",
                anomalia_id="exemplo-frio"),
     ]
+    us = {"exemplo-porta": "US08", "exemplo-luz": "US11", "exemplo-frio": "US10"}
     for anomalia in exemplo_anomalias:
-        criar_anomalia(anomalia)
+        criar_anomalia(anomalia, us[anomalia.id])
     for evento in exemplo_eventos:
         eventos.registar(evento)
     return {"anomalias": len(exemplo_anomalias), "eventos": len(exemplo_eventos)}
