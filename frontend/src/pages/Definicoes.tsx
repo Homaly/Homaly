@@ -34,11 +34,11 @@ function Formulario({ inicial }: { inicial: Defs }) {
         e.preventDefault();
         submeter(nome.trim() ? { nome: nome.trim(), telemovel: telemovel.trim() } : null);
       }}
-      className="space-y-6"
+      className="space-y-8"
     >
       <section className="space-y-3">
         <div>
-          <h2 className="font-semibold">Nome da casa</h2>
+          <h2 className="text-xl font-semibold">Nome da casa</h2>
           <p className="text-sm text-muted">
             É assim que o contacto externo reconhece a casa na SMS. Opcional.
           </p>
@@ -54,17 +54,17 @@ function Formulario({ inicial }: { inicial: Defs }) {
 
       <section className="space-y-3">
         <div>
-          <h2 className="font-semibold">Contacto externo</h2>
+          <h2 className="text-xl font-semibold">Contacto externo</h2>
           <p className="text-sm text-muted">
             Recebe por SMS os alertas de segurança e de bem-estar quando não responde a tempo. Opcional.
           </p>
         </div>
         <label className="block space-y-1">
-          <span className="text-sm">Nome</span>
+          <span className="text-sm font-medium">Nome</span>
           <Campo value={nome} onChange={e => setNome(e.target.value)} placeholder="Vizinha Ana" maxLength={60} />
         </label>
         <label className="block space-y-1">
-          <span className="text-sm">Telemóvel</span>
+          <span className="text-sm font-medium">Telemóvel</span>
           <Campo
             type="tel"
             inputMode="tel"
@@ -92,7 +92,7 @@ function Formulario({ inicial }: { inicial: Defs }) {
 
       <section className="space-y-3">
         <div>
-          <h2 className="font-semibold">Tempo de espera</h2>
+          <h2 className="text-xl font-semibold">Tempo de espera</h2>
           <p className="text-sm text-muted">
             Minutos antes de avisar o contacto externo. Zero avisa ao mesmo tempo.
           </p>

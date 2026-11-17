@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
-import Icone from '../components/Icone';
+import Icone, { type NomeIcone } from '../components/Icone';
 
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -54,7 +54,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-const TOAST_STYLES: Record<ToastType, { border: string; icon: string; iconColor: string }> = {
+const TOAST_STYLES: Record<ToastType, { border: string; icon: NomeIcone; iconColor: string }> = {
   success: { border: 'border-accent-green/40', icon: 'check_circle', iconColor: 'text-accent-green' },
   info: { border: 'border-primary/40', icon: 'info', iconColor: 'text-primary-ink' },
   warning: { border: 'border-accent-orange/40', icon: 'warning', iconColor: 'text-accent-orange' },
@@ -65,16 +65,16 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
   const { border, icon, iconColor } = TOAST_STYLES[toast.type];
   return (
     <div
-      className={`animate-toast-in pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border ${border} bg-surface-container shadow-lg w-full max-w-sm`}
+      className={`animate-toast-in pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border ${border} bg-surface-container shadow-lg w-full max-w-sm`}
     >
-      <Icone nome={icon} className={`text-xl shrink-0 ${iconColor}`} />
+      <Icone nome={icon} className={`size-5 ${iconColor}`} />
       <span className="text-sm font-medium flex-1">{toast.message}</span>
       <button
         onClick={() => onDismiss(toast.id)}
         className="-my-3.5 -mr-3 flex size-12 shrink-0 items-center justify-center text-muted hover:text-on-surface"
         aria-label="Fechar"
       >
-        <Icone nome="close" className="text-xl" />
+        <Icone nome="close" className="size-5" />
       </button>
     </div>
   );

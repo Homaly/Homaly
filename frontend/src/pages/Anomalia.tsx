@@ -70,18 +70,17 @@ export default function Anomalia() {
           </header>
 
           {a.imagemUrl && (
-            <img src={a.imagemUrl} alt="Imagem da câmara" className="w-full rounded-xl border border-outline-variant" />
+            <img src={a.imagemUrl} alt="Imagem da câmara" className="w-full rounded-2xl" />
           )}
 
           <p className="leading-relaxed">{a.explicacao}</p>
 
           {a.estado === 'resolvida' ? (
             <div className="space-y-3">
-              <div role="status" className="flex gap-3 rounded-xl bg-accent-green/10 p-4">
+              <div role="status" className="flex gap-3 rounded-2xl bg-accent-green/10 p-4">
                 <Icone
                   nome="check_circle"
-                  preenchido
-                  className={cn('text-3xl text-accent-green', enviado && 'animate-check-pop')}
+                  className={cn('size-7 text-accent-green', enviado && 'animate-check-pop')}
                 />
                 <div className="min-w-0 space-y-1">
                   <p className="font-semibold">{enviado ? 'Obrigado, fica registado' : 'Resolvida'}</p>
@@ -128,7 +127,7 @@ export default function Anomalia() {
           ) : (
             <>
               {a.acaoProposta && (
-                <section className="space-y-3 rounded-xl border border-primary/30 p-4">
+                <section className="space-y-3 rounded-2xl bg-surface-container p-4">
                   <p className="font-semibold">A casa propõe: {a.acaoProposta.descricao}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <Botao onClick={() => enviarDecisao(true)} disabled={ocupado}>
@@ -218,7 +217,7 @@ function Silencio({
 }) {
   if (proposta.estado === 'pendente') {
     return (
-      <section className="space-y-3 rounded-xl border border-primary/30 p-4">
+      <section className="space-y-3 rounded-2xl bg-surface-container p-4">
         <p className="font-semibold">{proposta.texto}</p>
         <div className="grid grid-cols-2 gap-2">
           <Botao onClick={() => onDecidir(true)} disabled={ocupado}>
