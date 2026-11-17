@@ -20,13 +20,11 @@ Disp->MCP: get_home_devices (ciclo de leitura)
 MCP-->Disp: sensorState: alarm
 Disp->Disp: antes estava normal: a porta abriu
 Disp->DB: guardar Evento "a porta abriu" (hora da leitura)
-Disp->MCP: get_home_security_status
-MCP-->Disp: status (AWAY: alarme armado em modo ausente)
-Disp->Motor: a porta abriu; estado do alarme
+Disp->Motor: a porta abriu
 Motor->DB: férias ditas à casa, rotinas e histórico de aberturas
 DB-->Motor: contexto
 
-alt a casa devia estar vazia (férias ditas à casa ou alarme em AWAY)
+alt a casa devia estar vazia (férias ditas à casa)
 Motor->IA: segurança: a porta abriu com a casa vazia
 note right of IA: Aqui a IA não decide se avisa:\no alerta é sempre imediato
 IA->LLM: escrever a explicação

@@ -103,9 +103,9 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 **Critérios de aceitação**
 - **Dado** que no histórico a porta nunca abre entre a meia-noite e as 6h, **quando** abre às 3h10, **então** recebo uma notificação de imediato.
 - **Dado** que avisei antes que ia chegar tarde, **então** a casa não avisa.
-- **Dado** que a casa devia estar vazia (disse à casa que vamos de férias, ou o alarme está armado em modo ausente), **quando** a porta abre a qualquer hora, **então** recebo uma notificação de imediato e o contacto externo é avisado ao mesmo tempo, sem esperar o tempo de espera da casa.
+- **Dado** que a casa devia estar vazia (disse à casa que vamos de férias), **quando** a porta abre a qualquer hora, **então** recebo uma notificação de imediato e o contacto externo é avisado ao mesmo tempo, sem esperar o tempo de espera da casa.
 
-**Dispositivos:** sensor de porta. O estado do alarme lê-se pelo servidor MCP (`get_home_security_status`).
+**Dispositivos:** sensor de porta. A casa vazia vem só das férias ditas à casa: o alarme do kit é só de fumo, não há alarme de intrusão para armar.
 
 ### US08 — Porta esquecida aberta (Segurança)
 
@@ -185,7 +185,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 - **Dado** que o aparelho na tomada costuma estar ligado no máximo uma hora seguida, **quando** está a gastar há três horas, **então** recebo "o aquecedor está ligado há três horas, desligo?" com o consumo atual e a ação de desligar a tomada.
 - **Dado** que aceito desligar, **então** a casa desliga a tomada e confirma (US03).
 - **Dado** que respondo que ainda está a ser usado, **então** a casa não volta a perguntar nesse dia.
-- **Dado** que a casa devia estar vazia (férias ditas à casa, ou alarme armado em modo ausente), **quando** a tomada está a gastar, **então** o aviso é de segurança, é imediato e segue as regras do contacto externo (US05).
+- **Dado** que a casa devia estar vazia (férias ditas à casa), **quando** a tomada está a gastar, **então** o aviso é de segurança, é imediato e segue as regras do contacto externo (US05).
 - **Dado** que o aparelho deixa de gastar, **então** a anomalia resolve-se sozinha.
 
 **Dispositivos:** tomada inteligente, que mede a potência e se liga e desliga pelo servidor MCP. "A gastar" quer dizer potência acima de um limite baixo (por exemplo, 10 W), a afinar. A casa sabe que aparelho está na tomada porque o responsável lho diz na conversa ("na tomada está o aquecedor", US01); se não souber, diz "o aparelho na tomada". O tempo habitual vem do histórico; na demo, do dataset simulado.

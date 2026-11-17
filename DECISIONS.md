@@ -62,7 +62,7 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 - **A lâmpada não pisca para avisar.**
 - **Conversa por texto na aplicação:** o responsável diz coisas à casa ("amanhã vamos de férias", "a empregada vem às terças") e a casa usa isso para não dar alarmes falsos.
 - **De onde vem o "normal":** dos sensores e das conversas com a casa sobre o dia a dia.
-- **Casa vazia sobe o alerta:** se a casa devia estar vazia (férias ditas à casa, ou alarme armado em modo ausente), a porta abrir a qualquer hora é um alerta de segurança imediato, e o contacto externo é avisado sem tempo de espera (US01, US07).
+- **Casa vazia sobe o alerta:** se a casa devia estar vazia (férias ditas à casa), a porta abrir a qualquer hora é um alerta de segurança imediato, e o contacto externo é avisado sem tempo de espera (US01, US07, US14). O alarme do kit é só de fumo; não há alarme de intrusão que diga que a casa está vazia.
 - **Um aviso por porta aberta:** a porta esquecida aberta (US08) e a porta aberta com a casa a arrefecer (US12) partilham um só aviso por cada abertura da porta. Se a US08 avisou primeiro, a US12 não envia outra notificação; acrescenta a descida de temperatura ao mesmo aviso. Se a US12 avisou primeiro e a porta continua aberta ao fim de cinco minutos, o mesmo aviso passa a ser de segurança, e pode então chegar ao contacto externo.
 - **Silenciar avisos depois de uma resposta (US02):** "está tudo bem" sem motivo fecha só aquela ocorrência; um motivo temporário silencia esse tipo de anomalia até ao fim do dia; um motivo recorrente passa a fazer parte da rotina até ser removido. A casa diz sempre o que vai ignorar e até quando, e espera confirmação. As anomalias de segurança nunca ficam silenciadas para além da ocorrência atual sem uma regra recorrente explícita.
 
@@ -113,7 +113,7 @@ Uma unidade de cada:
 | Detetor de fumo | Sensor (posto de parte) | Estado `normal` ou `alarm` |
 | Lâmpada | Dispositivo que a casa consegue comandar | Ligada ou desligada, brilho, cor e tom do branco; lê-se e altera-se |
 | Tomada (Plug) | Dispositivo que a casa consegue comandar | Ligada ou desligada, potência, tensão, corrente e consumo de hoje e de ontem |
-| Gateway (Security hub) | Liga os dispositivos à rede | Estado do alarme, Wi-Fi e rede móvel |
+| Gateway (Security hub) | Liga os dispositivos à rede | Estado do alarme (só de fumo), Wi-Fi e rede móvel |
 
 O que cada dispositivo devolve, com os ids, está em `docs/mcp-dispositivos.md`. O que se pensava ser só um adaptador aparece no servidor como uma tomada inteligente com medição de consumo.
 

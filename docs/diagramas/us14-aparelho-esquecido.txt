@@ -20,13 +20,10 @@ MCP-->Disp: tomada (power e potência instantânea)
 Disp->Motor: estado e potência da tomada
 end
 note over Motor: "A gastar" quer dizer potência acima de um limite baixo\n(por exemplo, 10 W, a afinar)
-Disp->MCP: get_home_security_status
-MCP-->Disp: estado do alarme
-Disp->Motor: estado do alarme
 Motor->DB: histórico da tomada, férias ditas à casa\ne que aparelho está na tomada (US01)
 DB-->Motor: contexto
 
-alt a casa devia estar vazia (férias ditas à casa ou alarme em AWAY) e a tomada está a gastar
+alt a casa devia estar vazia (férias ditas à casa) e a tomada está a gastar
 Motor->IA: segurança: aparelho a gastar com a casa vazia
 note right of IA: Aqui a IA não decide se avisa:\no alerta é sempre imediato
 IA->LLM: escrever a explicação
