@@ -29,6 +29,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `CICLO` | Com `1`, a app corre o ciclo das regras numa thread, com as peças reais (`ciclo.arrancar`) | Desligado |
 | `RELOGIO_INICIO`, `RELOGIO_FATOR` | O relógio do ciclo e da API (um só por processo): começa a esta hora simulada (ISO 8601) e anda este número de vezes mais depressa, para a demo | A hora real |
 | `POLLING_SEGUNDOS` | De quanto em quanto tempo ler a casa (`dispositivos.intervalo_s()`) | `10` |
+| `SENSOR_SILENCIO_MINUTOS` | Um dispositivo que não comunica há mais do que isto não dá leituras (o MCP repetiria o último valor); `0` desliga | `60` |
 | `PORTA_MINUTOS`, `PORTA_QUEDA_GRAUS` | Os limites da regra da porta (US08, US12) | `5` minutos, `2` °C |
 | `FRIO_LIMITE_GRAUS`, `FRIO_MINUTOS` | Os limites da casa fria (US10) | `16` °C, `120` minutos |
 | `IA_FORNECEDOR` | Que modelo de IA a casa usa. Só existe `falso`, que não usa nenhum: a casa fica com o resumo do desvio | `falso` |
@@ -57,7 +58,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `avisos.py` | `avisos.publicar`: `anomalias.guardar`, `tempo_real.enviar_anomalia` e o contacto externo (`agendar`, com `imediato` quando a casa está vazia, e `resolvida`), ainda falso. Uma anomalia que chega já resolvida sem ter sido vista não agenda nada. |
 | `habitual.py`, `relogio.py`, `afinacao.py` | O habitual da casa, do histórico simulado em `dados/historico.csv` (US07, US09, US14); o relógio, talvez acelerado; e a passagem do histórico pelas regras para contar falsos alarmes (`scripts/afinar.py`). |
 | `dev.py` | `/dev`: pôr anomalias e eventos à mão, para testar a PWA sem esperar pelo ciclo das regras (`POST /dev/exemplo` carrega os dados dos mocks). |
-| `dispositivos/` | A casa pelo MCP: `ler()` (um só `get_home_devices`, devolve `Leitura`s e grava um evento quando a porta, a lâmpada ou a tomada mudam), `executar(dispositivo, tipo, valor)` (lâmpada e tomada: `power` on/off; lâmpada: `brightness` 1–100; confirma lendo de novo), `alarme()` e `intervalo_s()`. Falhas levantam `ErroDispositivos`. |
+| `dispositivos/` | A casa pelo MCP: `ler()` (um só `get_home_devices`, devolve `Leitura`s e grava um evento quando a porta, a lâmpada ou a tomada mudam), `executar(dispositivo, tipo, valor)` (lâmpada e tomada: `power` on/off; lâmpada: `brightness` 1–100; confirma lendo de novo), `alarme()`, `intervalo_s()` e `em_silencio()` (os dispositivos calados, cujas leituras ficam de fora). Falhas levantam `ErroDispositivos`. |
 | `dispositivos/simulacao.py` | `/dev/leituras`: leituras injetadas para a demo, por cima das reais. |
 | `regras/porta.py` | US08 e US12 num só aviso por abertura da porta; devolve `Resolucao` quando a porta fecha. |
 | `regras/temperatura.py` | US10: abaixo de 16 °C durante duas horas; devolve `Resolucao` quando volta a subir. |

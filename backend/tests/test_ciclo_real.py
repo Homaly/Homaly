@@ -14,7 +14,7 @@ from backend.regras import us07, us09, us14
 from backend.relogio import Relogio
 
 from .conftest import LX
-from .test_dispositivos import ClienteFalso, com_valor, json_real
+from .test_dispositivos import ClienteFalso, com_valor, comunicou_em, json_real
 
 TERCA_0310 = datetime(2026, 11, 17, 3, 10, tzinfo=LX)
 
@@ -22,7 +22,8 @@ TERCA_0310 = datetime(2026, 11, 17, 3, 10, tzinfo=LX)
 def test_porta_de_madrugada_chega_a_base_de_dados():
     for regra in (us07, us09, us14):
         regra.reiniciar()
-    casa = json_real("mcp_get_home_devices.txt")
+    # Os dispositivos comunicaram agora (com a hora da resposta guardada, contariam como calados).
+    casa = comunicou_em(json_real("mcp_get_home_devices.txt"), datetime.now(LX))
     cliente = ClienteFalso(com_valor(casa, "contactSensor", "sensorState", "normal"))
     dispositivos.configurar(cliente)
     try:
