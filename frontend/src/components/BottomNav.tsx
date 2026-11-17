@@ -1,5 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../lib/cn';
+import Icone from './Icone';
 
 const SEPARADORES = [
   { to: '/', icon: 'home', label: 'Início' },
@@ -8,10 +9,15 @@ const SEPARADORES = [
   { to: '/definicoes', icon: 'settings', label: 'Definições' },
 ];
 
+/** Barra de baixo: 64 px de altura mais o contorno. A caixa da Conversa assenta em bottom-16. */
 export default function BottomNav() {
+  const { pathname } = useLocation();
+  // O detalhe da anomalia não é um separador: tem a seta de voltar e fica sem barra.
+  if (pathname.startsWith('/anomalias/')) return null;
+
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 dark:border-primary/10 bg-white/95 dark:bg-card-dark/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
-      <ul className="mx-auto max-w-md grid grid-cols-4">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant bg-surface-container/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+      <ul className="mx-auto grid max-w-md grid-cols-4">
         {SEPARADORES.map(s => (
           <li key={s.to}>
             <NavLink
@@ -19,19 +25,14 @@ export default function BottomNav() {
               end={s.to === '/'}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors',
-                  isActive ? 'text-primary' : 'text-slate-500 dark:text-slate-400'
+                  'flex h-16 flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors',
+                  isActive ? 'text-primary-ink' : 'text-muted'
                 )
               }
             >
               {({ isActive }) => (
                 <>
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
-                  >
-                    {s.icon}
-                  </span>
+                  <Icone nome={s.icon} preenchido={isActive} />
                   {s.label}
                 </>
               )}

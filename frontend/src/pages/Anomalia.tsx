@@ -5,24 +5,36 @@ import { pt } from 'date-fns/locale';
 import Layout from '../components/Layout';
 import { ClasseBadge } from '../components/AnomaliaCard';
 import { EstadoCarregar, EstadoErro } from '../components/Estados';
-import { useAnomalia, useDecidirAcao, useResponderAnomalia } from '../api/hooks';
+import Botao from '../components/Botao';
+import Campo from '../components/Campo';
+import Icone from '../components/Icone';
+import { useAnomalia, useDecidirAcao, useDecidirSilencio, useResponderAnomalia } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
+import type { PropostaSilencio } from '../types/contract';
+import { cn } from '../lib/cn';
+
+const RESPOSTA_SEM_MOTIVO = 'Está tudo bem';
 
 export default function Anomalia() {
   const { id = '' } = useParams();
   const { data: a, isPending, isError, refetch } = useAnomalia(id);
   const responder = useResponderAnomalia(id);
   const decidir = useDecidirAcao(id);
+  const silencio = useDecidirSilencio(id);
   const { showToast } = useToast();
   const [texto, setTexto] = useState('');
+  const [aExplicar, setAExplicar] = useState(false);
+  /** Só depois de responder neste ecrã: mostra o agradecimento e o que acontece a seguir. */
+  const [enviado, setEnviado] = useState<{ semMotivo: boolean } | null>(null);
 
-  const ocupado = responder.isPending || decidir.isPending;
+  const ocupado = responder.isPending || decidir.isPending || silencio.isPending;
 
   const enviarResposta = (t: string) =>
     responder.mutate(t, {
       onSuccess: () => {
+        setEnviado({ semMotivo: t === RESPOSTA_SEM_MOTIVO });
         setTexto('');
-        showToast('Resposta registada', 'success');
+        setAExplicar(false);
       },
       onError: () => showToast('Não foi possível enviar a resposta', 'error'),
     });
@@ -30,6 +42,11 @@ export default function Anomalia() {
   const enviarDecisao = (aceitar: boolean) =>
     decidir.mutate(aceitar, {
       onSuccess: () => showToast(aceitar ? 'Feito' : 'A casa não vai agir', 'success'),
+      onError: () => showToast('A casa não conseguiu confirmar. Nada foi alterado.', 'error'),
+    });
+
+  const enviarSilencio = (aceitar: boolean) =>
+    silencio.mutate(aceitar, {
       onError: () => showToast('A casa não conseguiu confirmar. Nada foi alterado.', 'error'),
     });
 
@@ -44,91 +61,168 @@ export default function Anomalia() {
           <header className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <ClasseBadge classe={a.classe} />
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-muted">
                 {format(new Date(a.detetadaEm), "d MMM, HH:mm", { locale: pt })}
               </span>
             </div>
-            <h2 className="text-lg font-bold">{a.titulo}</h2>
+            {/* O título da anomalia é o mais importante do ecrã: maior do que o "Anomalia" da barra. */}
+            <h2 className="text-2xl font-bold leading-tight">{a.titulo}</h2>
           </header>
 
           {a.imagemUrl && (
-            <img src={a.imagemUrl} alt="Imagem da câmara" className="w-full rounded-xl border border-slate-200 dark:border-primary/10" />
+            <img src={a.imagemUrl} alt="Imagem da câmara" className="w-full rounded-xl border border-outline-variant" />
           )}
 
-          <p className="text-slate-700 dark:text-slate-200 leading-relaxed">{a.explicacao}</p>
+          <p className="leading-relaxed">{a.explicacao}</p>
 
           {a.estado === 'resolvida' ? (
-            <div className="rounded-xl bg-accent-green/10 p-4 text-sm">
-              <p className="font-semibold text-accent-green">Resolvida</p>
-              {a.resposta && (
-                <p className="mt-1">
-                  {a.resposta.texto}
-                  <span className="text-slate-500 dark:text-slate-400">
-                    {' · '}
-                    {format(new Date(a.resposta.em), 'HH:mm', { locale: pt })}
-                  </span>
-                </p>
+            <div className="space-y-3">
+              <div role="status" className="flex gap-3 rounded-xl bg-accent-green/10 p-4">
+                <Icone
+                  nome="check_circle"
+                  preenchido
+                  className={cn('text-3xl text-accent-green', enviado && 'animate-check-pop')}
+                />
+                <div className="min-w-0 space-y-1">
+                  <p className="font-semibold">{enviado ? 'Obrigado, fica registado' : 'Resolvida'}</p>
+                  {a.resposta && (
+                    <p className="text-sm">
+                      {a.resposta.texto}
+                      <span className="text-muted">
+                        {' · '}
+                        {format(new Date(a.resposta.em), 'HH:mm', { locale: pt })}
+                      </span>
+                    </p>
+                  )}
+                  {/* Com proposta de silêncio, é ela que diz o que acontece a seguir. */}
+                  {enviado && !a.propostaSilencio && (
+                    <p className="text-sm text-muted">
+                      {enviado.semMotivo
+                        ? 'Se voltar a acontecer, a casa avisa outra vez.'
+                        : 'A casa vai ter isto em conta da próxima vez.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {a.propostaSilencio && (
+                <Silencio
+                  proposta={a.propostaSilencio}
+                  ocupado={ocupado}
+                  aConfirmar={silencio.isPending ? silencio.variables : undefined}
+                  onDecidir={enviarSilencio}
+                />
               )}
             </div>
           ) : (
             <>
               {a.acaoProposta && (
-                <section className="rounded-xl border border-primary/30 p-4 space-y-3">
-                  <p className="text-sm font-semibold">A casa propõe: {a.acaoProposta.descricao}</p>
+                <section className="space-y-3 rounded-xl border border-primary/30 p-4">
+                  <p className="font-semibold">A casa propõe: {a.acaoProposta.descricao}</p>
                   <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => enviarDecisao(true)}
-                      disabled={ocupado}
-                      className="py-2.5 rounded-lg bg-primary text-background-dark font-semibold disabled:opacity-50"
-                    >
+                    <Botao onClick={() => enviarDecisao(true)} disabled={ocupado}>
                       {decidir.isPending && decidir.variables === true ? 'A confirmar…' : 'Aceitar'}
-                    </button>
-                    <button
-                      onClick={() => enviarDecisao(false)}
-                      disabled={ocupado}
-                      className="py-2.5 rounded-lg bg-slate-200 dark:bg-primary/10 font-semibold disabled:opacity-50"
-                    >
+                    </Botao>
+                    <Botao variante="secundario" onClick={() => enviarDecisao(false)} disabled={ocupado}>
                       Recusar
-                    </button>
+                    </Botao>
                   </div>
                 </section>
               )}
 
-              <section className="space-y-3">
-                <button
-                  onClick={() => enviarResposta('Está tudo bem')}
+              {!aExplicar ? (
+                // Uma ação principal por ecrã: com ação proposta, é o Aceitar; sem ela, é esta.
+                <Botao
+                  variante={a.acaoProposta ? 'contorno' : 'primario'}
+                  largo
+                  onClick={() => setAExplicar(true)}
                   disabled={ocupado}
-                  className="w-full py-2.5 rounded-lg bg-accent-green/15 text-accent-green font-semibold disabled:opacity-50"
                 >
                   Está tudo bem
-                </button>
+                </Botao>
+              ) : (
                 <form
                   onSubmit={e => {
                     e.preventDefault();
-                    if (texto.trim()) enviarResposta(texto.trim());
+                    enviarResposta(texto.trim() || RESPOSTA_SEM_MOTIVO);
                   }}
-                  className="flex gap-2"
+                  className="space-y-3"
                 >
-                  <input
-                    value={texto}
-                    onChange={e => setTexto(e.target.value)}
-                    placeholder="Explicar o que se passa…"
-                    className="flex-1 min-w-0 rounded-lg border border-slate-200 dark:border-primary/20 bg-white dark:bg-card-dark px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
-                  />
-                  <button
-                    type="submit"
-                    disabled={ocupado || !texto.trim()}
-                    className="px-4 rounded-lg bg-primary text-background-dark font-semibold disabled:opacity-50"
-                    aria-label="Enviar"
-                  >
-                    <span className="material-symbols-outlined">send</span>
-                  </button>
+                  <label className="block space-y-2">
+                    <span className="block">
+                      <span className="font-semibold">Está tudo bem. Quer dizer porquê?</span>{' '}
+                      <span className="text-sm text-muted">Opcional</span>
+                    </span>
+                    <Campo
+                      autoFocus
+                      enterKeyHint="send"
+                      autoCapitalize="sentences"
+                      value={texto}
+                      onChange={e => setTexto(e.target.value)}
+                      placeholder="Fiquei em casa doente"
+                    />
+                  </label>
+                  <div className="space-y-1">
+                    <Botao type="submit" largo disabled={ocupado}>
+                      {responder.isPending
+                        ? 'A enviar…'
+                        : texto.trim()
+                          ? 'Confirmar'
+                          : 'Confirmar sem motivo'}
+                    </Botao>
+                    <Botao
+                      variante="texto"
+                      largo
+                      onClick={() => {
+                        setAExplicar(false);
+                        setTexto('');
+                      }}
+                      disabled={ocupado}
+                    >
+                      Cancelar
+                    </Botao>
+                  </div>
                 </form>
-              </section>
+              )}
             </>
           )}
         </article>
       )}
     </Layout>
+  );
+}
+
+/** US02: a casa diz o que vai deixar de avisar e até quando; só se aplica depois do Sim. */
+function Silencio({
+  proposta,
+  ocupado,
+  aConfirmar,
+  onDecidir,
+}: {
+  proposta: PropostaSilencio;
+  ocupado: boolean;
+  /** A escolha que está à espera do backend, se houver. */
+  aConfirmar?: boolean;
+  onDecidir: (aceitar: boolean) => void;
+}) {
+  if (proposta.estado === 'pendente') {
+    return (
+      <section className="space-y-3 rounded-xl border border-primary/30 p-4">
+        <p className="font-semibold">{proposta.texto}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Botao onClick={() => onDecidir(true)} disabled={ocupado}>
+            {aConfirmar === true ? 'A confirmar…' : 'Sim'}
+          </Botao>
+          <Botao variante="secundario" onClick={() => onDecidir(false)} disabled={ocupado}>
+            {aConfirmar === false ? 'A confirmar…' : 'Não'}
+          </Botao>
+        </div>
+      </section>
+    );
+  }
+  return (
+    <p role="status" className="text-sm text-on-surface-variant">
+      {proposta.estado === 'aceite' ? `Combinado. ${proposta.texto}` : 'Combinado. A casa continua a avisar.'}
+    </p>
   );
 }

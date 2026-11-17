@@ -15,7 +15,7 @@ export default function Layout({ title, showBack, children }: LayoutProps) {
     <div className="mx-auto max-w-md min-h-dvh flex flex-col">
       <Topbar title={title} showBack={showBack} />
       {!ligado && (
-        <div className="px-4 py-2 text-xs font-medium text-center bg-accent-orange/15 text-accent-orange">
+        <div role="status" className="px-4 py-2 text-xs font-medium text-center bg-accent-orange/15 text-accent-orange">
           Sem ligação em tempo real. A tentar novamente…
         </div>
       )}

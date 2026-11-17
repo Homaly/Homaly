@@ -7,6 +7,8 @@ export interface Api {
   responderAnomalia(id: string, texto: string): Promise<Anomalia>;
   /** Devolve a anomalia atualizada, depois de a casa confirmar a ação. */
   decidirAcao(id: string, aceitar: boolean): Promise<Anomalia>;
+  /** US02: aceita ou recusa a proposta de silêncio. Devolve a anomalia atualizada. */
+  decidirSilencio(id: string, aceitar: boolean): Promise<Anomalia>;
   listarEventos(): Promise<Evento[]>;
   obterConversa(): Promise<MensagemConversa[]>;
   /** Devolve a resposta da casa. */

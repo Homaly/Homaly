@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { format, isToday, isYesterday } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import Layout from '../components/Layout';
+import Icone from '../components/Icone';
 import { EstadoCarregar, EstadoErro, EstadoVazio } from '../components/Estados';
 import { useEventos } from '../api/hooks';
 import type { Evento } from '../types/contract';
@@ -25,14 +26,19 @@ function agruparPorDia(eventos: Evento[]) {
 function LinhaEvento({ e }: { e: Evento }) {
   const conteudo = (
     <>
-      <span className="w-12 shrink-0 text-xs tabular-nums text-slate-500 dark:text-slate-400">
+      <span className="w-12 shrink-0 text-xs tabular-nums text-muted">
         {format(new Date(e.em), 'HH:mm')}
       </span>
       <span className="flex-1 min-w-0">
         <span className="font-medium">{e.dispositivo}</span>
-        <span className="text-slate-600 dark:text-slate-300"> · {e.descricao}</span>
+        <span className="text-on-surface-variant"> · {e.descricao}</span>
       </span>
-      {e.anomaliaId && <span className="material-symbols-outlined text-accent-orange text-lg">error</span>}
+      {e.anomaliaId && (
+        <>
+          <Icone nome="error" className="text-lg text-accent-orange" />
+          <span className="sr-only">Ver anomalia</span>
+        </>
+      )}
     </>
   );
   const classes = 'flex items-center gap-3 py-3 text-sm';
@@ -60,10 +66,10 @@ export default function Historico() {
         <div className="space-y-5">
           {agruparPorDia(data).map(([dia, eventos]) => (
             <section key={dia}>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 first-letter:uppercase">
+              <h2 className="text-sm font-semibold text-muted first-letter:uppercase">
                 {dia}
               </h2>
-              <div className="divide-y divide-slate-200 dark:divide-primary/10">
+              <div className="divide-y divide-outline-variant">
                 {eventos.map(e => (
                   <LinhaEvento key={e.id} e={e} />
                 ))}
