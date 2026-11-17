@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Layout from '../components/Layout';
+import Botao from '../components/Botao';
+import Campo from '../components/Campo';
+import Icone from '../components/Icone';
 import { EstadoCarregar, EstadoErro, EstadoVazio } from '../components/Estados';
 import { useConversa, useEnviarMensagem } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
@@ -41,37 +44,39 @@ export default function Conversa() {
                 className={cn(
                   'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm',
                   m.autor === 'pessoa'
-                    ? 'bg-primary text-background-dark rounded-br-sm'
-                    : 'bg-white dark:bg-card-dark border border-slate-200 dark:border-primary/10 rounded-bl-sm'
+                    ? 'bg-primary text-on-primary rounded-br-sm'
+                    : 'bg-surface-container border border-outline-variant rounded-bl-sm'
                 )}
               >
                 {m.texto}
               </p>
             </div>
           ))}
-          {enviar.isPending && <p className="text-xs text-slate-500 dark:text-slate-400">A casa está a pensar…</p>}
+          {enviar.isPending && <p className="text-xs text-muted">A casa está a pensar…</p>}
           <div ref={fim} />
         </div>
       )}
 
+      {/* Assenta em cima da barra de baixo (64 px), por baixo do contorno dela. */}
       <form
         onSubmit={submeter}
-        className="fixed bottom-16 inset-x-0 z-30 mx-auto max-w-md flex gap-2 px-4 py-2 bg-background-light dark:bg-background-dark mb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-16 inset-x-0 z-30 mx-auto max-w-md flex gap-2 px-4 py-2 bg-surface mb-[env(safe-area-inset-bottom)]"
       >
-        <input
+        <Campo
           value={texto}
           onChange={e => setTexto(e.target.value)}
-          placeholder="Ex.: amanhã vamos de férias uma semana"
-          className="flex-1 min-w-0 rounded-full border border-slate-200 dark:border-primary/20 bg-white dark:bg-card-dark px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
+          placeholder="Amanhã vamos de férias uma semana"
+          aria-label="Mensagem para a casa"
+          className="flex-1 min-w-0 rounded-full"
         />
-        <button
+        <Botao
           type="submit"
           disabled={!texto.trim() || enviar.isPending}
-          className="size-11 shrink-0 rounded-full bg-primary text-background-dark flex items-center justify-center disabled:opacity-50"
+          className="size-12 shrink-0 rounded-full px-0"
           aria-label="Enviar"
         >
-          <span className="material-symbols-outlined">send</span>
-        </button>
+          <Icone nome="send" />
+        </Botao>
       </form>
     </Layout>
   );

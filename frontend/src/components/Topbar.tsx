@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../hooks/useTheme';
+import { cn } from '../lib/cn';
+import Icone from './Icone';
 
 type TopbarProps = {
   title: string;
@@ -13,32 +15,37 @@ export default function Topbar({ title, showBack = false }: TopbarProps) {
   const [theme, setTheme] = useTheme();
   const isDark =
     theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const [themeKey, setThemeKey] = useState(0);
+  /** Conta as trocas de tema neste ecrã: a animação só corre depois de uma troca, não ao mudar de ecrã. */
+  const [trocas, setTrocas] = useState(0);
 
   return (
-    <header className="h-16 border-b border-slate-200 dark:border-primary/10 flex items-center justify-between px-4 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md z-40 sticky top-0 shrink-0">
-      <div className="flex items-center gap-2 min-w-0">
+    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-outline-variant bg-surface/95 px-4 backdrop-blur-md">
+      <div className="flex min-w-0 items-center gap-1">
         {showBack && (
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center justify-center size-9 rounded-lg hover:bg-slate-100 dark:hover:bg-primary/10 transition-colors"
+            className="-ml-3 flex size-12 shrink-0 items-center justify-center rounded-xl text-on-surface-variant transition-colors hover:bg-surface-tonal"
             aria-label="Voltar"
           >
-            <span className="material-symbols-outlined text-slate-600 dark:text-slate-300">arrow_back</span>
+            <Icone nome="arrow_back" />
           </button>
         )}
-        <h1 className="text-xl font-bold tracking-tight truncate">{title}</h1>
+        <h1 className="truncate text-xl font-bold tracking-tight">{title}</h1>
       </div>
       <button
         onClick={() => {
           setTheme(isDark ? 'light' : 'dark');
-          setThemeKey(k => k + 1);
+          setTrocas(n => n + 1);
         }}
-        className="flex items-center justify-center rounded-lg size-10 bg-slate-100 dark:bg-primary/10 text-slate-700 dark:text-primary hover:bg-primary/20 transition-colors overflow-hidden"
+        className="group -mr-1 flex size-12 shrink-0 items-center justify-center"
         aria-label={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
       >
-        <span key={themeKey} className="material-symbols-outlined animate-icon-flip-in">
-          {isDark ? 'light_mode' : 'dark_mode'}
+        <span className="flex size-10 items-center justify-center overflow-hidden rounded-lg bg-surface-tonal text-on-surface-variant transition-colors group-hover:bg-primary/20">
+          <Icone
+            key={trocas}
+            nome={isDark ? 'light_mode' : 'dark_mode'}
+            className={cn(trocas > 0 && 'animate-icon-flip-in')}
+          />
         </span>
       </button>
     </header>

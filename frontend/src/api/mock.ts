@@ -5,6 +5,11 @@ import type { Api } from './types';
 
 const agora = Date.now();
 const haMin = (min: number) => new Date(agora - min * 60_000).toISOString();
+const fimDoDia = () => {
+  const d = new Date();
+  d.setHours(23, 59, 0, 0);
+  return d.toISOString();
+};
 
 const IMAGEM_VEICULO =
   'data:image/svg+xml;utf8,' +
@@ -86,7 +91,21 @@ export const mockApi: Api = {
     return a ? espera(a) : Promise.reject(new Error('Anomalia não encontrada'));
   },
   responderAnomalia: (id, texto) =>
-    atualizar(id, a => ({ ...a, estado: 'resolvida', resposta: { texto, em: new Date().toISOString() } })),
+    atualizar(id, a => ({
+      ...a,
+      estado: 'resolvida',
+      resposta: { texto, em: new Date().toISOString() },
+      // US02: com motivo, a casa propõe deixar de avisar até ao fim do dia; nunca em segurança.
+      ...(texto !== 'Está tudo bem' && a.classe !== 'seguranca'
+        ? {
+            propostaSilencio: {
+              texto: 'Não volto a avisar sobre isto até ao fim do dia.',
+              ate: fimDoDia(),
+              estado: 'pendente' as const,
+            },
+          }
+        : {}),
+    })),
   decidirAcao: (id, aceitar) =>
     atualizar(id, a => ({
       ...a,
@@ -96,6 +115,12 @@ export const mockApi: Api = {
         em: new Date().toISOString(),
       },
     })),
+  decidirSilencio: (id, aceitar) =>
+    atualizar(id, a =>
+      a.propostaSilencio
+        ? { ...a, propostaSilencio: { ...a.propostaSilencio, estado: aceitar ? 'aceite' : 'recusada' } }
+        : a
+    ),
   listarEventos: () => espera(eventos),
   obterConversa: () => espera(conversa),
   enviarMensagem: texto => {

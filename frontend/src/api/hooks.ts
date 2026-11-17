@@ -49,6 +49,14 @@ export function useDecidirAcao(id: string) {
   });
 }
 
+export function useDecidirSilencio(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (aceitar: boolean) => api.decidirSilencio(id, aceitar),
+    onSuccess: a => guardarAnomaliaNaCache(qc, a),
+  });
+}
+
 export function useEnviarMensagem() {
   const qc = useQueryClient();
   return useMutation({

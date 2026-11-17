@@ -9,6 +9,7 @@ export const realApi: Api = {
   obterAnomalia: id => apiFetch<Anomalia>(`/anomalias/${id}`),
   responderAnomalia: (id, texto) => apiFetch<Anomalia>(`/anomalias/${id}/resposta`, post({ texto })),
   decidirAcao: (id, aceitar) => apiFetch<Anomalia>(`/anomalias/${id}/acao`, post({ aceitar })),
+  decidirSilencio: (id, aceitar) => apiFetch<Anomalia>(`/anomalias/${id}/silencio`, post({ aceitar })),
   listarEventos: () => apiFetch<Evento[]>('/eventos'),
   obterConversa: () => apiFetch<MensagemConversa[]>('/conversa'),
   enviarMensagem: texto => apiFetch<MensagemConversa>('/conversa', post({ texto })),

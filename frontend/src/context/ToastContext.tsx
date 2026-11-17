@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import Icone from '../components/Icone';
 
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -40,7 +41,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-20 inset-x-0 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none">
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed bottom-20 inset-x-0 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none"
+      >
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />
         ))}
@@ -51,25 +56,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 const TOAST_STYLES: Record<ToastType, { border: string; icon: string; iconColor: string }> = {
   success: { border: 'border-accent-green/40', icon: 'check_circle', iconColor: 'text-accent-green' },
-  info: { border: 'border-primary/40', icon: 'info', iconColor: 'text-primary' },
+  info: { border: 'border-primary/40', icon: 'info', iconColor: 'text-primary-ink' },
   warning: { border: 'border-accent-orange/40', icon: 'warning', iconColor: 'text-accent-orange' },
-  error: { border: 'border-red-500/40', icon: 'error', iconColor: 'text-red-500' },
+  error: { border: 'border-danger/40', icon: 'error', iconColor: 'text-danger' },
 };
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
   const { border, icon, iconColor } = TOAST_STYLES[toast.type];
   return (
     <div
-      className={`animate-toast-in pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border ${border} bg-white dark:bg-card-dark shadow-lg w-full max-w-sm`}
+      className={`animate-toast-in pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border ${border} bg-surface-container shadow-lg w-full max-w-sm`}
     >
-      <span className={`material-symbols-outlined text-xl shrink-0 ${iconColor}`}>{icon}</span>
-      <span className="text-sm font-medium text-slate-800 dark:text-slate-100 flex-1">{toast.message}</span>
+      <Icone nome={icon} className={`text-xl shrink-0 ${iconColor}`} />
+      <span className="text-sm font-medium flex-1">{toast.message}</span>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shrink-0"
+        className="-my-3.5 -mr-3 flex size-12 shrink-0 items-center justify-center text-muted hover:text-on-surface"
         aria-label="Fechar"
       >
-        <span className="material-symbols-outlined text-base">close</span>
+        <Icone nome="close" className="text-xl" />
       </button>
     </div>
   );
