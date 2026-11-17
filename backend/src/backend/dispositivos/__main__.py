@@ -19,6 +19,11 @@ def main() -> None:
     for l in sorted(leituras, key=lambda l: (l.dispositivo, l.tipo)):
         print(f"{l.dispositivo:12} {l.tipo:28} {l.valor!r}")
     print(f"\nalarme: {estado_alarme}")
+    calados = dispositivos.em_silencio()
+    if calados:
+        print(f"\ncalados há mais de {dispositivos.silencio_minutos():g} min (leituras de fora):")
+        for nome, quando in sorted(calados.items()):
+            print(f"  {nome:12} desde {quando.astimezone():%d/%m %H:%M}")
 
 
 if __name__ == "__main__":
