@@ -83,7 +83,7 @@ O que o C4 assume e os documentos ainda não fixam:
 
 ## Lacunas e inconsistências encontradas
 
-Resolvidas a 2026-11-17 nos documentos. Dos diagramas, só a US03 (lâmpada ou tomada) e a nova US14 já refletem isto; os outros ainda não foram atualizados. Resolvidas: 1 e 2 (contrato em `docs/frontend-design.md` e decisões no `DECISIONS.md`), 3 (a US07 usa `get_home_security_status`), 6 (a tomada também se comanda; nova US14), 7 (a US08 resolve-se quando a porta fecha) e 8 (há SMS de resolvido também quando a anomalia se resolve sozinha). Continuam abertas a 4 e a 5.
+Resolvidas a 2026-11-17 nos documentos. Dos diagramas, só a US03 (lâmpada ou tomada) e a nova US14 já refletem isto; os outros ainda não foram atualizados. Resolvidas: 1 e 2 (contrato em `docs/frontend-design.md` e decisões no `DECISIONS.md`), 3 (já não se aplica: o alarme do kit é só de fumo, e a casa vazia vem só das férias), 6 (a tomada também se comanda; nova US14), 7 (a US08 resolve-se quando a porta fecha) e 8 (há SMS de resolvido também quando a anomalia se resolve sozinha). Continuam abertas a 4 e a 5.
 
 1. **Página do alerta (US05):** o contrato em `docs/frontend-design.md` não tem rota nem pedido para ela, nem diz quem a serve ou como o link identifica o alerta.
 2. **Proposta de silêncio (US02):** a casa diz o que vai deixar de avisar e espera confirmação, mas a `Anomalia` não tem campo para a resposta da casa e não há pedido para confirmar.

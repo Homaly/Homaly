@@ -156,7 +156,8 @@ def test_texto_vazio_422(cliente, publicadas, texto):
     assert anomalias.obter(a.id).estado == "ativa"
 
 
-def test_obter_publicar_sem_avisos_e_o_por_omissao():
+def test_obter_publicar_sem_avisos_e_o_por_omissao(monkeypatch):
+    monkeypatch.setitem(sys.modules, "backend.avisos", None)  # como se o avisos.py não existisse
     assert obter_publicar() is _publicar
 
 

@@ -55,7 +55,7 @@ Cada valor vem dentro de `capabilities`, como `{"type": "temperatureValue", "val
 
 - `get_home_security_status` devolve `{"status": "DISARMED", "isAlarmed": true}`.
 - `get_home` mostra mais: o tipo de alarme (`FIRE_SMOKE`), os atrasos de armar e de disparar (30 s em `AWAY`, 0 s em `STAY`) e a hora de entrada.
-- O estado `AWAY` existe, por isso a regra da casa vazia (US07) pode ler o alarme. Ainda não se viu o alarme armado.
+- O estado `AWAY` existe, mas o alarme do kit é só de fumo (`FIRE_SMOKE`): não há alarme de intrusão. A casa vazia das US07 e US14 vem só das férias ditas à casa (decidido a 2026-11-17).
 - O histórico de alarmes só tem dois eventos de 21 de outubro, de uma sirene que não faz parte do nosso kit. Não serve de histórico.
 
 ## O que falta confirmar

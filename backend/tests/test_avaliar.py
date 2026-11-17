@@ -109,8 +109,15 @@ def test_acao_vazia_nao_propoe_nada():
 def test_silencio_ativo_cala_sem_chamar_modelo():
     modelo = ModeloFixo(None)
     contexto = com_silencio(Silencio("US08", AGORA + timedelta(hours=1), "m"))
-    assert avaliar(desvio(), contexto, agora=AGORA, modelo=modelo) is None
+    assert avaliar(desvio(classe="eficiencia"), contexto, agora=AGORA, modelo=modelo) is None
     assert modelo.chamadas == []
+
+
+def test_silencio_temporario_nao_cala_seguranca():
+    """DECISIONS: a segurança só fica silenciada com uma regra recorrente explícita (sem 'ate')."""
+    contexto = com_silencio(Silencio("US14", AGORA + timedelta(hours=1), "Recusou: desligar a tomada"))
+    d = desvio(us="US14", classe="seguranca", imediato=True)
+    assert avaliar(d, contexto, agora=AGORA, modelo=ModeloFixo(None)) is not None
 
 
 def test_silencio_permanente_cala():
@@ -120,7 +127,7 @@ def test_silencio_permanente_cala():
 
 def test_silencio_expirado_nao_cala():
     contexto = com_silencio(Silencio("US08", AGORA - timedelta(minutes=1), "m"))
-    assert avaliar(desvio(), contexto, agora=AGORA, modelo=ModeloFixo(None)) is not None
+    assert avaliar(desvio(classe="eficiencia"), contexto, agora=AGORA, modelo=ModeloFixo(None)) is not None
 
 
 def test_silencio_de_outra_us_nao_cala():
@@ -152,7 +159,7 @@ def test_fornecedor_desconhecido_usa_resumo(monkeypatch):
 
 def test_silencio_com_fim_sem_fuso_cala():
     contexto = com_silencio(Silencio("US08", datetime(2030, 1, 1), "m"))
-    assert avaliar(desvio(), contexto, agora=AGORA, modelo=ModeloFixo(None)) is None
+    assert avaliar(desvio(classe="eficiencia"), contexto, agora=AGORA, modelo=ModeloFixo(None)) is None
 
 
 def test_us_desconhecida():
@@ -162,7 +169,7 @@ def test_us_desconhecida():
 def test_agora_sem_fuso_nao_rebenta():
     contexto = com_silencio(Silencio("US08", AGORA + timedelta(days=1), "m"))
     naive = datetime(2026, 11, 17, 15, 0)
-    assert avaliar(desvio(), contexto, agora=naive, modelo=ModeloFixo(None)) is None
+    assert avaliar(desvio(classe="eficiencia"), contexto, agora=naive, modelo=ModeloFixo(None)) is None
 
 
 def test_acao_so_espacos_e_sem_acao():

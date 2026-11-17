@@ -44,6 +44,7 @@ class Contexto:         # o que o responsável disse à casa (US01, US02)
     rotinas: list[Rotina]
     silencios: list[Silencio]
     casa_vazia: bool
+    aparelho_tomada: str | None = None   # "o desumidificador", dito na conversa (US14)
 
 @dataclass
 class Desvio:           # o que uma regra produz
@@ -58,8 +59,9 @@ dispositivos.ler() -> list[Leitura]
 dispositivos.executar(dispositivo, tipo, valor) -> bool
 regra.verificar(leituras, contexto, agora) -> list[Desvio]   # um ficheiro por história
 ia.avaliar(desvio, contexto) -> Anomalia | None              # a Anomalia de contract.ts
-avisos.publicar(anomalia)
-contacto_externo.agendar(anomalia)       # anomalia nova: começa o tempo de espera
+avisos.publicar(anomalia, imediato=False)
+contacto_externo.agendar(anomalia, imediato=False)  # anomalia nova: começa o tempo de espera;
+                                                    # imediato (casa vazia): avisa já, sem esperar
 contacto_externo.cancelar(anomalia_id)   # o responsável respondeu: pára o tempo de espera
 contacto_externo.resolvida(anomalia)     # resolvida, pelo responsável ou sozinha: pára a espera e,
                                          # se já houve SMS, envia a de resolvido
@@ -94,7 +96,7 @@ O tempo de espera passa para Candeias, com a US05. Toda a mudança a uma anomali
 
 ### Xuta: US08, US10, US12, US13
 
-- **`dispositivos`:** o token no Keycloak como faz `scripts/mcp_headers.sh` (`grant_type=password`), o User-Agent `homaly-backend/0.1`, o polling com `get_home_devices` (tudo numa só chamada), `executar` com `update_device_capabilities` e a confirmação com `get_device_details`, e o estado do alarme com `get_home_security_status`.
+- **`dispositivos`:** o token no Keycloak como faz `scripts/mcp_headers.sh` (`grant_type=password`), o User-Agent `homaly-backend/0.1`, o polling com `get_home_devices` (tudo numa só chamada), `executar` com `update_device_capabilities` e a confirmação com `get_device_details`. O alarme do kit é só de fumo, por isso não se lê o estado do alarme.
 - **US08:** a regra dos cinco minutos. Quando a porta fecha depois do aviso, a anomalia resolve-se sozinha, com a hora a que a porta fechou na `resolucao`.
 - **US10:** abaixo de 16 °C durante duas horas, e a anomalia que se resolve sozinha. Se a proposta das leituras simuladas for aceite, a forma de as injetar na demo.
 - **US12:** porta aberta com a temperatura a cair, junta ao aviso da US08.
@@ -106,7 +108,7 @@ O tempo de espera passa para Candeias, com a US05. Toda a mudança a uma anomali
 - **O ciclo:** a cada polling, chama `ler()`, corre todas as regras, passa cada desvio a `avaliar()` e publica. Escreve-se no primeiro dia com versões falsas de tudo; quando as reais chegam, substituem as falsas.
 - **Histórico simulado:** várias semanas da casa em `dados/historico.csv`, e o "habitual": a que horas a porta costuma abrir.
 - **`avisos.publicar`:** grava a anomalia, envia-a pelo WebSocket e chama `contacto_externo.agendar` (anomalia nova) ou `contacto_externo.resolvida` (anomalia resolvida).
-- **US07:** porta aberta a uma hora anormal. Com a casa vazia (férias ditas à casa, ou alarme armado), o desvio é `imediato` e não é a IA que decide.
+- **US07:** porta aberta a uma hora anormal. Com a casa vazia (férias ditas à casa), o desvio é `imediato` e não é a IA que decide.
 - **US09:** a porta não abriu até à hora habitual.
 - **US14:** o aparelho na tomada a gastar (potência acima de um limite baixo, por exemplo 10 W) há muito mais tempo do que é costume. A casa pergunta se desliga, e a ação de desligar é a da US03. Com a casa vazia, o desvio é `imediato` e de segurança. Resolve-se sozinha quando o aparelho deixa de gastar. O nome do aparelho vem da conversa (US01); se a casa não o souber, diz "o aparelho na tomada".
 - **Propostas a levar à equipa:** histórico pré-carregado e relógio acelerado na demo.

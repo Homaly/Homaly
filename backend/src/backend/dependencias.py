@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 
-from backend import contrato
+from backend import relogio
 from backend.ia.modelo import Modelo, ModeloFalso, obter_modelo
 
 registo = logging.getLogger(__name__)
@@ -18,4 +18,5 @@ def obter_modelo_dep() -> Modelo:
 
 
 def obter_agora() -> datetime:
-    return contrato.agora()
+    """A hora do relógio partilhado com o ciclo (talvez acelerada, com RELOGIO_INICIO)."""
+    return relogio.partilhado().agora()
