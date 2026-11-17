@@ -94,6 +94,17 @@ export default function Anomalia() {
                       </span>
                     </p>
                   )}
+                  {/* Como se resolveu (US06): "a porta fechou às 14:12", "Feito: Apagar a luz.".
+                      Não se repete quando só diz outra vez a resposta. */}
+                  {a.resolucao && !(a.resposta && a.resolucao.texto.includes(a.resposta.texto)) && (
+                    <p className="text-sm first-letter:uppercase">
+                      {a.resolucao.texto}
+                      <span className="text-muted">
+                        {' · '}
+                        {format(new Date(a.resolucao.em), 'HH:mm', { locale: pt })}
+                      </span>
+                    </p>
+                  )}
                   {/* Com proposta de silêncio, é ela que diz o que acontece a seguir. */}
                   {enviado && !a.propostaSilencio && (
                     <p className="text-sm text-muted">
