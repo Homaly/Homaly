@@ -1,7 +1,7 @@
 """avisos.publicar: toda a mudança a uma anomalia (nova, mudada ou resolvida) passa por aqui.
 
 Grava a anomalia (anomalias.guardar), envia-a pelo WebSocket (tempo_real) e avisa o
-contacto externo:
+contacto externo (contacto_externo, US05):
 - anomalia nova e ativa: contacto_externo.agendar (começa o tempo de espera); uma que
   chega já resolvida sem ter sido vista (ex.: depois de um reinício) não avisa ninguém;
   com imediato=True (casa vazia), o contacto avisa já, sem o tempo de espera;
@@ -51,8 +51,12 @@ class Avisos:
         if anterior is None:
             # Uma já resolvida que este processo nunca viu (resposta depois de um reinício,
             # anomalia de /dev) não agenda: seria um alerta ao contacto por algo já resolvido.
+            # Mas chama resolvida(): se o contacto recebeu o alerta antes do reinício, recebe a
+            # SMS de resolvido (se não recebeu, resolvida() não faz nada).
             if anomalia.estado == "ativa":
                 self._contacto.agendar(anomalia, imediato=imediato)
+            else:
+                self._contacto.resolvida(anomalia)
             return
         estado_antes, classe_antes = anterior
         if anomalia.estado == "resolvida" and estado_antes != "resolvida":
@@ -75,10 +79,14 @@ def configurar(avisos: Avisos) -> None:
 
 
 def reais() -> Avisos:
-    """A gravação e o WebSocket reais; o contacto externo é o falso até o real existir (Candeias)."""
-    from backend import anomalias, falsos, tempo_real
+    """A gravação, o WebSocket e o contacto externo (US05) reais."""
+    from backend import anomalias, contacto_externo, tempo_real
 
-    return Avisos(gravar=anomalias.guardar, enviar_ws=tempo_real.enviar_anomalia, contacto=falsos.ContactoExterno())
+    return Avisos(
+        gravar=anomalias.guardar,
+        enviar_ws=tempo_real.enviar_anomalia,
+        contacto=contacto_externo.ContactoExterno(),
+    )
 
 
 def publicar(anomalia: Anomalia, imediato: bool = False) -> None:
