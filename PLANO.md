@@ -21,9 +21,9 @@ Uma casa que repara: aprende o que é habitual e avisa quando algo foge a isso.
 | Segurança | A porta abriu a uma hora em que nunca abre; a porta ficou aberta mais de cinco minutos; veículo desconhecido na entrada de veículos | Porta, câmara |
 | Bem-estar e rotina | A porta não abriu até à hora habitual | Porta |
 | Saúde e conforto | Casa abaixo de 16 graus durante horas | Temperatura |
-| Eficiência energética | Luz acesa há demasiado tempo; porta aberta com a temperatura a cair | Lâmpada, porta, temperatura |
+| Eficiência energética | Luz acesa há demasiado tempo; porta aberta com a temperatura a cair; aparelho esquecido ligado na tomada | Lâmpada, porta, temperatura, tomada |
 
-Além das anomalias: conversa por texto com a casa, notificações com resposta, contacto externo e histórico. São treze user stories no total.
+Além das anomalias: conversa por texto com a casa, notificações com resposta, contacto externo e histórico. São catorze user stories no total.
 
 **Fora do MVP:** as restantes anomalias da câmara, detetor de fumo, automatizações, e as classes Estado da própria casa, Sono e noite, e Visitas e cuidadores.
 

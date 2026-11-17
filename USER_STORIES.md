@@ -15,7 +15,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 |---|----------|------|--------------|
 | US01 | Contar à casa o dia a dia | Transversal | — |
 | US02 | Receber uma anomalia e responder | Transversal | — |
-| US03 | Autorizar a casa a agir | Transversal | Lâmpada |
+| US03 | Autorizar a casa a agir | Transversal | Lâmpada, tomada |
 | US04 | Escolher um contacto externo | Transversal | — |
 | US05 | Ser avisado como contacto externo | Transversal | — |
 | US06 | Ver o que aconteceu em casa | Transversal | Todos |
@@ -26,6 +26,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 | US11 | Luz acesa há demasiado tempo | Eficiência energética | Lâmpada, porta |
 | US12 | Porta aberta com a casa a arrefecer | Eficiência energética | Porta, temperatura |
 | US13 | Veículo desconhecido na entrada | Segurança | Câmara |
+| US14 | Aparelho esquecido ligado | Eficiência energética | Tomada |
 
 ## Histórias transversais
 
@@ -60,7 +61,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 - **Dado** que aceito, **então** a casa executa a ação e confirma o resultado.
 - **Dado** que recuso ou não respondo, **então** a casa não age.
 
-**Dispositivos:** lâmpada, o único dispositivo que a casa comanda.
+**Dispositivos:** lâmpada e tomada inteligente, os dois dispositivos que a casa comanda. Depois de agir, a casa lê de novo o estado do dispositivo para confirmar o resultado.
 
 ### US04 — Escolher um contacto externo
 
@@ -78,10 +79,12 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 **Critérios de aceitação**
 - **Dado** que há uma anomalia que me deve chegar, **então** recebo uma SMS com o que aconteceu, a que horas e o que é habitual.
 - **Dado** que recebo a SMS, **então** ela traz um link para uma página com o alerta e o estado atual, que abro sem instalar nada. A página é só de leitura.
+- **Dado** que abro o link depois de a anomalia se resolver, **então** a página mostra que está resolvida e como ("a porta fechou às 14:12").
+- **Dado** que passaram mais de 24 horas desde a SMS, **então** o link já não mostra o alerta, só que expirou.
 - **Dado** que a anomalia é de segurança ou de bem-estar e rotina, **quando** o responsável não responde dentro do tempo de espera da casa (cinco minutos por omissão), **então** recebo a mensagem.
 - **Dado** que o tempo de espera da casa é zero, **então** recebo a mensagem ao mesmo tempo que o responsável.
 - **Dado** que a anomalia é de eficiência energética ou de saúde e conforto, **então** não recebo nada.
-- **Dado** que a anomalia fica resolvida pelo responsável, **então** recebo uma segunda mensagem a dizer que está resolvida.
+- **Dado** que já recebi uma SMS sobre uma anomalia, **quando** ela fica resolvida, pelo responsável ou sozinha (por exemplo, a porta fechou), **então** recebo uma segunda SMS a dizer que está resolvida e como.
 
 ### US06 — Ver o que aconteceu em casa
 
@@ -102,7 +105,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 - **Dado** que avisei antes que ia chegar tarde, **então** a casa não avisa.
 - **Dado** que a casa devia estar vazia (disse à casa que vamos de férias, ou o alarme está armado em modo ausente), **quando** a porta abre a qualquer hora, **então** recebo uma notificação de imediato e o contacto externo é avisado ao mesmo tempo, sem esperar o tempo de espera da casa.
 
-**Dispositivos:** sensor de porta. O estado do alarme lê-se pelo servidor MCP (`GET_HOME_SECURITY_STATE`).
+**Dispositivos:** sensor de porta. O estado do alarme lê-se pelo servidor MCP (`get_home_security_status`).
 
 ### US08 — Porta esquecida aberta (Segurança)
 
@@ -113,6 +116,8 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 - **Dado** que a porta fecha antes dos cinco minutos, **então** não recebo nada.
 - **Dado** que este aviso já foi enviado, **quando** a temperatura começa a descer com a porta ainda aberta, **então** a casa acrescenta isso ao mesmo aviso em vez de enviar outro (ver US12).
 - **Dado** que a casa já avisou que a sala está a arrefecer com a porta aberta (US12), **quando** passam cinco minutos sem a porta fechar, **então** não recebo um segundo aviso: o existente passa a ser de segurança e diz que a porta está aberta há cinco minutos.
+- **Dado** que já recebi o aviso, **quando** a porta fecha, **então** o aviso resolve-se sozinho, fica no histórico com a hora a que a porta fechou ("resolvido: a porta fechou às 14:12") e o tempo de espera do contacto externo é cancelado.
+- **Dado** que o contacto externo já tinha recebido uma SMS, **quando** a porta fecha, **então** ele recebe a SMS de resolvido (US05).
 
 **Dispositivos:** sensor de porta.
 
@@ -171,6 +176,19 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 - **Dado** que não respondo dentro do tempo de espera da casa, **então** o contacto externo é avisado (US05).
 
 **Dispositivos:** câmara, apontada à entrada de veículos. A imagem vem do stream RTSP da câmara, fora do servidor MCP. Os dois minutos são um valor a afinar, para não avisar por quem só faz inversão de marcha. Falta decidir como a casa reconhece um veículo: pela matrícula ou pelo aspeto (tipo e cor), conforme a qualidade da imagem.
+
+### US14 — Aparelho esquecido ligado (Eficiência energética)
+
+**Como** responsável da casa, **quero** que a casa me pergunte quando o aparelho ligado à tomada está a gastar há muito mais tempo do que é costume, **para** o desligar à distância e não gastar energia nem correr riscos.
+
+**Critérios de aceitação**
+- **Dado** que o aparelho na tomada costuma estar ligado no máximo uma hora seguida, **quando** está a gastar há três horas, **então** recebo "o aquecedor está ligado há três horas, desligo?" com o consumo atual e a ação de desligar a tomada.
+- **Dado** que aceito desligar, **então** a casa desliga a tomada e confirma (US03).
+- **Dado** que respondo que ainda está a ser usado, **então** a casa não volta a perguntar nesse dia.
+- **Dado** que a casa devia estar vazia (férias ditas à casa, ou alarme armado em modo ausente), **quando** a tomada está a gastar, **então** o aviso é de segurança, é imediato e segue as regras do contacto externo (US05).
+- **Dado** que o aparelho deixa de gastar, **então** a anomalia resolve-se sozinha.
+
+**Dispositivos:** tomada inteligente, que mede a potência e se liga e desliga pelo servidor MCP. "A gastar" quer dizer potência acima de um limite baixo (por exemplo, 10 W), a afinar. A casa sabe que aparelho está na tomada porque o responsável lho diz na conversa ("na tomada está o aquecedor", US01); se não souber, diz "o aparelho na tomada". O tempo habitual vem do histórico; na demo, do dataset simulado.
 
 ## Limites conhecidos
 

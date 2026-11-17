@@ -28,18 +28,18 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 | Segurança | Porta aberta a uma hora em que nunca abre; porta esquecida aberta; alguém visto com a casa vazia; veículo desconhecido na entrada de veículos | Porta, câmara |
 | Bem-estar e rotina | Nenhuma atividade até à hora habitual; ninguém na cozinha às horas das refeições; vários dias sem sair; movimento repetido de madrugada; saiu e não voltou à hora de sempre | Porta, câmara, lâmpada |
 | Saúde e conforto | Casa fria ou quente demais durante horas | Temperatura |
-| Eficiência energética | Lâmpada acesa há demasiado tempo; porta aberta com a temperatura a cair | Lâmpada, porta, temperatura |
+| Eficiência energética | Lâmpada acesa há demasiado tempo; porta aberta com a temperatura a cair; aparelho esquecido ligado na tomada | Lâmpada, porta, temperatura, tomada |
 | Estado da própria casa | Um sensor deixou de comunicar; o gateway ficou sem ligação | Gateway, todos |
 
 - **Entram no MVP quatro classes:** segurança, bem-estar e rotina, saúde e conforto, e eficiência energética.
-- **Anomalias do MVP (sete):**
+- **Anomalias do MVP (oito):**
 
   | Classe | Anomalias no MVP | Dispositivos |
   |--------|------------------|--------------|
   | Segurança | A porta abriu a uma hora em que nunca abre; a porta ficou aberta mais de cinco minutos; veículo desconhecido na entrada de veículos | Porta, câmara |
   | Bem-estar e rotina | A porta não abriu até à hora habitual | Porta |
   | Saúde e conforto | Casa abaixo de 16 graus durante horas | Temperatura |
-  | Eficiência energética | Lâmpada acesa há demasiado tempo; porta aberta com a temperatura a cair | Lâmpada, porta, temperatura |
+  | Eficiência energética | Lâmpada acesa há demasiado tempo; porta aberta com a temperatura a cair; aparelho esquecido ligado na tomada | Lâmpada, porta, temperatura, tomada |
 
   As restantes anomalias de cada classe ficam para os dias 3 e 4.
 - **Estado da própria casa: fora do MVP.** Fica para mais tarde, por ser uma preocupação de longo prazo.
@@ -79,6 +79,12 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 - **Quem decide que é anomalia:** regras simples detetam que algo fugiu ao padrão; a IA avalia o contexto (o histórico e o que foi dito na conversa), decide se vale a pena avisar e escreve a explicação.
 - **Dataset:** serve de histórico simulado da casa e de conjunto de casos para testar a deteção. Não se treina nenhum modelo de IA de raiz.
 - **Leitura dos sensores:** os sensores não enviam eventos. O backend pergunta o estado dos dispositivos ao servidor MCP em intervalos regulares e deteta as mudanças comparando com a leitura anterior. O intervalo está por definir. Confirmado nas leituras de 2026-11-16: o servidor não tem subscrições e não dá a hora a que cada valor mudou (ver `docs/mcp-dispositivos.md`).
+- **Porta e lâmpada dadas como verificadas** (2026-11-17): o sensor de porta indica `alarm` com a porta aberta e `normal` com ela fechada, e a lâmpada está ligada e comunica. A equipa assume-o como confirmado.
+- **A porta fecha depois do aviso (US08):** o aviso resolve-se sozinho e fica no histórico com a hora a que a porta fechou. Se o tempo de espera ainda estava a contar, é cancelado; se o contacto externo já tinha recebido SMS, recebe a de resolvido.
+- **Página do alerta (US05):** é o backend que a serve, como uma página HTML simples, sem login e fora da aplicação React. O link leva um código aleatório e longo, criado quando a SMS é enviada e associado a esse alerta; nunca o id da anomalia, para não se poderem adivinhar os alertas de outras casas. O link funciona 24 horas depois do envio, mesmo que a anomalia já esteja resolvida (aí mostra que está resolvida e como); depois disso só diz que expirou.
+- **Proposta de silêncio (US02):** a proposta da casa ("não volto a avisar sobre a porta até ao fim do dia, ok?") vem na própria anomalia, e o responsável aceita ou recusa com um pedido próprio. O silêncio só se aplica depois de aceite. Detalhe no contrato, em `docs/frontend-design.md`.
+- **Tomada inteligente:** serve para a anomalia do aparelho esquecido ligado (US14) e passa a ser o segundo dispositivo que a casa comanda (US03), além da lâmpada.
+- **SMS de resolvido:** se o contacto externo já recebeu uma SMS sobre uma anomalia, recebe outra quando ela fica resolvida, quer pelo responsável quer sozinha (por exemplo, a porta fechou).
 - **User-Agent próprio nos pedidos ao MCP:** o servidor está atrás do Cloudflare, que recusa os pedidos com o User-Agent por omissão das bibliotecas. O backend envia `homaly-backend/0.1`.
 - **Acesso ao servidor MCP:** a equipa já tem a API key. Fica no `.env`, que nunca é commitado.
 
@@ -103,7 +109,7 @@ Uma unidade de cada:
 |-------------|-------|----------------|
 | Câmara | Sensor (no MVP, só para o veículo desconhecido) | Deteção de movimento e de som; nenhuma imagem |
 | Sensor de temperatura | Sensor | Temperatura e humidade |
-| Sensor de abertura de porta | Sensor | Estado `normal` ou `alarm` |
+| Sensor de abertura de porta | Sensor | Estado `alarm` com a porta aberta e `normal` com a porta fechada |
 | Detetor de fumo | Sensor (posto de parte) | Estado `normal` ou `alarm` |
 | Lâmpada | Dispositivo que a casa consegue comandar | Ligada ou desligada, brilho, cor e tom do branco; lê-se e altera-se |
 | Tomada (Plug) | Dispositivo que a casa consegue comandar | Ligada ou desligada, potência, tensão, corrente e consumo de hoje e de ontem |
@@ -129,8 +135,5 @@ O que cada dispositivo devolve, com os ids, está em `docs/mcp-dispositivos.md`.
 - Se as regras do hackathon permitem reaproveitar código escrito antes do evento.
 - O modelo de IA e quem o fornece: a equipa está a ver como fazer (créditos da organização ou plano gratuito de um fornecedor).
 - De quanto em quanto tempo o backend pergunta o estado dos sensores ao servidor MCP.
-- Se a lâmpada está ligada à rede: lê-se o estado, o brilho e a cor, mas não comunica desde 4 de novembro, por isso o estado que o servidor mostra pode estar desatualizado.
-- Se `sensorState: alarm` no sensor de porta quer dizer porta aberta. Confirma-se abrindo e fechando a porta.
-- O que fazer com a tomada inteligente: é um segundo dispositivo que a casa pode comandar e mede consumo, o que interessa à eficiência energética. As user stories ainda dizem que a lâmpada é o único dispositivo comandável (US03).
 - Como a casa reconhece um veículo (US13): a matrícula sozinha parece demasiado simples; a equipa vai discutir.
 - A imagem da câmara: o MCP só dá deteção de movimento e de som, sem imagem; a imagem vem do stream RTSP (`CAMERA_RTSP_URL`), que ainda não foi testado.

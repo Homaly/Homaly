@@ -59,7 +59,7 @@ Cada valor vem dentro de `capabilities`, como `{"type": "temperatureValue", "val
 
 ## O que falta confirmar
 
-- **Porta:** se `sensorState: alarm` quer dizer porta aberta. Na leitura estava `alarm`. Confirma-se abrindo e fechando a porta e lendo de novo.
-- **Lâmpada:** se está ligada e emparelhada. Não comunica desde 4 de novembro, por isso o `power: on` pode estar desatualizado.
+A equipa deu como verificados a porta (`alarm` = aberta, `normal` = fechada) e a lâmpada (ligada e a comunicar) a 2026-11-17.
+
 - **Temperatura:** de quanto em quanto tempo o sensor comunica. Define o intervalo útil do polling.
 - **Câmara:** o que aparece em `motionDetected` quando há movimento, e se o filtro de pessoas o limita a pessoas.

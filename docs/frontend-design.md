@@ -1,6 +1,6 @@
 # Desenho do frontend
 
-Versão de 2026-11-16. Base: `USER_STORIES.md` (US01–US13) e `DECISIONS.md`.
+Versão de 2026-11-16. Base: `USER_STORIES.md` (US01–US14) e `DECISIONS.md`.
 
 ## Resumo
 
@@ -54,6 +54,14 @@ interface Anomalia {
   acaoProposta?: { descricao: string }
   imagemUrl?: string
   resposta?: { texto: string; em: string }
+  propostaSilencio?: PropostaSilencio  // US02: só se aplica depois de aceite
+  resolucao?: { texto: string; em: string } // ex.: "a porta fechou às 14:12"
+}
+
+interface PropostaSilencio {
+  texto: string             // "Não volto a avisar sobre a porta até ao fim do dia."
+  ate: string               // ISO 8601
+  estado: 'pendente' | 'aceite' | 'recusada'
 }
 
 interface Evento {
@@ -75,9 +83,14 @@ interface Definicoes { contacto: { nome: string; telemovel: string } | null; esp
 | `GET /anomalias/{id}` | Detalhe |
 | `POST /anomalias/{id}/resposta` `{texto}` | Responder (US02) |
 | `POST /anomalias/{id}/acao` `{aceitar}` | Aceitar ou recusar a ação (US03) |
+| `POST /anomalias/{id}/silencio` `{aceitar}` | Aceitar ou recusar a proposta de silêncio (US02); devolve a `Anomalia` atualizada |
 | `GET /eventos` | Histórico |
 | `GET /conversa`, `POST /conversa` `{texto}` | Conversa; o POST devolve a resposta da casa |
 | `GET /definicoes`, `PUT /definicoes` | Definições |
+
+**Proposta de silêncio (US02):** quando o responsável explica um alerta (`POST /anomalias/{id}/resposta`), a resposta pode trazer `propostaSilencio` com `estado: 'pendente'`. O ecrã de detalhe mostra o texto com os botões Sim e Não, que chamam `POST /anomalias/{id}/silencio`. O backend só deixa de avisar depois de `aceitar: true`.
+
+**Página do alerta (US05):** não faz parte da PWA. É o backend que a serve, em `GET /a/{codigo}`, como uma página HTML simples, sem login, para o contacto externo abrir a partir da SMS. O `codigo` é aleatório e longo (por exemplo, `secrets.token_urlsafe(16)` em Python), criado quando a SMS é enviada e associado ao alerta; nunca é o id da anomalia. A página mostra o alerta e o estado atual, incluindo se já está resolvido e como. Funciona 24 horas depois do envio; depois mostra só que o alerta expirou.
 
 **WebSocket `/ws`:** o servidor envia `{tipo: 'anomalia', anomalia}` quando uma anomalia aparece ou muda, e `{tipo: 'evento', evento}` quando há um evento novo. O cliente não envia nada por aqui.
 

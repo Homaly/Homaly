@@ -15,6 +15,18 @@ export interface Anomalia {
   acaoProposta?: { descricao: string };
   imagemUrl?: string;
   resposta?: { texto: string; em: string };
+  /** US02: a casa propõe deixar de avisar até uma hora; só se aplica depois de aceite. */
+  propostaSilencio?: PropostaSilencio;
+  /** Como se resolveu (ex.: "a porta fechou às 14:12"); só com estado 'resolvida'. */
+  resolucao?: { texto: string; em: string };
+}
+
+export interface PropostaSilencio {
+  /** Ex.: "Não volto a avisar sobre a porta até ao fim do dia." */
+  texto: string;
+  /** ISO 8601: até quando a casa deixa de avisar. */
+  ate: string;
+  estado: 'pendente' | 'aceite' | 'recusada';
 }
 
 export interface Evento {

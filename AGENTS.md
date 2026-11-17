@@ -69,7 +69,7 @@ npm run build    # type-check and production build
 | `templates/` | Official templates for the executive summary (.docx) and the presentation (.pptx). |
 | `DECISIONS.md` | The team's decisions. Only the "Decidido" section is settled; "Proposto" and "Em aberto" are not. |
 | `PLANO.md` | The plan: what is built, MVP scope, calendar, work fronts, risks. |
-| `USER_STORIES.md` | User stories of the MVP (US01–US13). |
+| `USER_STORIES.md` | User stories of the MVP (US01–US14). |
 | `DIVISAO.md` | Proposed split of the work among the five team members: each owns some user stories end to end, against formats fixed up front so nobody waits on anyone; fixed merge times and a day-by-day plan. Not accepted by the team yet. |
 | `.env.example` | Names of the settings the code will need. Real values go in `.env`, which is never committed. |
 
