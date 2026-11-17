@@ -6,13 +6,16 @@ deixa de avisar por causa da IA.
 """
 
 import json
+import logging
 from dataclasses import asdict
 from datetime import datetime
 
 from backend import contrato, db
-from backend.contrato import AcaoProposta, Anomalia
+from backend.contrato import AcaoProposta, Anomalia, _com_fuso
 from backend.formatos import Contexto, Desvio
-from backend.ia.modelo import Modelo, obter_modelo
+from backend.ia.modelo import Modelo, ModeloFalso, obter_modelo
+
+registo = logging.getLogger(__name__)
 
 db.esquema(
     """
@@ -53,11 +56,17 @@ def avaliar(
     modelo: Modelo | None = None,
 ) -> Anomalia | None:
     """A anomalia a publicar para este desvio, ou `None` se não vale um aviso."""
-    agora = agora or contrato.agora()
+    if agora is None:
+        agora = contrato.agora()
     if _silenciado(desvio, contexto, agora):
         return None
 
-    modelo = modelo or obter_modelo()
+    if modelo is None:
+        try:
+            modelo = obter_modelo()
+        except Exception:
+            registo.warning("Sem modelo de IA; fica o resumo do desvio.", exc_info=True)
+            modelo = ModeloFalso()
     resposta = _validar(_perguntar(modelo, desvio, contexto, agora))
     if resposta is None:
         titulo, explicacao, acao = _recurso(desvio)
@@ -92,7 +101,7 @@ def us_da_anomalia(anomalia_id: str) -> str | None:
 
 def _silenciado(desvio: Desvio, contexto: Contexto, agora: datetime) -> bool:
     return any(
-        s.us == desvio.us and (s.ate is None or agora <= s.ate) for s in contexto.silencios
+        s.us == desvio.us and (s.ate is None or agora <= _com_fuso(s.ate)) for s in contexto.silencios
     )
 
 
@@ -122,6 +131,7 @@ def _perguntar(
     try:
         return modelo.completar_json(SISTEMA, mensagem)
     except Exception:
+        registo.warning("O modelo de IA falhou; fica o resumo do desvio.", exc_info=True)
         return None
 
 

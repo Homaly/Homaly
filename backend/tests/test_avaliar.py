@@ -1,4 +1,4 @@
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
 
 from backend.formatos import Contexto, Desvio, Periodo, Rotina, Silencio
 from backend.ia import avaliar
@@ -120,6 +120,18 @@ def test_mensagem_leva_desvio_contexto_e_agora():
     assert "praia" in mensagem
     assert "a empregada vem" in mensagem
     assert AGORA.isoformat() in mensagem
+
+
+def test_fornecedor_desconhecido_usa_resumo(monkeypatch):
+    monkeypatch.setenv("IA_FORNECEDOR", "xpto")
+    a = avaliar(desvio(), CONTEXTO_VAZIO, agora=AGORA)
+    assert a is not None
+    assert a.titulo == "Alerta de segurança"
+
+
+def test_silencio_com_fim_sem_fuso_cala():
+    contexto = com_silencio(Silencio("US08", datetime(2030, 1, 1), "m"))
+    assert avaliar(desvio(), contexto, agora=AGORA, modelo=ModeloFixo(None)) is None
 
 
 def test_us_desconhecida():
