@@ -25,6 +25,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 |----------|----------|-------------|
 | `DB_PATH` | O ficheiro SQLite | `homaly.db`, na pasta onde o backend arranca |
 | `HOMALY_DEV` | Com `1`, liga os pedidos `/dev` | Desligado; o `docker-compose.yml` liga-o |
+| `IA_FORNECEDOR` | Que modelo de IA a casa usa. Só existe `falso`, que não usa nenhum: a casa fica com o resumo do desvio | `falso` |
 
 ## Módulos
 
@@ -36,6 +37,12 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `anomalias.py` | A tabela das anomalias, `guardar`, `obter`, `listar`; `GET /anomalias` e `GET /anomalias/{id}`. |
 | `eventos.py` | A tabela dos eventos, `registar`, `listar`; `GET /eventos`. |
 | `tempo_real.py` | O WebSocket `/ws`; `enviar_anomalia` e `enviar_evento`. |
+| `formatos.py` | Os formatos partilhados entre as peças (`Leitura`, `Desvio`, `Contexto`, ...); mudar um campo obriga a avisar a equipa. |
+| `ia/` | `modelo.py`: o `Modelo` (trocável), o `ModeloFalso` e `obter_modelo`, que lê `IA_FORNECEDOR`. `avaliar.py`: `avaliar(desvio, contexto)` dá uma `Anomalia` (ou nada), com o resumo do desvio se o modelo falhar; `us_da_anomalia`; `registar_us(a.id, us)`: quem publicar uma anomalia sem passar por `avaliar` tem de a chamar, senão a US02 não consegue propor silenciá-la. |
+| `contexto/` | `repositorio.py`: o que a pessoa disse à casa (férias, rotinas, silêncios, conversa), guardado em SQLite. |
+| `conversa/` | `GET /conversa` e `POST /conversa`: a pessoa fala com a casa (US01). |
+| `resposta/` | `POST /anomalias/{id}/resposta` e `POST /anomalias/{id}/silencio`: a pessoa responde a uma anomalia e aceita ou recusa deixar de ser avisada (US02). |
+| `dependencias.py` | O que os routers recebem por `Depends` (o modelo, a hora); os testes substituem-no. |
 | `dev.py` | `/dev`: pôr anomalias e eventos à mão, enquanto o ciclo das regras não existe. |
 
 ## Como ligar o teu módulo
@@ -92,3 +99,13 @@ curl -X POST localhost:8000/dev/anomalias -H 'Content-Type: application/json' -d
 - `POST /dev/exemplo` carrega os mesmos dados dos mocks da PWA (pode correr-se várias vezes).
 - `POST /dev/anomalias` grava uma `Anomalia` e envia-a pelo WebSocket; com um `id` que já existe, atualiza-a.
 - `POST /dev/eventos` grava um `Evento` e envia-o pelo WebSocket.
+
+## Testes
+
+A partir de `backend/`:
+
+```bash
+uv run pytest
+```
+
+Os testes ficam em `tests/` e importam os auxiliares com `from tests.conftest import ...` (por exemplo `ModeloFixo`, um modelo que devolve sempre a resposta combinada, e `AGORA`). A fixture `bd` (automática) dá a cada teste um ficheiro SQLite novo, com as tabelas criadas.

@@ -1,0 +1,113 @@
+"""A pessoa responde a uma anomalia e a casa pode propor deixar de avisar (US02).
+
+A anomalia fica sempre resolvida. A IA lê a resposta e diz se é só uma ocorrência (`nenhum`), se
+vale só por hoje (`temporario`) ou se é uma rotina (`recorrente`). Só nos dois últimos a casa propõe
+silenciar; a proposta só se aplica depois de a pessoa a aceitar (`aplicar`). Uma resposta do
+modelo que não presta, ou um modelo que falha, não dá proposta: a anomalia fica resolvida na mesma.
+"""
+
+import json
+import logging
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+
+from backend.contexto import repositorio
+from backend.contrato import Anomalia, PropostaSilencio, TextoEm
+from backend.conversa.interpretar import DIAS_DA_SEMANA, ler_rotina
+from backend.formatos import Silencio
+from backend.ia.modelo import Modelo
+
+registo = logging.getLogger(__name__)
+
+MOTIVOS = ("nenhum", "temporario", "recorrente")
+
+SISTEMA = """\
+És a IA de uma casa ligada. A casa avisou o responsável de uma anomalia e ele respondeu-lhe. \
+Percebe se a resposta quer dizer que a casa não precisa de voltar a avisar disto. Responde só \
+com JSON:
+{"motivo": "nenhum" | "temporario" | "recorrente", "rotina": {"descricao": "...", "dias": [1], \
+"hora": "HH:MM" | null} | null}
+- "nenhum": a pessoa só explica ou diz que está tudo bem ("está tudo bem", "fui eu").
+- "temporario": é uma situação de hoje, que não vai repetir-se ("hoje tenho visitas").
+- "recorrente": acontece em dias certos ("a empregada vem às terças"). Preenche "rotina": \
+"dias" são números de 0 a 6, com 0 = segunda-feira; "hora" só se a pessoa a disser, senão null.
+- Fora de "recorrente", "rotina" é null.
+- Na dúvida, responde "nenhum". Não inventes dias nem horas que a pessoa não tenha dito.
+"""
+
+
+@dataclass
+class Decisao:
+    anomalia: Anomalia
+    proposta: dict | None  # o que `aplicar` faz se a pessoa aceitar
+
+
+def responder(
+    anomalia: Anomalia, us: str | None, texto: str, agora: datetime, modelo: Modelo
+) -> Decisao:
+    """A anomalia resolvida com a resposta da pessoa, e a proposta de silêncio que daí sair."""
+    resolvida = anomalia.model_copy(
+        update={
+            "estado": "resolvida",
+            "resposta": TextoEm(texto=texto, em=agora),
+            "resolucao": TextoEm(texto="Resolvida por quem responde: " + texto, em=agora),
+        }
+    )
+    dados = _perguntar(modelo, anomalia, texto, agora)
+    motivo = dados.get("motivo") if isinstance(dados, dict) else None
+
+    if motivo == "temporario" and anomalia.classe != "seguranca" and us:
+        ate = agora.replace(hour=23, minute=59, second=59, microsecond=0)
+        proposta = {"tipo": "silencio", "us": us, "ate": ate.isoformat(), "motivo": texto}
+        frase = f"Não volto a avisar sobre «{anomalia.titulo}» até ao fim do dia, ok?"
+        return _com_proposta(resolvida, frase, ate, proposta)
+
+    if motivo == "recorrente":
+        rotina = ler_rotina(dados.get("rotina"))
+        if rotina:
+            proposta = {
+                "tipo": "rotina",
+                "descricao": rotina.descricao,
+                "dias": rotina.dias,
+                "hora": rotina.hora.strftime("%H:%M") if rotina.hora else None,
+            }
+            frase = f"Passo a contar com isto: {rotina.descricao}. Não aviso enquanto não o removeres, ok?"
+            # O contrato ainda exige `ate`: "sem fim" é daqui a uns dez anos.
+            return _com_proposta(resolvida, frase, agora + timedelta(days=3652), proposta)
+
+    return Decisao(resolvida, None)
+
+
+def aplicar(proposta: dict) -> None:
+    """Guarda no contexto o silêncio ou a rotina que a pessoa aceitou."""
+    if proposta["tipo"] == "silencio":
+        repositorio.guardar_silencio(
+            Silencio(proposta["us"], datetime.fromisoformat(proposta["ate"]), proposta["motivo"])
+        )
+    else:
+        repositorio.guardar_rotina(ler_rotina(proposta))
+
+
+def _com_proposta(anomalia: Anomalia, texto: str, ate: datetime, proposta: dict) -> Decisao:
+    pendente = PropostaSilencio(texto=texto, ate=ate, estado="pendente")
+    return Decisao(anomalia.model_copy(update={"proposta_silencio": pendente}), proposta)
+
+
+def _perguntar(modelo: Modelo, anomalia: Anomalia, texto: str, agora: datetime) -> object:
+    mensagem = json.dumps(
+        {
+            "anomalia": {
+                "classe": anomalia.classe,
+                "titulo": anomalia.titulo,
+                "explicacao": anomalia.explicacao,
+            },
+            "resposta": texto,
+            "hoje": f"{DIAS_DA_SEMANA[agora.weekday()]}, {agora.date().isoformat()}",
+        },
+        ensure_ascii=False,
+    )
+    try:
+        return modelo.completar_json(SISTEMA, mensagem)
+    except Exception:
+        registo.warning("O modelo de IA falhou; a anomalia fica resolvida sem proposta.", exc_info=True)
+        return None
