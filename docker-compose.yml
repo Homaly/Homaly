@@ -16,6 +16,7 @@ services:
     env_file: .env          # credenciais do MCP; nunca entra na imagem
     environment:
       APP_MODULE: backend.main:app
+      HOMALY_DEV: "1"       # pedidos /dev para pôr dados à mão (ver backend/README.md)
     volumes:
       - ./backend:/app
       - /app/.venv          # mantem o ambiente Python da imagem

@@ -26,7 +26,7 @@ All project documents and deliverables are written in European Portuguese (the o
 ## Current state
 
 - **Documents:** the decisions, plan and user stories listed below.
-- **Backend:** a scaffold only, in `backend/` — a Python 3.12 project managed with [uv](https://docs.astral.sh/uv/), `src/` layout, package `backend`, no dependencies yet. `backend/src/main.py` is PyCharm boilerplate, not the entry point.
+- **Backend:** in `backend/` — a Python 3.12 project managed with [uv](https://docs.astral.sh/uv/), `src/` layout, package `backend`. FastAPI app `backend.main:app` with a SQLite file (`DB_PATH`), `GET /anomalias`, `GET /anomalias/{id}`, `GET /eventos` and the WebSocket `/ws`. The Python mirror of the contract is `backend/src/backend/contrato.py`; keep it in step with `contract.ts`. With `HOMALY_DEV=1` (set in `docker-compose.yml`) it also serves `/dev` routes to insert anomalies and events by hand. No MCP client, rules or AI yet. How each module plugs in: `backend/README.md`. `backend/src/main.py` is PyCharm boilerplate, not the entry point.
 - **Frontend:** a PWA for mobile in `frontend/` — React 19, Vite, TypeScript, Tailwind v4, react-router, TanStack Query, vite-plugin-pwa. Design and API contract in `docs/frontend-design.md`; the contract types live in `frontend/src/types/contract.ts`. With `VITE_USE_MOCKS=true` it runs on fixed fake data (`src/api/mock.ts`) without the backend.
 - **Tests, linting, CI:** none yet.
 
@@ -91,7 +91,7 @@ Constraints taken from the brief:
 ## Chosen stack
 
 - **Frontend:** a PWA made for mobile, in React, Vite and TypeScript. See `docs/frontend-design.md`.
-- **Backend:** a single Python service holding the AI agent connected to the Altice MCP server, with a simple database. Scaffold only.
+- **Backend:** a single Python service holding the AI agent connected to the Altice MCP server, with a simple database (SQLite). FastAPI; the API and WebSocket exist, the MCP client and the AI do not yet.
 - **External contact alerts:** SMS sent through [textbee](https://github.com/vernu/textbee) (an Android phone acting as an SMS gateway), carrying a link to a simple alert page.
 - **Data:** a simulated dataset provides the home's history and the test cases for detection. No model is trained from scratch.
 

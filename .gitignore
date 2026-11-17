@@ -12,3 +12,8 @@ env
 # Python
 __pycache__/
 .venv/
+
+# Base de dados local do backend (SQLite)
+*.db
+*.db-wal
+*.db-shm
