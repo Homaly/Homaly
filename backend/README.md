@@ -29,6 +29,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `CICLO` | Com `1`, a app corre o ciclo das regras numa thread, com as peças reais (`ciclo.arrancar`) | Desligado |
 | `RELOGIO_INICIO`, `RELOGIO_FATOR` | O relógio do ciclo e da API (um só por processo): começa a esta hora simulada (ISO 8601) e anda este número de vezes mais depressa, para a demo | A hora real |
 | `POLLING_SEGUNDOS` | De quanto em quanto tempo ler a casa (`dispositivos.intervalo_s()`) | `10` |
+| `SENSOR_SILENCIO_MINUTOS` | Um dispositivo que não comunica há mais do que isto não dá leituras (o MCP repetiria o último valor); `0` desliga | `60` |
 | `PORTA_MINUTOS`, `PORTA_QUEDA_GRAUS` | Os limites da regra da porta (US08, US12) | `5` minutos, `2` °C |
 | `FRIO_LIMITE_GRAUS`, `FRIO_MINUTOS` | Os limites da casa fria (US10) | `16` °C, `120` minutos |
 | `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID` | O textbee, que envia as SMS ao contacto externo (US05). Sem a chave, as SMS não saem: ficam no registo e em `GET /dev/sms` | Sem textbee |
@@ -62,7 +63,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `contacto_externo/` | US05: `ContactoExterno` (o que o `avisos` usa) agenda a SMS para o fim do tempo de espera; `arrancar()` (com `CICLO=1`) envia de 5 em 5 s o que está na hora, pelo textbee (`sms.py`). Na hora de enviar volta a ver a anomalia: com resposta, resolvida, de outra classe ou sem contacto, não envia. Quem recebeu o alerta recebe a SMS de resolvido. O textbee que falha tenta outra vez 30 s e 60 s depois. A thread só arranca com o ciclo, porque sem ele não nascem alertas. Com o relógio acelerado (`RELOGIO_FATOR`), o tempo de espera e as 24 horas da página também correm mais depressa. `pagina.py`: `GET /a/{codigo}`, a página do alerta, sem login, válida 24 horas depois da última SMS. |
 | `habitual.py`, `relogio.py`, `afinacao.py` | O habitual da casa, do histórico simulado em `dados/historico.csv` (US07, US09, US14); o relógio, talvez acelerado; e a passagem do histórico pelas regras para contar falsos alarmes (`scripts/afinar.py`). |
 | `dev.py` | `/dev`: pôr anomalias e eventos à mão, para testar a PWA sem esperar pelo ciclo das regras (`POST /dev/exemplo` carrega os dados dos mocks). |
-| `dispositivos/` | A casa pelo MCP: `ler()` (um só `get_home_devices`, devolve `Leitura`s e grava um evento quando a porta, a lâmpada ou a tomada mudam), `executar(dispositivo, tipo, valor)` (lâmpada e tomada: `power` on/off; lâmpada: `brightness` 1–100; confirma lendo de novo), `alarme()` e `intervalo_s()`. Falhas levantam `ErroDispositivos`. |
+| `dispositivos/` | A casa pelo MCP: `ler()` (um só `get_home_devices`, devolve `Leitura`s e grava um evento quando a porta, a lâmpada ou a tomada mudam), `executar(dispositivo, tipo, valor)` (lâmpada e tomada: `power` on/off; lâmpada: `brightness` 1–100; confirma lendo de novo), `alarme()`, `intervalo_s()` e `em_silencio()` (os dispositivos calados, cujas leituras ficam de fora). Falhas levantam `ErroDispositivos`. |
 | `dispositivos/simulacao.py` | `/dev/leituras`: leituras injetadas para a demo, por cima das reais. |
 | `regras/porta.py` | US08 e US12 num só aviso por abertura da porta; devolve `Resolucao` quando a porta fecha. |
 | `regras/temperatura.py` | US10: abaixo de 16 °C durante duas horas; devolve `Resolucao` quando volta a subir. |

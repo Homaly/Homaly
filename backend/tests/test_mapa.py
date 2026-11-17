@@ -1,6 +1,7 @@
 """Do JSON do MCP para as leituras da casa (dispositivos.mapa)."""
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from backend.dispositivos import mapa
@@ -48,6 +49,36 @@ def test_tipo_desconhecido_fica_com_o_nome_original():
 
 def test_dispositivo_sem_capabilities_nao_da_leituras():
     assert mapa.para_leituras({"devices": [{"id": "x", "type": "bulb"}]}, AGORA) == []
+
+
+# Sensores em silêncio: o MCP devolve o último valor mesmo que o dispositivo não comunique há horas.
+# Na resposta guardada, a porta comunicou a 16/11 às 19:16 UTC e a lâmpada a 4/11.
+DEPOIS_DA_LAMPADA = datetime(2026, 11, 16, 19, 0, tzinfo=UTC)
+
+
+def test_dispositivo_que_nao_comunica_desde_o_limite_nao_da_leituras():
+    leituras = mapa.para_leituras(resposta_real("mcp_get_home_devices.txt"), AGORA, DEPOIS_DA_LAMPADA)
+
+    assert Leitura("porta", "sensorState", "alarm", AGORA) in leituras
+    assert not any(l.dispositivo == "lampada" for l in leituras)
+
+
+def test_sem_limite_da_todas_as_leituras():
+    leituras = mapa.para_leituras(resposta_real("mcp_get_home_devices.txt"), AGORA, None)
+
+    assert any(l.dispositivo == "lampada" for l in leituras)
+
+
+def test_dispositivo_sem_hora_de_comunicacao_conta_como_recente():
+    dados = {"devices": [{"id": "x", "type": "bulb", "capabilities": [{"type": "power", "value": "on"}]}]}
+
+    assert mapa.para_leituras(dados, AGORA, DEPOIS_DA_LAMPADA) == [Leitura("lampada", "power", "on", AGORA)]
+
+
+def test_em_silencio_diz_desde_quando():
+    calados = mapa.em_silencio(resposta_real("mcp_get_home_devices.txt"), DEPOIS_DA_LAMPADA)
+
+    assert calados == {"lampada": datetime(2026, 11, 4, 11, 55, 15, 316000, tzinfo=UTC)}
 
 
 def test_ids_por_dispositivo():

@@ -2,6 +2,7 @@
 
 import copy
 import json
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -37,11 +38,20 @@ def com_valor(casa: dict, tipo_mcp: str, capability: str, valor) -> dict:
     return nova
 
 
+def comunicou_em(casa: dict, quando, tipo_mcp: str | None = None) -> dict:
+    """Uma cópia da casa em que os dispositivos (ou só um tipo) comunicaram pela última vez em `quando`."""
+    nova = copy.deepcopy(casa)
+    for d in nova["devices"]:
+        if tipo_mcp is None or d["type"] == tipo_mcp:
+            d["lastCommunicationTime"] = int(quando.timestamp() * 1000)
+    return nova
+
+
 class ClienteFalso:
     """Faz de ClienteMCP: responde com a casa guardada e regista as chamadas."""
 
     def __init__(self, casa: dict | None = None):
-        self.casa = casa or json_real("mcp_get_home_devices.txt")
+        self.casa = casa or comunicou_em(json_real("mcp_get_home_devices.txt"), AGORA)
         self.chamadas: list[tuple[str, dict]] = []
         self.detalhes: dict[str, list[dict]] = {}  # deviceId -> respostas seguidas de get_device_details
         self.falhar = False
@@ -72,6 +82,9 @@ def falso(monkeypatch):
     dispositivos.configurar(cliente)
     simulacao.limpar()
     monkeypatch.setattr(dispositivos, "PAUSA_S", 0)
+    # A hora real da casa: um minuto depois de todos os dispositivos terem comunicado.
+    monkeypatch.setattr(dispositivos, "_agora_real", lambda: AGORA + timedelta(minutes=1))
+    monkeypatch.delenv("SENSOR_SILENCIO_MINUTOS", raising=False)
     yield cliente
     dispositivos.configurar(None)
     simulacao.limpar()
@@ -135,6 +148,87 @@ def test_valor_igual_nao_gera_evento(falso):
     dispositivos.ler(AGORA)
 
     assert eventos.listar() == []
+
+
+# Sensores em silêncio: o MCP repete o último valor de um dispositivo que deixou de comunicar
+
+
+def test_dispositivo_calado_ha_mais_de_uma_hora_nao_da_leituras(falso):
+    falso.casa = comunicou_em(falso.casa, AGORA - timedelta(minutes=61), "bulb")
+
+    leituras = dispositivos.ler(AGORA)
+
+    assert not any(l.dispositivo == "lampada" for l in leituras)
+    assert any(l.dispositivo == "porta" for l in leituras)
+
+
+def test_dispositivo_calado_ha_menos_de_uma_hora_conta(falso):
+    falso.casa = comunicou_em(falso.casa, AGORA - timedelta(minutes=50), "bulb")
+
+    assert any(l.dispositivo == "lampada" for l in dispositivos.ler(AGORA))
+
+
+def test_em_silencio_diz_que_dispositivos_estao_calados_e_desde_quando(falso):
+    quando = AGORA - timedelta(hours=8)
+    falso.casa = comunicou_em(falso.casa, quando, "contactSensor")
+
+    dispositivos.ler(AGORA)
+
+    assert dispositivos.em_silencio() == {"porta": quando}
+
+
+def test_o_silencio_mede_se_com_a_hora_real_e_nao_com_a_do_ciclo(falso):
+    # O ciclo da Vila pode passar uma hora acelerada; o lastCommunicationTime do MCP é real.
+    dispositivos.ler(AGORA + timedelta(days=3))
+
+    assert dispositivos.em_silencio() == {}
+
+
+def test_limite_do_silencio_configuravel(falso, monkeypatch):
+    monkeypatch.setenv("SENSOR_SILENCIO_MINUTOS", "10")
+    falso.casa = comunicou_em(falso.casa, AGORA - timedelta(minutes=15), "bulb")
+
+    assert not any(l.dispositivo == "lampada" for l in dispositivos.ler(AGORA))
+
+
+def test_limite_zero_desliga_o_filtro(falso, monkeypatch):
+    monkeypatch.setenv("SENSOR_SILENCIO_MINUTOS", "0")
+    falso.casa = comunicou_em(falso.casa, AGORA - timedelta(days=13), "bulb")
+
+    assert any(l.dispositivo == "lampada" for l in dispositivos.ler(AGORA))
+
+
+def test_limite_invalido_diz_qual(falso, monkeypatch):
+    monkeypatch.setenv("SENSOR_SILENCIO_MINUTOS", "uma hora")
+
+    with pytest.raises(ValueError, match="SENSOR_SILENCIO_MINUTOS"):
+        dispositivos.ler(AGORA)
+
+
+def test_leitura_injetada_aparece_mesmo_com_o_sensor_calado(falso):
+    # Na demo, a sala a 15 °C tem de aparecer mesmo com o kit desligado.
+    falso.casa = comunicou_em(falso.casa, AGORA - timedelta(hours=8), "temperatureSensor")
+    simulacao.sobrepor("temperatura", "temperatureValue", 15.0)
+
+    assert Leitura("temperatura", "temperatureValue", 15.0, AGORA) in dispositivos.ler(AGORA)
+
+
+def test_sensor_calado_nao_gera_eventos(falso):
+    dispositivos.ler(AGORA)
+    casa = com_valor(falso.casa, "contactSensor", "sensorState", "normal")
+    falso.casa = comunicou_em(casa, AGORA - timedelta(hours=2), "contactSensor")
+
+    dispositivos.ler(AGORA)
+
+    assert eventos.listar() == []
+
+
+def test_executar_encontra_um_dispositivo_calado(falso):
+    falso.casa = comunicou_em(falso.casa, AGORA - timedelta(hours=2), "bulb")
+    falso.detalhes[LAMPADA] = [detalhes("power", "off")]
+    dispositivos.ler(AGORA)
+
+    assert dispositivos.executar("lampada", "power", "off") is True
 
 
 # Leituras injetadas (demo)
