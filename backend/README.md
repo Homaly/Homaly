@@ -38,7 +38,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `eventos.py` | A tabela dos eventos, `registar`, `listar`; `GET /eventos`. |
 | `tempo_real.py` | O WebSocket `/ws`; `enviar_anomalia` e `enviar_evento`. |
 | `formatos.py` | Os formatos partilhados entre as peças (`Leitura`, `Desvio`, `Contexto`, ...); mudar um campo obriga a avisar a equipa. |
-| `ia/` | `modelo.py`: o `Modelo` (trocável), o `ModeloFalso` e `obter_modelo`, que lê `IA_FORNECEDOR`. `avaliar.py`: `avaliar(desvio, contexto)` dá uma `Anomalia` (ou nada), com o resumo do desvio se o modelo falhar; `us_da_anomalia`. |
+| `ia/` | `modelo.py`: o `Modelo` (trocável), o `ModeloFalso` e `obter_modelo`, que lê `IA_FORNECEDOR`. `avaliar.py`: `avaliar(desvio, contexto)` dá uma `Anomalia` (ou nada), com o resumo do desvio se o modelo falhar; `us_da_anomalia`; `registar_us(a.id, us)`: quem publicar uma anomalia sem passar por `avaliar` tem de a chamar, senão a US02 não consegue propor silenciá-la. |
 | `contexto/` | `repositorio.py`: o que a pessoa disse à casa (férias, rotinas, silêncios, conversa), guardado em SQLite. |
 | `conversa/` | `GET /conversa` e `POST /conversa`: a pessoa fala com a casa (US01). |
 | `resposta/` | `POST /anomalias/{id}/resposta` e `POST /anomalias/{id}/silencio`: a pessoa responde a uma anomalia e aceita ou recusa deixar de ser avisada (US02). |

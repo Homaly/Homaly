@@ -67,3 +67,9 @@ def test_proposta_guardar_ler_apagar():
     assert repo.ler_proposta("a1") == dados
     repo.apagar_proposta("a1")
     assert repo.ler_proposta("a1") is None
+
+
+def test_agora_sem_fuso_nao_rebenta():
+    repo.guardar_periodo(_ferias())
+    contexto = repo.carregar_contexto(datetime(2026, 11, 20, 12, 0))
+    assert contexto.casa_vazia is True

@@ -1,3 +1,6 @@
+import sys
+import types
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,7 +11,7 @@ from backend.dependencias import obter_agora, obter_modelo_dep
 from backend.formatos import Desvio
 from backend.ia import avaliar
 from backend.main import app
-from backend.resposta.router import obter_publicar
+from backend.resposta.router import _publicar, obter_publicar
 from tests.conftest import AGORA, ModeloFixo
 
 TEMPORARIO = {"motivo": "temporario", "rotina": None}
@@ -151,3 +154,14 @@ def test_texto_vazio_422(cliente, publicadas, texto):
     a = _anomalia()
     assert _responder(cliente, a, texto).status_code == 422
     assert anomalias.obter(a.id).estado == "ativa"
+
+
+def test_obter_publicar_sem_avisos_e_o_por_omissao():
+    assert obter_publicar() is _publicar
+
+
+def test_obter_publicar_usa_avisos_quando_existe(monkeypatch):
+    def publicar(a: Anomalia) -> None: ...
+
+    monkeypatch.setitem(sys.modules, "backend.avisos", types.SimpleNamespace(publicar=publicar))
+    assert obter_publicar() is publicar

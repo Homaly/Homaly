@@ -22,7 +22,9 @@ def obter_publicar() -> Callable[[Anomalia], None]:
     """Toda a mudança a uma anomalia passa por `avisos.publicar`; sem ele, só guarda e envia."""
     try:
         from backend.avisos import publicar
-    except ImportError:
+    except ModuleNotFoundError as e:
+        if e.name != "backend.avisos":
+            raise
         return _publicar
     return publicar
 
@@ -89,6 +91,6 @@ def decidir_silencio(
     decidida = anomalia.model_copy(
         update={"proposta_silencio": anomalia.proposta_silencio.model_copy(update={"estado": estado})}
     )
-    repositorio.apagar_proposta(id)
     publicar(decidida)
+    repositorio.apagar_proposta(id)
     return decidida

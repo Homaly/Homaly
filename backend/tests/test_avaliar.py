@@ -2,7 +2,7 @@ from datetime import datetime, time, timedelta
 
 from backend.formatos import Contexto, Desvio, Periodo, Rotina, Silencio
 from backend.ia import avaliar
-from backend.ia.avaliar import us_da_anomalia
+from backend.ia.avaliar import registar_us, us_da_anomalia
 from tests.conftest import AGORA, ModeloFixo
 
 CONTEXTO_VAZIO = Contexto([], [], [], False)
@@ -136,3 +136,21 @@ def test_silencio_com_fim_sem_fuso_cala():
 
 def test_us_desconhecida():
     assert us_da_anomalia("nao-existe") is None
+
+
+def test_agora_sem_fuso_nao_rebenta():
+    contexto = com_silencio(Silencio("US08", AGORA + timedelta(days=1), "m"))
+    naive = datetime(2026, 11, 17, 15, 0)
+    assert avaliar(desvio(), contexto, agora=naive, modelo=ModeloFixo(None)) is None
+
+
+def test_acao_so_espacos_e_sem_acao():
+    modelo = ModeloFixo({"avisar": True, "titulo": "T", "explicacao": "E", "acao": "   "})
+    a = avaliar(desvio(), CONTEXTO_VAZIO, agora=AGORA, modelo=modelo)
+    assert a is not None
+    assert a.acao_proposta is None
+
+
+def test_registar_us():
+    registar_us("x", "US09")
+    assert us_da_anomalia("x") == "US09"

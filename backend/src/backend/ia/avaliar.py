@@ -58,6 +58,7 @@ def avaliar(
     """A anomalia a publicar para este desvio, ou `None` se não vale um aviso."""
     if agora is None:
         agora = contrato.agora()
+    agora = _com_fuso(agora)
     if _silenciado(desvio, contexto, agora):
         return None
 
@@ -82,12 +83,17 @@ def avaliar(
         detetada_em=agora,
         acao_proposta=AcaoProposta(descricao=acao) if acao else None,
     )
+    registar_us(anomalia.id, desvio.us)
+    return anomalia
+
+
+def registar_us(anomalia_id: str, us: str) -> None:
+    """Regista a user story cuja regra gerou a anomalia (a US02 precisa dela para silenciar)."""
     with db.ligar() as con:
         con.execute(
             "INSERT OR REPLACE INTO anomalia_us (anomalia_id, us) VALUES (?, ?)",
-            (anomalia.id, desvio.us),
+            (anomalia_id, us),
         )
-    return anomalia
 
 
 def us_da_anomalia(anomalia_id: str) -> str | None:
@@ -151,7 +157,7 @@ def _validar(resposta: object) -> dict | None:
         return None
     if acao is not None and not isinstance(acao, str):
         return None
-    return {"avisar": avisar, "titulo": titulo, "explicacao": explicacao, "acao": acao}
+    return {"avisar": avisar, "titulo": titulo, "explicacao": explicacao, "acao": acao if acao and acao.strip() else None}
 
 
 def _recurso(desvio: Desvio) -> tuple[str, str, None]:

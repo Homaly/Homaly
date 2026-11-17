@@ -8,7 +8,7 @@ import json
 from datetime import UTC, datetime, time
 
 from backend import db
-from backend.contrato import MensagemConversa
+from backend.contrato import MensagemConversa, _com_fuso
 from backend.formatos import Contexto, Periodo, Rotina, Silencio
 
 db.esquema(
@@ -79,6 +79,7 @@ def guardar_aparelho(nome: str) -> None:
 
 
 def carregar_contexto(agora: datetime) -> Contexto:
+    agora = _com_fuso(agora)
     with db.ligar() as con:
         ferias = [
             Periodo(datetime.fromisoformat(linha["inicio"]), datetime.fromisoformat(linha["fim"]), linha["motivo"])
