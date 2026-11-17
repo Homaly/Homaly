@@ -38,6 +38,7 @@ def explicado_por_rotina(contexto: Contexto, agora: datetime) -> bool:
             continue
         if r.hora is None:
             return True
-        if abs(agora - datetime.combine(agora.date(), r.hora)) <= MARGEM_ROTINA:
+        # A hora da rotina é hora local, no fuso de `agora` (que no ciclo real traz fuso).
+        if abs(agora - datetime.combine(agora.date(), r.hora, tzinfo=agora.tzinfo)) <= MARGEM_ROTINA:
             return True
     return False

@@ -23,7 +23,7 @@ def test_tomada_no_maximo_uma_hora_e_aviso_as_tres():
     h = habitual.padrao()
     assert h.tomada_max == timedelta(hours=1)
     assert h.limite_tomada == timedelta(hours=3)
-    assert h.texto_tomada() == "Costuma estar a gastar no máximo 1 h seguida."
+    assert h.texto_tomada() == "Costuma estar a gastar no máximo 1 h de seguida."
 
 
 def test_a_semana_de_ferias_nao_conta(tmp_path):

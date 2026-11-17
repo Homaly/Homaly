@@ -34,3 +34,17 @@ def test_do_ambiente(monkeypatch):
     assert r.inicio.tzinfo is not None  # com fuso, como o resto do backend (contrato.py)
     monkeypatch.delenv("RELOGIO_INICIO")
     assert Relogio.do_ambiente().inicio is None
+
+
+def test_a_api_e_o_ciclo_partilham_o_mesmo_relogio(monkeypatch):
+    """Com RELOGIO_INICIO, a hora da API (obter_agora) é a hora simulada do ciclo."""
+    from backend import relogio
+    from backend.dependencias import obter_agora
+
+    monkeypatch.setattr(relogio, "_partilhado", None)
+    monkeypatch.setenv("RELOGIO_INICIO", "2026-11-19T08:50:00")
+    monkeypatch.setenv("RELOGIO_FATOR", "1")
+    r = relogio.partilhado()
+    assert relogio.partilhado() is r
+    assert abs(obter_agora() - datetime(2026, 11, 19, 8, 50).astimezone()) < timedelta(seconds=5)
+    monkeypatch.setattr(relogio, "_partilhado", None)

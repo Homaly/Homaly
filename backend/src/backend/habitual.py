@@ -98,7 +98,7 @@ class Habitual:
         return VEZES_O_HABITUAL * self.tomada_max
 
     def texto_tomada(self) -> str:
-        return f"Costuma estar a gastar no máximo {duracao(self.tomada_max)} seguida."
+        return f"Costuma estar a gastar no máximo {duracao(self.tomada_max)} de seguida."
 
 
 def _nas_ferias(quando: datetime) -> bool:

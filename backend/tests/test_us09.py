@@ -62,7 +62,7 @@ class Contacto:
     def __init__(self):
         self.chamadas: list[str] = []
 
-    def agendar(self, anomalia: Anomalia) -> None:
+    def agendar(self, anomalia: Anomalia, imediato: bool = False) -> None:
         self.chamadas.append(f"agendar {anomalia.estado}")
 
     def cancelar(self, anomalia_id: str) -> None:
@@ -86,3 +86,26 @@ def test_o_contacto_externo_e_informado_quando_a_porta_abre():
     sexta = [(q, l) for q, l in falsos.ler_csv(str(DADOS / "us09.csv")) if q.date() == datetime(2026, 11, 20).date()]
     correr(ciclo, sexta)
     assert contacto.chamadas == ["agendar ativa", "resolvida resolvida"]
+
+
+def test_resolve_dizendo_quando_a_porta_abriu():
+    r = Registo(us09, CONTEXTO).correr("us09.csv")
+    assert r.resolucoes == ["a porta abriu às 09:40", "a porta abriu às 10:30", "a porta abriu às 09:30"]
+
+
+def test_ferias_a_meio_resolvem_com_o_motivo_e_nao_sozinha():
+    """A anomalia ativa não se resolve "sozinha": a casa passou a estar vazia."""
+    from backend.formatos import Desvio, Leitura, Resolucao
+
+    us09.reiniciar()
+    fechada = lambda t: [Leitura("porta", "sensorState", "normal", t)]  # noqa: E731
+    sexta = lambda h, m=0: datetime(2026, 11, 20, h, m)  # noqa: E731
+    sem_ferias = Contexto([], [], [], False)
+    assert us09.verificar(fechada(sexta(8)), sem_ferias, sexta(8)) == []
+    [desvio] = us09.verificar(fechada(sexta(9)), sem_ferias, sexta(9))
+    assert isinstance(desvio, Desvio)
+    ferias = Contexto([Periodo(sexta(9, 5), sexta(23), "férias no Algarve")], [], [], False)
+    assert us09.verificar(fechada(sexta(9, 10)), ferias, sexta(9, 10)) == [
+        Resolucao("US09", "a casa ficou vazia (férias no Algarve): já não se espera que a porta abra", sexta(9, 10))
+    ]
+    assert us09.verificar(fechada(sexta(9, 20)), ferias, sexta(9, 20)) == []

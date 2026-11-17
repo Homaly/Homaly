@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import acoes, anomalias, ciclo, dev, eventos, tempo_real
+from . import acoes, anomalias, ciclo, dev, eventos, relogio, tempo_real
 from .conversa import router as conversa
 from .dispositivos import simulacao
 from .resposta import router as resposta
@@ -14,6 +14,8 @@ from .resposta import router as resposta
 
 @asynccontextmanager
 async def _vida(app: FastAPI):
+    # O relógio começa a contar no arranque, com ou sem ciclo, para a API ter a hora simulada.
+    relogio.partilhado()
     # O ciclo das regras (Vila): só com CICLO=1, para os testes e a PWA não lerem o MCP.
     parar = ciclo.arrancar() if os.environ.get("CICLO") == "1" else None
     yield

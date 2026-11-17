@@ -20,7 +20,7 @@ def test_sem_motivo_resolve_sem_proposta():
     assert d.anomalia.estado == "resolvida"
     assert d.anomalia.resposta.texto == "está tudo bem"
     assert d.anomalia.resposta.em == AGORA
-    assert d.anomalia.resolucao.texto == "Resolvida por quem responde: está tudo bem"
+    assert d.anomalia.resolucao.texto == "Resolvida com a resposta «está tudo bem»"
     assert d.anomalia.proposta_silencio is None
     assert d.proposta is None
 

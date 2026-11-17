@@ -121,8 +121,11 @@ def us_da_anomalia(anomalia_id: str) -> str | None:
 
 
 def _silenciado(desvio: Desvio, contexto: Contexto, agora: datetime) -> bool:
+    """Como `ciclo.silenciado`: um silêncio temporário nunca cala segurança."""
     return any(
-        s.us == desvio.us and (s.ate is None or agora <= _com_fuso(s.ate)) for s in contexto.silencios
+        s.us == desvio.us
+        and (s.ate is None or (desvio.classe != "seguranca" and agora <= _com_fuso(s.ate)))
+        for s in contexto.silencios
     )
 
 
@@ -175,8 +178,12 @@ def _validar(resposta: object) -> dict | None:
     return {"avisar": avisar, "titulo": titulo, "explicacao": explicacao, "acao": acao if acao and acao.strip() else None}
 
 
-def _recurso(desvio: Desvio) -> tuple[str, str, None]:
-    explicacao = desvio.resumo
+def explicacao_do_desvio(desvio: Desvio) -> str:
+    """A explicação sem IA: os factos e o habitual. O ciclo usa-a quando a anomalia muda."""
     if desvio.habitual:
-        explicacao += " Habitual: " + desvio.habitual
-    return TITULO_POR_CLASSE[desvio.classe], explicacao, None
+        return f"{desvio.resumo} Habitual: {desvio.habitual}"
+    return desvio.resumo
+
+
+def _recurso(desvio: Desvio) -> tuple[str, str, None]:
+    return TITULO_POR_CLASSE[desvio.classe], explicacao_do_desvio(desvio), None

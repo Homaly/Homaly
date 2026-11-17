@@ -20,6 +20,13 @@ _aplicados = 0
 _trinco = threading.Lock()
 
 
+def usar(caminho: str) -> None:
+    """Passa a usar outro ficheiro (ex.: um temporário); as tabelas criam-se de novo nele."""
+    global CAMINHO, _aplicados
+    with _trinco:
+        CAMINHO, _aplicados = caminho, 0
+
+
 def esquema(sql: str) -> None:
     """Regista um `CREATE TABLE IF NOT EXISTS ...`; corre antes da próxima ligação."""
     _esquemas.append(sql)

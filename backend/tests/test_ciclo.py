@@ -1,6 +1,7 @@
 """Os cenários do ciclo decididos a 2026-11-17."""
 
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -42,7 +43,7 @@ class Casa:
         return Anomalia(id=f"a{len(self.chamadas_ia)}", classe=desvio.classe, titulo="t",
                         explicacao=desvio.resumo, detetada_em=datetime.now())
 
-    def _publicar(self, anomalia: Anomalia) -> None:
+    def _publicar(self, anomalia: Anomalia, imediato: bool = False) -> None:
         self.ultima = anomalia
         self.publicadas.append((anomalia.estado, anomalia.classe, anomalia.explicacao))
 
@@ -92,17 +93,17 @@ def test_ocorrencia_ignorada_que_volta_e_nova():
 
 
 def test_silenciada_nao_vai_a_ia_mas_fica_no_historico():
-    casa = Casa(silencios=[Silencio(us="US07", ate=minuto(60), motivo="visita")])
-    casa.passo(0, desvio("US07"))
-    casa.passo(1, desvio("US07"))
+    casa = Casa(silencios=[Silencio(us="US11", ate=minuto(60), motivo="visita")])
+    casa.passo(0, desvio("US11", classe="eficiencia"))
+    casa.passo(1, desvio("US11", classe="eficiencia"))
     assert casa.chamadas_ia == []
-    assert casa.historico == [("US07", "silenciado pelo responsável")]
+    assert casa.historico == [("US11", "silenciado pelo responsável")]
 
 
 def test_silencio_expirado_nao_conta():
-    casa = Casa(silencios=[Silencio(us="US07", ate=minuto(-1), motivo="visita")])
-    casa.passo(0, desvio("US07"))
-    assert casa.chamadas_ia == ["US07"]
+    casa = Casa(silencios=[Silencio(us="US11", ate=minuto(-1), motivo="visita")])
+    casa.passo(0, desvio("US11", classe="eficiencia"))
+    assert casa.chamadas_ia == ["US11"]
 
 
 def test_ativa_que_muda_atualiza_com_o_resumo_sem_ir_a_ia():
@@ -146,9 +147,12 @@ def test_us07_so_se_resolve_com_resposta():
 def test_respondida_com_o_desvio_ainda_presente_nao_volta_a_avisar():
     casa = Casa()
     casa.passo(0, desvio())
-    casa.ciclo.respondida(casa.ultima.id)
-    casa.passo(1, desvio())
-    casa.passo(2)
+    # O responsável responde pela PWA: na base de dados a anomalia fica resolvida.
+    resolvida = casa.ultima.model_copy(update={"estado": "resolvida"})
+    casa.ciclo.obter_anomalia = {resolvida.id: resolvida}.get
+    casa.passo(1, desvio(resumo="porta aberta há 6 minutos"))  # o ciclo lê-a e vê que já foi respondida
+    casa.passo(2, desvio())
+    casa.passo(3)
     assert casa.chamadas_ia == ["US08"]
     assert len(casa.publicadas) == 1
 
@@ -157,7 +161,7 @@ class Contacto:
     def __init__(self):
         self.chamadas: list[str] = []
 
-    def agendar(self, a):
+    def agendar(self, a, imediato=False):
         self.chamadas.append("agendar")
 
     def cancelar(self, i):
@@ -214,7 +218,7 @@ def test_ao_vivo_usa_a_hora_do_relogio():
     ciclo = Ciclo(
         regras=[lambda leituras, contexto, agora: vistos.append(agora) or []],
         avaliar=lambda d, c: None,
-        publicar=lambda a: None,
+        publicar=lambda a, **k: None,
         obter_contexto=lambda: Contexto([], [], [], False),
         registar_historico=lambda d, m, a: None,
     )
@@ -226,3 +230,70 @@ def test_ao_vivo_usa_a_hora_do_relogio():
 
     ao_vivo(ciclo, lambda: [], relogio, intervalo=5, passos=3, dormir=dormir)
     assert vistos == [datetime(2026, 11, 19, 8, 50), datetime(2026, 11, 19, 8, 55), datetime(2026, 11, 19, 9, 0)]
+
+
+def test_publicar_resolvida_que_nunca_viu_nao_agenda(avisos):
+    """Ex.: resposta via API depois de um reinício (o --reload do docker) ou anomalia de /dev."""
+    av, contacto, _ = avisos
+    a = anomalia()
+    a.estado = "resolvida"
+    av.publicar(a)
+    assert contacto.chamadas == []
+
+
+class ContactoComImediato(Contacto):
+    def agendar(self, a, imediato=False):
+        self.chamadas.append("agendar imediato" if imediato else "agendar")
+
+
+def test_desvio_imediato_chega_ao_contacto_externo():
+    """US07/US14 com a casa vazia: o contacto é avisado sem esperar o tempo de espera."""
+    contacto = ContactoComImediato()
+    av = Avisos(gravar=lambda a: None, enviar_ws=lambda a: None, contacto=contacto)
+    casa = Casa()
+    casa.ciclo.publicar = av.publicar
+    casa.passo(0, Desvio(us="US07", classe="seguranca", resumo="porta abriu", habitual=None, imediato=True))
+    casa.passo(1, desvio())
+    assert contacto.chamadas == ["agendar imediato", "agendar"]
+
+
+def test_a_linha_de_comandos_nao_escreve_no_homaly_db(tmp_path, monkeypatch):
+    from backend import avisos, ciclo, db
+
+    monkeypatch.setattr(avisos, "_padrao", None)  # o main() põe as peças falsas
+    dev = tmp_path / "homaly.db"
+    monkeypatch.setattr(db, "CAMINHO", str(dev))
+    ciclo.main([str(Path(__file__).parent.parent / "dados" / "us11.csv")])
+    assert db.CAMINHO != str(dev)
+    assert not dev.exists()
+
+
+def test_silencio_temporario_nao_cala_seguranca_no_ciclo():
+    """Recusar desligar a tomada silencia a US14 até ao fim do dia; com a casa vazia é segurança e avisa."""
+    casa = Casa(silencios=[Silencio("US14", minuto(60), "Recusou: desligar a tomada")])
+    casa.passo(0, desvio(us="US14", classe="eficiencia", resumo="a gastar"))
+    casa.passo(1)
+    casa.passo(2, desvio(us="US14", classe="seguranca", resumo="a gastar com a casa vazia"))
+    assert casa.chamadas_ia == ["US14"]
+    assert casa.historico[0] == ("US14", "silenciado pelo responsável")
+
+
+@pytest.mark.parametrize("ia_avisa, silencios", [
+    (True, [Silencio("US14", minuto(60), "Recusou: desligar a tomada")]),  # silenciada
+    (False, []),  # a IA decidiu não avisar
+])
+def test_a_meio_passa_a_seguranca_e_avisa(ia_avisa, silencios):
+    """A tomada já gastava (eficiência, calada) e a casa fica vazia: agora é segurança e avisa."""
+    casa = Casa(ia_avisa=ia_avisa, silencios=silencios)
+    casa.passo(0, desvio(us="US14", classe="eficiencia", resumo="a gastar"))
+    casa.ia_avisa = True
+    casa.passo(1, desvio(us="US14", classe="seguranca", resumo="a gastar com a casa vazia"))
+    assert casa.publicadas[-1][:2] == ("ativa", "seguranca")
+
+
+def test_ativa_que_muda_guarda_o_habitual_na_explicacao():
+    casa = Casa()
+    casa.passo(0, desvio(us="US12", classe="saude_conforto", resumo="porta aberta, frio"))
+    casa.passo(1, Desvio(us="US12", classe="seguranca", resumo="porta aberta há 5 min",
+                         habitual="A porta costuma fechar em 1 min."))
+    assert casa.publicadas[-1][2] == "porta aberta há 5 min Habitual: A porta costuma fechar em 1 min."

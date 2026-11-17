@@ -59,8 +59,9 @@ dispositivos.ler() -> list[Leitura]
 dispositivos.executar(dispositivo, tipo, valor) -> bool
 regra.verificar(leituras, contexto, agora) -> list[Desvio]   # um ficheiro por história
 ia.avaliar(desvio, contexto) -> Anomalia | None              # a Anomalia de contract.ts
-avisos.publicar(anomalia)
-contacto_externo.agendar(anomalia)       # anomalia nova: começa o tempo de espera
+avisos.publicar(anomalia, imediato=False)
+contacto_externo.agendar(anomalia, imediato=False)  # anomalia nova: começa o tempo de espera;
+                                                    # imediato (casa vazia): avisa já, sem esperar
 contacto_externo.cancelar(anomalia_id)   # o responsável respondeu: pára o tempo de espera
 contacto_externo.resolvida(anomalia)     # resolvida, pelo responsável ou sozinha: pára a espera e,
                                          # se já houve SMS, envia a de resolvido
