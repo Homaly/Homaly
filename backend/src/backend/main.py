@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import acoes, anomalias, ciclo, dev, eventos, relogio, tempo_real
+from . import acoes, anomalias, ciclo, definicoes, dev, eventos, relogio, tempo_real
 from .conversa import router as conversa
 from .dispositivos import simulacao
 from .resposta import router as resposta
@@ -35,6 +35,7 @@ app.include_router(tempo_real.router)
 app.include_router(conversa.router)
 app.include_router(resposta.router)
 app.include_router(acoes.router)
+app.include_router(definicoes.router)
 
 if os.environ.get("HOMALY_DEV") == "1":
     app.include_router(dev.router)

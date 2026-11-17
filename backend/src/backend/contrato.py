@@ -7,11 +7,19 @@ Em Python os campos usam snake_case (`detetada_em`); no JSON saem em camelCase (
 como no contract.ts. Os campos opcionais que ficam a `None` não saem no JSON.
 """
 
+import re
 from datetime import datetime
 from typing import Annotated, Literal
 from uuid import uuid4
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+)
 from pydantic.alias_generators import to_camel
 
 
@@ -91,11 +99,48 @@ class MensagemConversa(Modelo):
     em: Instante = Field(default_factory=agora)
 
 
+def _telemovel(texto: str) -> str:
+    """Um telemóvel no formato internacional (+351912345678), que é o que o textbee recebe.
+
+    Aceita 912 345 678, +351 912 345 678 ou 00351912345678; um número estrangeiro tem de trazer o
+    indicativo. Um número fixo português não recebe SMS e é recusado.
+    """
+    numero = re.sub(r"[\s\-.()]", "", texto)
+    if numero.startswith("00"):
+        numero = "+" + numero[2:]
+    if re.fullmatch(r"\d{9}", numero):
+        numero = "+351" + numero
+    if numero.startswith("+351"):
+        if not re.fullmatch(r"\+3519[1236]\d{7}", numero):
+            raise ValueError(
+                "um telemóvel português tem 9 algarismos e começa por 91, 92, 93 ou 96 (os fixos não recebem SMS)"
+            )
+        return numero
+    if not re.fullmatch(r"\+[1-9]\d{7,14}", numero):
+        raise ValueError("número de telemóvel inválido; um número estrangeiro começa por + e o indicativo")
+    return numero
+
+
+Nome = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
+
+
 class Contacto(Modelo):
-    nome: str
-    telemovel: str
+    nome: Nome
+    telemovel: Annotated[str, AfterValidator(_telemovel)]
 
 
 class Definicoes(Modelo):
+    """US04. Sem `nome_casa`, a SMS ao contacto externo diz só "Homaly"."""
+
     contacto: Contacto | None
-    espera_minutos: int
+    espera_minutos: Annotated[int, Field(ge=0, le=1440)]  # até um dia
+    nome_casa: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] | None = None
+
+    @field_validator("nome_casa")
+    @classmethod
+    def _sem_nome_vazio(cls, nome: str | None) -> str | None:
+        return nome or None
+
+    def para_json(self) -> dict:
+        """Como as outras, sem os campos a None, exceto `contacto`, que vai a null sem contacto."""
+        return {**super().para_json(), "contacto": self.contacto.para_json() if self.contacto else None}
