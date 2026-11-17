@@ -6,7 +6,7 @@ export function EstadoCarregar() {
   return (
     <div className="space-y-3" aria-busy="true" aria-label="A carregar">
       {[0, 1, 2].map(i => (
-        <div key={i} className="h-20 animate-pulse rounded-xl bg-surface-tonal" />
+        <div key={i} className="h-20 motion-safe:animate-pulse rounded-xl bg-surface-tonal" />
       ))}
     </div>
   );

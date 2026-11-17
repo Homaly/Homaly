@@ -26,6 +26,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `DB_PATH` | O ficheiro SQLite | `homaly.db`, na pasta onde o backend arranca |
 | `HOMALY_DEV` | Com `1`, liga os pedidos `/dev` | Desligado; o `docker-compose.yml` liga-o |
 | `IA_FORNECEDOR` | Que modelo de IA a casa usa. Só existe `falso`, que não usa nenhum: a casa fica com o resumo do desvio | `falso` |
+| `LUZ_HORAS` | US11: ao fim de quantas horas acesa a casa pergunta pela luz (na demo, por exemplo `0.05` = 3 min) | `5` |
 
 ## Módulos
 
@@ -36,13 +37,16 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `db.py` | A ligação ao SQLite. |
 | `anomalias.py` | A tabela das anomalias, `guardar`, `obter`, `listar`; `GET /anomalias` e `GET /anomalias/{id}`. |
 | `eventos.py` | A tabela dos eventos, `registar`, `listar`; `GET /eventos`. |
+| `historico.py` | O resto do histórico (US06), como eventos: a anomalia nova e a anomalia resolvida, com `anomaliaId` (o `anomalias.guardar` chama `anomalia_mudou` sozinho), e `registar_desvio(desvio, motivo, agora)`, o desvio que a casa viu e não avisou: é o `registar_historico` do ciclo. |
 | `tempo_real.py` | O WebSocket `/ws`; `enviar_anomalia` e `enviar_evento`. |
 | `formatos.py` | Os formatos partilhados entre as peças (`Leitura`, `Desvio`, `Contexto`, ...); mudar um campo obriga a avisar a equipa. |
 | `ia/` | `modelo.py`: o `Modelo` (trocável), o `ModeloFalso` e `obter_modelo`, que lê `IA_FORNECEDOR`. `avaliar.py`: `avaliar(desvio, contexto)` dá uma `Anomalia` (ou nada), com o resumo do desvio se o modelo falhar; `us_da_anomalia`; `registar_us(a.id, us)`: quem publicar uma anomalia sem passar por `avaliar` tem de a chamar, senão a US02 não consegue propor silenciá-la. |
 | `contexto/` | `repositorio.py`: o que a pessoa disse à casa (férias, rotinas, silêncios, conversa), guardado em SQLite. |
 | `conversa/` | `GET /conversa` e `POST /conversa`: a pessoa fala com a casa (US01). |
 | `resposta/` | `POST /anomalias/{id}/resposta` e `POST /anomalias/{id}/silencio`: a pessoa responde a uma anomalia e aceita ou recusa deixar de ser avisada (US02). |
+| `acoes.py` | `POST /anomalias/{id}/acao` (US03): aceitar executa a ação e resolve a anomalia; recusar resolve-a sem agir e, na US11 e na US14, não volta a perguntar até ao fim do dia. O comando é fixo por user story (`ACOES`: US11 apaga a lâmpada, US14 desliga a tomada), nunca vem do texto da IA. Usa `dispositivos.executar`; sem ele, um falso que só regista (só com `HOMALY_DEV=1`). |
 | `dependencias.py` | O que os routers recebem por `Depends` (o modelo, a hora); os testes substituem-no. |
+| `regras/` | Uma regra por história, cada uma com `verificar(leituras, contexto, agora) -> list[Desvio]`. `us11.py`: a luz acesa há `LUZ_HORAS` e a porta abriu e fechou depois de ela acender; o que lembra entre voltas fica na tabela `estado_luz`. Os casos de teste estão em `dados/us11.csv`. |
 | `dev.py` | `/dev`: pôr anomalias e eventos à mão, enquanto o ciclo das regras não existe. |
 
 ## Como ligar o teu módulo
@@ -97,7 +101,7 @@ curl -X POST localhost:8000/dev/anomalias -H 'Content-Type: application/json' -d
 ```
 
 - `POST /dev/exemplo` carrega os mesmos dados dos mocks da PWA (pode correr-se várias vezes).
-- `POST /dev/anomalias` grava uma `Anomalia` e envia-a pelo WebSocket; com um `id` que já existe, atualiza-a.
+- `POST /dev/anomalias` grava uma `Anomalia` e envia-a pelo WebSocket; com um `id` que já existe, atualiza-a. Com `?us=US11`, regista a user story (a US02 e a US03 precisam dela).
 - `POST /dev/eventos` grava um `Evento` e envia-o pelo WebSocket.
 
 ## Testes

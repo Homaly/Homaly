@@ -75,6 +75,7 @@ def avaliar(
         if not resposta["avisar"] and not desvio.imediato:
             return None
         titulo, explicacao, acao = resposta["titulo"], resposta["explicacao"], resposta["acao"]
+    acao = _acao_possivel(desvio.us, acao)
 
     anomalia = Anomalia(
         classe=desvio.classe,
@@ -85,6 +86,20 @@ def avaliar(
     )
     registar_us(anomalia.id, desvio.us)
     return anomalia
+
+
+def _acao_possivel(us: str, acao: str | None) -> str | None:
+    """A ação a propor: só nas user stories em que a casa sabe agir (US03, `acoes.ACOES`).
+
+    Nessas, propõe-se sempre, com o texto da IA ou, sem ele (ou sem modelo), o da casa. Nas
+    outras, a ação que a IA escreveu cai: o botão Aceitar não teria nada para executar.
+    """
+    from backend.acoes import ACOES  # aqui dentro: acoes.py importa este módulo
+
+    conhecida = ACOES.get(us)
+    if conhecida is None:
+        return None
+    return acao or conhecida.descricao
 
 
 def registar_us(anomalia_id: str, us: str) -> None:
