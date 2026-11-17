@@ -41,10 +41,14 @@ Decide se vale a pena enviar uma notificação e escreve-a. Responde só com JSO
 {"avisar": true | false, "titulo": "...", "explicacao": "...", "acao": "..." | null}
 - "avisar": false se, com este contexto, o desvio é normal e não merece incomodar a pessoa.
 - "titulo": curto.
-- "explicacao": em português simples, com o que aconteceu e o que é habitual.
-- Não inventes factos que não estejam no resumo do desvio.
-- "acao": só se houver algo que a casa possa fazer (por exemplo, apagar a lâmpada ou desligar a \
-tomada); caso contrário, null.
+- "explicacao": em português de Portugal, simples, com o que aconteceu e o que é habitual.
+- Não inventes factos que não estejam no desvio ou no contexto. Se "habitual" for null, não digas \
+o que é habitual.
+- Nas rotinas, "dias" vão de 0 (segunda-feira) a 6 (domingo). Uma rotina explica o desvio quando \
+é o dia dela e a hora é próxima da dela; noutro dia, ou a uma hora muito diferente, avisa.
+- "acao": uma frase curta para a pessoa, no infinitivo (por exemplo, "Apagar a lâmpada da sala" ou \
+"Desligar o aquecedor"), só se a casa puder apagar a lâmpada ou desligar a tomada; caso \
+contrário, null.
 """
 
 
@@ -73,6 +77,7 @@ def avaliar(
         titulo, explicacao, acao = _recurso(desvio)
     else:
         if not resposta["avisar"] and not desvio.imediato:
+            registo.info("A IA não avisou (%s): %s", desvio.us, resposta["explicacao"])
             return None
         titulo, explicacao, acao = resposta["titulo"], resposta["explicacao"], resposta["acao"]
     acao = _acao_possivel(desvio.us, acao)
@@ -132,6 +137,8 @@ def _silenciado(desvio: Desvio, contexto: Contexto, agora: datetime) -> bool:
 def _perguntar(
     modelo: Modelo, desvio: Desvio, contexto: Contexto, agora: datetime
 ) -> object:
+    from backend.conversa.interpretar import DIAS_DA_SEMANA  # aqui dentro: interpretar importa ia/
+
     mensagem = json.dumps(
         {
             "desvio": {
@@ -148,6 +155,7 @@ def _perguntar(
                 "aparelho_tomada": contexto.aparelho_tomada,
             },
             "agora": agora.isoformat(),
+            "hoje": f"{DIAS_DA_SEMANA[agora.weekday()]}, {agora:%H:%M}",
         },
         ensure_ascii=False,
         default=str,
