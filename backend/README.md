@@ -36,6 +36,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `db.py` | A ligação ao SQLite. |
 | `anomalias.py` | A tabela das anomalias, `guardar`, `obter`, `listar`; `GET /anomalias` e `GET /anomalias/{id}`. |
 | `eventos.py` | A tabela dos eventos, `registar`, `listar`; `GET /eventos`. |
+| `historico.py` | O resto do histórico (US06), como eventos: a anomalia nova e a anomalia resolvida, com `anomaliaId` (o `anomalias.guardar` chama `anomalia_mudou` sozinho), e `registar_desvio(desvio, motivo, agora)`, o desvio que a casa viu e não avisou: é o `registar_historico` do ciclo. |
 | `tempo_real.py` | O WebSocket `/ws`; `enviar_anomalia` e `enviar_evento`. |
 | `formatos.py` | Os formatos partilhados entre as peças (`Leitura`, `Desvio`, `Contexto`, ...); mudar um campo obriga a avisar a equipa. |
 | `ia/` | `modelo.py`: o `Modelo` (trocável), o `ModeloFalso` e `obter_modelo`, que lê `IA_FORNECEDOR`. `avaliar.py`: `avaliar(desvio, contexto)` dá uma `Anomalia` (ou nada), com o resumo do desvio se o modelo falhar; `us_da_anomalia`; `registar_us(a.id, us)`: quem publicar uma anomalia sem passar por `avaliar` tem de a chamar, senão a US02 não consegue propor silenciá-la. |

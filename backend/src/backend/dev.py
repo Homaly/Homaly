@@ -9,7 +9,7 @@ from datetime import timedelta
 from fastapi import APIRouter
 
 from . import anomalias, eventos, tempo_real
-from .contrato import AcaoProposta, Anomalia, Evento, agora
+from .contrato import AcaoProposta, Anomalia, Evento, TextoEm, agora
 from .ia.avaliar import registar_us
 
 router = APIRouter(prefix="/dev", tags=["desenvolvimento"])
@@ -21,9 +21,9 @@ def criar_anomalia(anomalia: Anomalia, us: str | None = None) -> Anomalia:
 
     `?us=US11` diz que regra a gerou: a US02 precisa disso para silenciar e a US03 para agir.
     """
-    anomalias.guardar(anomalia)
     if us:
-        registar_us(anomalia.id, us)
+        registar_us(anomalia.id, us)  # antes de guardar: o evento do histórico diz o dispositivo
+    anomalias.guardar(anomalia)
     tempo_real.enviar_anomalia(anomalia)
     return anomalia
 
@@ -67,18 +67,16 @@ def carregar_exemplo() -> dict:
             explicacao="A sala esteve abaixo de 16 °C durante três horas. Já voltou aos 19 °C.",
             detetada_em=ha(60 * 10),
             estado="resolvida",
+            resolucao=TextoEm(texto="A sala voltou aos 19 °C.", em=ha(60 * 7)),
         ),
     ]
     exemplo_eventos = [
-        Evento(id="exemplo-e1", em=ha(7), dispositivo="Porta da rua", descricao="Abriu",
-               anomalia_id="exemplo-porta"),
+        Evento(id="exemplo-e1", em=ha(7), dispositivo="Porta da rua", descricao="Abriu"),
         Evento(id="exemplo-e2", em=ha(90), dispositivo="Sala", descricao="19,5 °C"),
         Evento(id="exemplo-e3", em=ha(180), dispositivo="Porta da rua", descricao="Fechou"),
         Evento(id="exemplo-e4", em=ha(181), dispositivo="Porta da rua", descricao="Abriu"),
-        Evento(id="exemplo-e5", em=ha(300), dispositivo="Luz da sala", descricao="Acendeu",
-               anomalia_id="exemplo-luz"),
-        Evento(id="exemplo-e6", em=ha(60 * 10), dispositivo="Sala", descricao="15,4 °C",
-               anomalia_id="exemplo-frio"),
+        Evento(id="exemplo-e5", em=ha(300), dispositivo="Luz da sala", descricao="Acendeu"),
+        Evento(id="exemplo-e6", em=ha(60 * 10), dispositivo="Sala", descricao="15,4 °C"),
     ]
     us = {"exemplo-porta": "US08", "exemplo-luz": "US11", "exemplo-frio": "US10"}
     for anomalia in exemplo_anomalias:
