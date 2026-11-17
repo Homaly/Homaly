@@ -70,6 +70,7 @@ npm run build    # type-check and production build
 | `DECISIONS.md` | The team's decisions. Only the "Decidido" section is settled; "Proposto" and "Em aberto" are not. |
 | `PLANO.md` | The plan: what is built, MVP scope, calendar, work fronts, risks. |
 | `USER_STORIES.md` | User stories of the MVP (US01–US13). |
+| `DIVISAO.md` | Proposed split of the work among the five team members: on the first day each builds one piece of the shared base, then each owns some user stories end to end; day-by-day plan. Not accepted by the team yet. |
 | `.env.example` | Names of the settings the code will need. Real values go in `.env`, which is never committed. |
 
 When these documents disagree with each other, say so instead of picking one silently. Keep them consistent when changing one of them.

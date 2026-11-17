@@ -57,6 +57,8 @@ A duração de quatro dias e o MVP ao segundo dia estão por confirmar.
 
 Uma por pessoa; falta decidir quem fica com qual.
 
+Há uma proposta diferente em `DIVISAO.md`: na terça, cada pessoa faz uma destas peças, só até a US08 funcionar de ponta a ponta; a partir de quarta, cada pessoa fica com algumas user stories e faz cada uma de ponta a ponta.
+
 1. **Dispositivos:** ligação ao servidor MCP da Altice.
 2. **Motor de anomalias:** regras de deteção e dataset simulado.
 3. **IA:** avaliação do contexto, explicações e conversa com a casa.
@@ -83,4 +85,4 @@ Uma por pessoa; falta decidir quem fica com qual.
 ## Por decidir pela equipa
 
 - A cena da demo.
-- Quem fica com cada frente de trabalho.
+- Quem fica com cada frente de trabalho, ou com que user stories (proposta em `DIVISAO.md`).

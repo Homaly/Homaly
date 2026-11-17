@@ -125,7 +125,7 @@ O que cada dispositivo devolve, com os ids, está em `docs/mcp-dispositivos.md`.
 
 - O papel das ideias 1 e 3: funcionalidades futuras ou abandonadas.
 - A cena da demo (a equipa decide mais tarde).
-- A divisão das histórias pelos cinco (a equipa decide mais tarde).
+- A divisão das histórias pelos cinco: há uma proposta em `DIVISAO.md`; a equipa decide.
 - Se as regras do hackathon permitem reaproveitar código escrito antes do evento.
 - O modelo de IA e quem o fornece: a equipa está a ver como fazer (créditos da organização ou plano gratuito de um fornecedor).
 - De quanto em quanto tempo o backend pergunta o estado dos sensores ao servidor MCP.
