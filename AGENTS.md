@@ -50,11 +50,12 @@ With Docker, from the repo root (development setup: bind mounts, Vite HMR, uvico
 
 ```bash
 docker compose up --build   # frontend on :5173, backend on :${BACKEND_PORT:-8000}
+docker compose up -d --build -V   # after a pull that adds dependencies: -V drops the old node_modules and .venv volumes
 ```
 
-The backend container runs `uvicorn $APP_MODULE` (default `backend.main:app`, set in `docker-compose.yml`), so it only starts once the backend declares FastAPI and uvicorn as dependencies and defines that app. It reads the root `.env`; the frontend reads `frontend/.env`.
+The backend container runs `uvicorn $APP_MODULE` (default `backend.main:app`, set in `docker-compose.yml`), so it only starts once the backend declares FastAPI and uvicorn as dependencies and defines that app. It reads the root `.env`; the frontend reads `frontend/.env.development` (shared defaults, committed), overridden by `frontend/.env.development.local` (per machine, not committed). The dev server on :5173 cannot be installed as a PWA; how to build, serve and install it is in `docs/frontend-design.md`, section "PWA".
 
-Without Docker, run from `frontend/` (copy `.env.example` to `.env` first):
+Without Docker, run from `frontend/` (to override the defaults, copy `.env.example` to `.env.development.local` first):
 
 ```bash
 npm install

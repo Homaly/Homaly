@@ -145,6 +145,23 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 
 `vite-plugin-pwa` com manifesto (nome Homaly, ícone, cores) e service worker básico. Instalável; sem push. O service worker guarda a letra do Google, para a app abrir sem rede com a mesma letra; os ícones vêm no código. A cor da barra do telemóvel (`theme-color`) acompanha o tema.
 
+### Instalar e testar
+
+O servidor de desenvolvimento (`npm run dev`, porta 5173) não tem manifesto nem service worker: mostra os ecrãs, mas não deixa instalar. Para testar a PWA, gerar a build e servi-la, a partir da raiz do repo:
+
+```bash
+docker compose run --rm -p 4173:4173 frontend sh -c "npx vite build --mode development && npx vite preview --host 0.0.0.0"
+```
+
+O `--mode development` faz a build ler `frontend/.env.development` e `frontend/.env.development.local`. Sem ele não há ficheiro de ambiente para produção: os mocks ficam desligados, a API fica sem endereço e os pedidos vão para o próprio servidor da build, que não responde.
+
+- **Dados:** por omissão, a build usa os mocks. Para usar o backend real, pôr `VITE_USE_MOCKS=false` em `frontend/.env.development.local` e ter o backend a correr na porta 8000.
+- **Instalar no computador:** abrir http://localhost:4173 no Chrome, no Edge ou no Chromium e carregar no ícone de instalar, à direita na barra de endereço (ou menu ⋮ → *Transmitir, guardar e partilhar* → *Instalar página como app…*). O Firefox não instala PWAs no Linux.
+- **Instalar no telemóvel (Android):** o Chrome só instala a partir de HTTPS ou de `localhost`; pelo IP da rede, a página abre mas não deixa instalar. Ligar o telemóvel por USB, com a depuração USB ativa; no Chrome do computador, em `chrome://inspect` → *Port forwarding*, reencaminhar `4173` e `8000` (a app chama a API em `localhost:8000`); no telemóvel, abrir `http://localhost:4173` e escolher ⋮ → *Instalar app*.
+- **Verificar:** F12 → *Application*. Em *Manifest* aparece "Homaly" com os ícones; em *Service workers*, o `sw.js` está ativo. Com *Offline* ligado no separador *Network*, a app deve voltar a abrir ao recarregar, sem dados novos.
+- **Aparece a versão antiga:** o service worker serve a cópia que guardou; a nova entra depois de recarregar uma ou duas vezes. Se não entrar, F12 → *Application* → *Storage* → *Clear site data*. Uma app já instalada atualiza-se da mesma forma ao abrir.
+- **Depois de um pull com dependências novas:** `docker compose up -d --build -V`. Sem o `-V`, os contentores ficam com o `node_modules` e o `.venv` antigos, e a build falha com "failed to resolve import" (ou o backend com `ModuleNotFoundError`).
+
 ## Verificação
 
 `tsc` e `vite build` sem erros. Cada ecrã aberto no browser em modo telemóvel, com mocks e, quando houver, com o backend. Sem testes automáticos.
