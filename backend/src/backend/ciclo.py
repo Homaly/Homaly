@@ -13,7 +13,10 @@ de o ver. Comportamento decidido a 2026-11-17:
   SO_COM_RESPOSTA, que esperam pela resposta. Se a regra devolveu uma Resolucao
   (ex.: "a porta fechou às 14:12"), é esse o texto; senão, um texto genérico.
 
-Uso: uv run python -m backend.ciclo <ficheiro.csv>
+Uso:
+  uv run python -m backend.ciclo <ficheiro.csv>   # reproduz um CSV; o 'agora' é a hora das leituras
+  uv run python -m backend.ciclo --ao-vivo        # um polling a cada POLLING_SEGUNDOS, com o relógio
+                                                  # de backend.relogio (RELOGIO_INICIO, RELOGIO_FATOR)
 """
 
 from __future__ import annotations
@@ -21,12 +24,14 @@ from __future__ import annotations
 import importlib
 import pkgutil
 import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable, Iterable, Literal
 
 from backend.contrato import Anomalia, TextoEm
 from backend.formatos import Contexto, Desvio, Leitura, Resolucao
+from backend.relogio import Relogio
 
 Regra = Callable[[list[Leitura], Contexto, datetime], list[Desvio | Resolucao]]
 
@@ -149,12 +154,33 @@ def correr(ciclo: Ciclo, lotes: Iterable[tuple[datetime, list[Leitura]]]) -> Non
         ciclo.passo(leituras, agora)
 
 
-def main(argv: list[str]) -> None:
-    from backend import avisos, falsos
+def ao_vivo(
+    ciclo: Ciclo,
+    ler: Callable[[], list[Leitura]],
+    relogio: Relogio,
+    intervalo: float,
+    passos: int | None = None,
+    dormir: Callable[[float], None] = time.sleep,
+) -> None:
+    """Um polling a cada intervalo segundos reais; o 'agora' é o do relógio (talvez acelerado).
 
-    avisos.configurar(falsos.avisos())  # a reprodução de um CSV só escreve no terminal
+    As regras usam o 'agora', não a hora das leituras, por isso a hora simulada chega a todas.
+    passos limita o número de pollings (para os testes); None corre para sempre.
+    """
+    n = 0
+    while passos is None or n < passos:
+        ciclo.passo(ler(), relogio.agora())
+        n += 1
+        if passos is None or n < passos:
+            dormir(intervalo)
+
+
+def main(argv: list[str]) -> None:
+    from backend import avisos, dispositivos, falsos
+
+    avisos.configurar(falsos.avisos())  # por agora, com as peças falsas: só escreve no terminal
     if len(argv) != 1:
-        sys.exit("uso: python -m backend.ciclo <ficheiro.csv>")
+        sys.exit("uso: python -m backend.ciclo <ficheiro.csv> | --ao-vivo")
     ciclo = Ciclo(
         regras=carregar_regras(),
         avaliar=falsos.avaliar,
@@ -162,7 +188,13 @@ def main(argv: list[str]) -> None:
         obter_contexto=falsos.obter_contexto,
         registar_historico=falsos.registar_historico,
     )
-    correr(ciclo, falsos.ler_csv(argv[0]))
+    if argv[0] == "--ao-vivo":
+        relogio = Relogio.do_ambiente()
+        intervalo = dispositivos.intervalo_s()
+        print(f"ciclo ao vivo: polling a cada {intervalo:g} s, a começar às {relogio.agora():%Y-%m-%d %H:%M}")
+        ao_vivo(ciclo, falsos.ler, relogio, intervalo)
+    else:
+        correr(ciclo, falsos.ler_csv(argv[0]))
 
 
 if __name__ == "__main__":

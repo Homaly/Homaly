@@ -204,3 +204,25 @@ def test_publicar_passou_a_seguranca_agenda_de_novo(avisos):
     a.explicacao = "outro texto"
     av.publicar(a)
     assert contacto.chamadas == ["agendar", "agendar"]
+
+
+def test_ao_vivo_usa_a_hora_do_relogio():
+    from backend.ciclo import ao_vivo
+    from backend.relogio import Relogio
+
+    vistos: list[datetime] = []
+    ciclo = Ciclo(
+        regras=[lambda leituras, contexto, agora: vistos.append(agora) or []],
+        avaliar=lambda d, c: None,
+        publicar=lambda a: None,
+        obter_contexto=lambda: Contexto([], [], [], False),
+        registar_historico=lambda d, m, a: None,
+    )
+    real = [datetime(2026, 11, 18, 14, 0)]
+    relogio = Relogio(datetime(2026, 11, 19, 8, 50), fator=60, real=lambda: real[0])
+
+    def dormir(segundos: float) -> None:
+        real[0] += timedelta(seconds=segundos)
+
+    ao_vivo(ciclo, lambda: [], relogio, intervalo=5, passos=3, dormir=dormir)
+    assert vistos == [datetime(2026, 11, 19, 8, 50), datetime(2026, 11, 19, 8, 55), datetime(2026, 11, 19, 9, 0)]

@@ -40,6 +40,15 @@ def ler_csv(caminho: str) -> Iterator[tuple[datetime, list[Leitura]]]:
         yield em, list(lote)
 
 
+# dispositivos.ler() (Xuta), para o ciclo ao vivo sem o MCP: a porta fechada e a tomada sem gastar.
+def ler() -> list[Leitura]:
+    agora = datetime.now()
+    return [
+        Leitura("porta", "sensorState", "normal", agora),
+        Leitura("tomada", "instantPower", 0.0, agora),
+    ]
+
+
 # Contexto (Simão): vazio.
 def obter_contexto() -> Contexto:
     return Contexto(ferias=[], rotinas=[], silencios=[], casa_vazia=False)

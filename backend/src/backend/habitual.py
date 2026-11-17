@@ -3,11 +3,20 @@
 - Porta: para cada tipo de dia (dias úteis, fim de semana), a primeira e a última
   hora a que a porta abriu no histórico. Uma abertura conta como normal até uma
   hora antes da primeira e uma hora depois da última (US07).
+- Porta, de manhã: para cada tipo de dia, a primeira abertura mais tardia (a primeira
+  de cada dia, e dessas a mais tardia). A US09 avisa se a porta ainda não abriu
+  MARGEM_US09 depois disso.
 - Tomada: o período seguido mais longo a gastar (acima de LIMITE_W). A US14 avisa
   a partir de três vezes esse período.
 
 A semana de férias do histórico não entra no cálculo: com a casa vazia, a casa
 aprenderia que é normal a porta não abrir.
+
+Afinação (backend.afinacao, 2026-11-17): cada semana do histórico, passada pelas regras
+com o habitual das outras, dá 0 falsos alarmes com estes valores. Folgas mais curtas:
+US07 25 min, US14 2 h, US09 0 min (um sábado abriu às 11:00, com o limite dessa
+semana nas 11:00). A margem da US09 (30 min) foi decidida assim; é a primeira a rever
+se houver mais dados.
 """
 
 from __future__ import annotations
@@ -17,6 +26,7 @@ import functools
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
+from typing import Container
 
 HISTORICO = Path(__file__).resolve().parents[2] / "dados" / "historico.csv"
 
@@ -24,6 +34,7 @@ HISTORICO = Path(__file__).resolve().parents[2] / "dados" / "historico.csv"
 FERIAS_DO_HISTORICO = (date(2026, 11, 2), date(2026, 11, 8))
 
 MARGEM_PORTA = timedelta(hours=1)
+MARGEM_US09 = timedelta(minutes=30)
 LIMITE_W = 10.0  # "a gastar": potência acima disto (US14), a afinar
 VEZES_O_HABITUAL = 3  # US14: avisa a partir de 3x o período mais longo do histórico
 
@@ -51,6 +62,7 @@ def _minutos(t: time) -> int:
 class Habitual:
     porta: dict[str, tuple[time, time]]  # tipo de dia -> (primeira, última abertura vistas)
     tomada_max: timedelta  # período seguido mais longo a gastar
+    primeira_abertura: dict[str, time]  # tipo de dia -> a primeira abertura do dia mais tardia
 
     def porta_normal(self, quando: datetime) -> bool:
         janela = self.porta.get(tipo_de_dia(quando))
@@ -67,6 +79,20 @@ class Habitual:
             return f"{NOME_DO_TIPO[tipo]}, a porta nunca abre."
         return f"{NOME_DO_TIPO[tipo]}, a porta costuma abrir entre as {janela[0]:%H:%M} e as {janela[1]:%H:%M}."
 
+    def limite_porta_nao_abriu(self, quando: datetime | date) -> time | None:
+        """US09: a hora a partir da qual a porta já devia ter aberto; None se nunca abre nesse tipo de dia."""
+        primeira = self.primeira_abertura.get(tipo_de_dia(quando))
+        if primeira is None:
+            return None
+        return (datetime.combine(date.min, primeira) + MARGEM_US09).time()
+
+    def texto_primeira_abertura(self, quando: datetime | date) -> str:
+        tipo = tipo_de_dia(quando)
+        primeira = self.primeira_abertura.get(tipo)
+        if primeira is None:
+            return f"{NOME_DO_TIPO[tipo]}, a porta nunca abre."
+        return f"{NOME_DO_TIPO[tipo]}, a porta costuma abrir pela primeira vez até às {primeira:%H:%M}."
+
     @property
     def limite_tomada(self) -> timedelta:
         return VEZES_O_HABITUAL * self.tomada_max
@@ -79,19 +105,23 @@ def _nas_ferias(quando: datetime) -> bool:
     return FERIAS_DO_HISTORICO[0] <= quando.date() <= FERIAS_DO_HISTORICO[1]
 
 
-def carregar(caminho: Path | str = HISTORICO) -> Habitual:
+def carregar(caminho: Path | str = HISTORICO, excluir: Container[date] = ()) -> Habitual:
+    """O habitual do ficheiro. Os dias em excluir não contam (a afinação usa-o para
+    testar uma semana com o habitual das outras)."""
     aberturas: dict[str, list[time]] = {}
+    primeiras: dict[date, time] = {}
     periodos: list[timedelta] = []
     desde: datetime | None = None
 
     with open(caminho, newline="", encoding="utf-8") as f:
         for linha in csv.DictReader(f):
             em = datetime.fromisoformat(linha["em"])
-            if _nas_ferias(em):
+            if _nas_ferias(em) or em.date() in excluir:
                 continue
             if linha["dispositivo"] == "porta" and linha["tipo"] == "sensorState":
                 if linha["valor"] == "alarm":
                     aberturas.setdefault(tipo_de_dia(em), []).append(em.time())
+                    primeiras.setdefault(em.date(), em.time())
             elif linha["dispositivo"] == "tomada" and linha["tipo"] == "instantPower":
                 if float(linha["valor"]) > LIMITE_W:
                     desde = desde or em
@@ -102,6 +132,10 @@ def carregar(caminho: Path | str = HISTORICO) -> Habitual:
     return Habitual(
         porta={tipo: (min(horas), max(horas)) for tipo, horas in aberturas.items()},
         tomada_max=max(periodos, default=timedelta(0)),
+        primeira_abertura={
+            tipo: max(t for d, t in primeiras.items() if tipo_de_dia(d) == tipo)
+            for tipo in {tipo_de_dia(d) for d in primeiras}
+        },
     )
 
 

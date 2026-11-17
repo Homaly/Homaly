@@ -1,4 +1,4 @@
-"""Gera dados/historico.csv: quatro semanas de uma família que trabalha.
+"""Gera dados/historico.csv: quatro semanas de uma família que trabalha, até à véspera da demo.
 
 - Dias úteis: sai entre as 7h30 e as 8h30, chega entre as 18h00 e as 19h30;
   às vezes uma saída curta ao fim da tarde, ainda antes das 19h30.
@@ -9,7 +9,8 @@
 - A semana de FERIAS_DO_HISTORICO: a porta não abre e a tomada não gasta.
 
 Só se escrevem as mudanças (porta a abrir e a fechar, tomada a ligar e a desligar).
-A semente é fixa: voltar a correr gera o mesmo ficheiro.
+Os extremos (07:30, 08:30, 19:30; 09:30, 11:00, 23:00) são forçados num dia de cada,
+para o habitual ficar exato. A semente é fixa: voltar a correr gera o mesmo ficheiro.
 
 Uso (em backend/): uv run python scripts/gerar_historico.py
 """
@@ -22,8 +23,8 @@ from datetime import date, datetime, time, timedelta
 
 from backend.habitual import FERIAS_DO_HISTORICO, HISTORICO
 
-INICIO = date(2026, 10, 19)  # segunda
-FIM = date(2026, 11, 15)  # domingo
+INICIO = date(2026, 10, 21)  # quarta
+FIM = date(2026, 11, 17)  # terça, véspera da demo (18/11)
 SEMENTE = 2026
 
 
@@ -39,7 +40,7 @@ def entre(rng: random.Random, dia: date, de: tuple[int, int], ate: tuple[int, in
 
 
 def dia_util(rng: random.Random, dia: date, n: int) -> tuple[list[datetime], list[tuple[datetime, int]]]:
-    saida = hora(dia, 7, 30) if n == 0 else entre(rng, dia, (7, 30), (8, 30))
+    saida = {0: hora(dia, 7, 30), 2: hora(dia, 8, 30)}.get(n) or entre(rng, dia, (7, 30), (8, 30))
     chegada = hora(dia, 19, 30) if n == 1 else entre(rng, dia, (18, 0), (19, 30))
     aberturas = [saida, chegada]
     if chegada <= hora(dia, 18, 50) and rng.random() < 0.4:  # saída curta, de volta até às 19h30
@@ -53,7 +54,7 @@ def dia_util(rng: random.Random, dia: date, n: int) -> tuple[list[datetime], lis
 
 
 def fim_de_semana(rng: random.Random, dia: date, n: int) -> tuple[list[datetime], list[tuple[datetime, int]]]:
-    primeira = hora(dia, 9, 30) if n == 0 else entre(rng, dia, (9, 30), (11, 0))
+    primeira = {0: hora(dia, 9, 30), 2: hora(dia, 11, 0)}.get(n) or entre(rng, dia, (9, 30), (11, 0))
     regresso = entre(rng, dia, (12, 30), (13, 30))
     saida = entre(rng, dia, (15, 0), (17, 0))
     ultima = hora(dia, 23, 0) if n == 1 else entre(rng, dia, (20, 0), (23, 0))
