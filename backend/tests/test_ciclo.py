@@ -238,7 +238,9 @@ def test_publicar_resolvida_que_nunca_viu_nao_agenda(avisos):
     a = anomalia()
     a.estado = "resolvida"
     av.publicar(a)
-    assert contacto.chamadas == []
+    # Não agenda nenhum alerta; chama resolvida(), que só manda a SMS de resolvido se o contacto
+    # já tinha recebido o alerta antes do reinício (US05).
+    assert contacto.chamadas == ["resolvida"]
 
 
 class ContactoComImediato(Contacto):

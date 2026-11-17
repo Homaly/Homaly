@@ -19,7 +19,7 @@ export default function Layout({ title, showBack, children }: LayoutProps) {
           Sem ligação em tempo real. A tentar novamente…
         </div>
       )}
-      <main className="flex-1 px-4 pt-4 pb-24">{children}</main>
+      <main className="flex-1 px-5 pt-2 pb-24">{children}</main>
     </div>
   );
 }

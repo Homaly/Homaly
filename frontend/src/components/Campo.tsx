@@ -3,7 +3,7 @@ import { cn } from '../lib/cn';
 
 /**
  * Campo de texto: 48 px de altura, cantos de 12 px, letra de 16 px (o iOS não faz zoom).
- * A caixa da conversa passa `rounded-full` de propósito, a condizer com o botão redondo de enviar.
+ * A caixa da conversa passa `rounded-full`, a condizer com os botões em pílula.
  */
 export default function Campo({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return (

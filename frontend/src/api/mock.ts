@@ -14,8 +14,8 @@ const fimDoDia = () => {
 const IMAGEM_VEICULO =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#1a2e35"/>' +
-      '<text x="160" y="95" fill="#06bcf9" font-family="sans-serif" font-size="16" text-anchor="middle">Imagem da câmara (mock)</text></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#161a2b"/>' +
+      '<text x="160" y="95" fill="#00e0c6" font-family="sans-serif" font-size="16" text-anchor="middle">Imagem da câmara (mock)</text></svg>'
   );
 
 let anomalias: Anomalia[] = [

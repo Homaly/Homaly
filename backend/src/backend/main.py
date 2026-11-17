@@ -6,7 +6,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import acoes, anomalias, ciclo, dev, eventos, relogio, tempo_real
+from . import acoes, anomalias, ciclo, contacto_externo, definicoes, dev, eventos, relogio, tempo_real
+from .contacto_externo import pagina, sms
 from .conversa import router as conversa
 from .dispositivos import simulacao
 from .resposta import router as resposta
@@ -18,9 +19,13 @@ async def _vida(app: FastAPI):
     relogio.partilhado()
     # O ciclo das regras (Vila): só com CICLO=1, para os testes e a PWA não lerem o MCP.
     parar = ciclo.arrancar() if os.environ.get("CICLO") == "1" else None
+    # O contacto externo (US05) envia as SMS que o ciclo agenda; arranca e pára com ele.
+    parar_contacto = contacto_externo.arrancar() if parar is not None else None
     yield
     if parar is not None:
         parar.set()
+    if parar_contacto is not None:
+        parar_contacto()
 
 
 app = FastAPI(title="Homaly", description="A casa que repara.", lifespan=_vida)
@@ -35,7 +40,10 @@ app.include_router(tempo_real.router)
 app.include_router(conversa.router)
 app.include_router(resposta.router)
 app.include_router(acoes.router)
+app.include_router(definicoes.router)
+app.include_router(pagina.router)  # a página do alerta, para o contacto externo (sem login)
 
 if os.environ.get("HOMALY_DEV") == "1":
     app.include_router(dev.router)
     app.include_router(simulacao.router)  # leituras injetadas para a demo
+    app.include_router(sms.router)  # as SMS que não saíram por falta do textbee

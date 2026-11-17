@@ -2,6 +2,9 @@
 
 - `ler()`: o estado da casa num só pedido (`get_home_devices`), como lista de `Leitura`, já com as
   leituras injetadas da demo por cima. Grava um evento quando a porta, a lâmpada ou a tomada mudam.
+  Um dispositivo que não comunica há mais de SENSOR_SILENCIO_MINUTOS (60) não dá leituras: o MCP
+  repetiria o último valor (ex.: a porta "aberta" desde ontem com o kit desligado). As regras tratam
+  "sem leitura" como "nada mudou". `em_silencio()` diz quais estão calados e desde quando.
 - `executar(dispositivo, tipo, valor)`: liga/desliga a lâmpada ou a tomada, ou muda o brilho da
   lâmpada, e confirma lendo o dispositivo de novo.
 - `alarme()`: o estado do alarme (`DISARMED`, `STAY` ou `AWAY`), para a casa vazia (US07, US14).
@@ -13,7 +16,7 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Protocol
 
 from backend import contrato, eventos
@@ -22,7 +25,7 @@ from backend.formatos import Leitura
 from . import mapa, mudancas, simulacao
 from .mcp import ClienteMCP, Config, ErroDispositivos
 
-__all__ = ["ErroDispositivos", "alarme", "configurar", "executar", "intervalo_s", "ler"]
+__all__ = ["ErroDispositivos", "alarme", "configurar", "em_silencio", "executar", "intervalo_s", "ler"]
 
 registo = logging.getLogger(__name__)
 
@@ -43,6 +46,7 @@ _trinco = threading.RLock()
 _cliente: Cliente | None = None
 _ids: dict[str, str] = {}
 _observador = mudancas.Observador()
+_calados: dict[str, datetime] = {}
 
 
 def intervalo_s() -> float:
@@ -57,13 +61,34 @@ def intervalo_s() -> float:
     return valor
 
 
+def silencio_minutos() -> float:
+    """Ao fim de quantos minutos sem comunicar um dispositivo deixa de contar (0: nunca)."""
+    texto = os.environ.get("SENSOR_SILENCIO_MINUTOS", "").strip()
+    try:
+        return float(texto) if texto else 60.0
+    except ValueError:
+        raise ValueError(f"SENSOR_SILENCIO_MINUTOS tem de ser um número, não '{texto}'") from None
+
+
+def _agora_real() -> datetime:
+    """A hora real; o `lastCommunicationTime` do MCP é real, mesmo com o relógio do ciclo acelerado."""
+    return contrato.agora()
+
+
+def em_silencio() -> dict[str, datetime]:
+    """Os dispositivos que estavam calados na última leitura, e desde quando."""
+    with _trinco:
+        return dict(_calados)
+
+
 def configurar(cliente: Cliente | None) -> None:
     """Escolhe o cliente (o real, ou um falso nos testes); None volta ao real, criado do ambiente."""
-    global _cliente, _ids, _observador
+    global _cliente, _ids, _observador, _calados
     with _trinco:
         _cliente = cliente
         _ids = {}
         _observador = mudancas.Observador()
+        _calados = {}
 
 
 def _obter_cliente() -> Cliente:
@@ -78,12 +103,25 @@ def ler(agora: datetime | None = None) -> list[Leitura]:
     """O estado da casa agora, uma `Leitura` por capability."""
     global _ids
     em = agora or contrato.agora()
+    minutos = silencio_minutos()
+    limite = _agora_real() - timedelta(minutes=minutos) if minutos > 0 else None
     with _trinco:
         dados = _obter_cliente().chamar("get_home_devices")
         _ids = mapa.ids(dados)
-        leituras = simulacao.aplicar(mapa.para_leituras(dados, em), em)
+        _atualizar_calados(mapa.em_silencio(dados, limite) if limite else {})
+        leituras = simulacao.aplicar(mapa.para_leituras(dados, em, limite), em)
         _registar_eventos(leituras)
     return leituras
+
+
+def _atualizar_calados(calados: dict[str, datetime]) -> None:
+    """Escreve no log só quando um dispositivo fica calado ou volta, não a cada leitura."""
+    global _calados
+    for nome in calados.keys() - _calados.keys():
+        registo.warning("%s não comunica desde %s; as leituras dele ficam de fora", nome, calados[nome])
+    for nome in _calados.keys() - calados.keys():
+        registo.info("%s voltou a comunicar", nome)
+    _calados = calados
 
 
 def _registar_eventos(leituras: list[Leitura]) -> None:

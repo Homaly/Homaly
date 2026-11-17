@@ -10,8 +10,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
-      // As fontes vêm do Google: guardá-las para a app abrir sem rede com letra e ícones
-      // (sem a fonte, os ícones aparecem como texto: "home", "chat"...).
+      // A letra vem do Google: guardá-la para a app abrir sem rede com a mesma letra.
       workbox: {
         runtimeCaching: [
           {
@@ -35,8 +34,8 @@ export default defineConfig({
         short_name: 'Homaly',
         description: 'A casa que repara: avisa quando algo foge ao habitual.',
         lang: 'pt',
-        theme_color: '#0f1e23',
-        background_color: '#0f1e23',
+        theme_color: '#131321',
+        background_color: '#131321',
         display: 'standalone',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },

@@ -47,6 +47,8 @@ export interface MensagemConversa {
 export interface Definicoes {
   contacto: { nome: string; telemovel: string } | null;
   esperaMinutos: number;
+  /** Como o contacto externo reconhece a casa na SMS (ex.: "Casa da D. Maria"); sem ele, só "Homaly". */
+  nomeCasa?: string;
 }
 
 /** Mensagens que o servidor envia pelo WebSocket /ws. */
