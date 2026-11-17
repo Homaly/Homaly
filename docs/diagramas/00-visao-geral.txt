@@ -41,7 +41,7 @@ API-->App: MensagemConversa (autor: casa)
 App-->R: a casa confirma o que percebeu
 
 == 1. A casa lê os sensores e compara com o habitual ==
-Kit->MCP: o estado muda (porta, temperatura, lâmpada, câmara)
+Kit->MCP: o estado muda (porta, temperatura, lâmpada, tomada, câmara)
 note over MCP,Kit: O servidor não envia eventos\nnem dá a hora de cada mudança
 loop a cada N segundos (intervalo por definir)
 Disp->MCP: get_home_devices

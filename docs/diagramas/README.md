@@ -1,6 +1,6 @@
 # Diagramas
 
-Versão de 2026-11-17. Base: `DECISIONS.md` (só a secção "Decidido"), `USER_STORIES.md` (US01–US13), `PLANO.md`, `docs/frontend-design.md` e `docs/mcp-dispositivos.md`.
+Versão de 2026-11-17. Base: `DECISIONS.md` (só a secção "Decidido"), `USER_STORIES.md` (US01–US14), `PLANO.md`, `docs/frontend-design.md` e `docs/mcp-dispositivos.md`.
 
 Esta pasta tem dois tipos de diagrama:
 
@@ -15,7 +15,7 @@ Esta pasta tem dois tipos de diagrama:
 | `00-visao-geral.txt` | O ciclo completo: ligação ao MCP, conversa, leitura dos sensores, regras, IA, notificação, resposta, ação e SMS |
 | `us01-contar-a-casa.txt` | US01: conversa por texto com a casa (férias, rotinas recorrentes, mensagem não percebida) |
 | `us02-receber-e-responder.txt` | US02: notificação, resposta, proposta de silêncio e confirmação |
-| `us03-autorizar-acao.txt` | US03: aceitar, recusar ou ignorar a ação proposta (apagar a lâmpada) |
+| `us03-autorizar-acao.txt` | US03: aceitar, recusar ou ignorar a ação proposta (apagar a lâmpada ou desligar a tomada) |
 | `us04-escolher-contacto-externo.txt` | US04: indicar, mudar ou remover o contacto externo e o tempo de espera |
 | `us05-aviso-contacto-externo.txt` | US05: tempo de espera, SMS pelo textbee, página do alerta e SMS de resolvido |
 | `us06-historico.txt` | US06: histórico de eventos e detalhe de uma anomalia |
@@ -26,6 +26,7 @@ Esta pasta tem dois tipos de diagrama:
 | `us11-luz-acesa.txt` | US11: luz acesa há demasiado tempo, com a pergunta e a ação |
 | `us12-porta-aberta-a-arrefecer.txt` | US12: porta aberta com a sala a arrefecer, e a junção com a US08 |
 | `us13-veiculo-desconhecido.txt` | US13: veículo desconhecido na entrada (câmara, stream RTSP e modelo de visão) |
+| `us14-aparelho-esquecido.txt` | US14: aparelho na tomada a gastar muito mais tempo do que é costume, com a casa vazia, a pergunta, a ação e a resolução sozinha |
 
 ## Participantes
 
@@ -82,7 +83,7 @@ O que o C4 assume e os documentos ainda não fixam:
 
 ## Lacunas e inconsistências encontradas
 
-Resolvidas a 2026-11-17 nos documentos (os diagramas ainda não foram atualizados): 1 e 2 (contrato em `docs/frontend-design.md` e decisões no `DECISIONS.md`), 3 (a US07 usa `get_home_security_status`), 6 (a tomada também se comanda; nova US14), 7 (a US08 resolve-se quando a porta fecha) e 8 (há SMS de resolvido também quando a anomalia se resolve sozinha). Continuam abertas a 4 e a 5.
+Resolvidas a 2026-11-17 nos documentos. Dos diagramas, só a US03 (lâmpada ou tomada) e a nova US14 já refletem isto; os outros ainda não foram atualizados. Resolvidas: 1 e 2 (contrato em `docs/frontend-design.md` e decisões no `DECISIONS.md`), 3 (a US07 usa `get_home_security_status`), 6 (a tomada também se comanda; nova US14), 7 (a US08 resolve-se quando a porta fecha) e 8 (há SMS de resolvido também quando a anomalia se resolve sozinha). Continuam abertas a 4 e a 5.
 
 1. **Página do alerta (US05):** o contrato em `docs/frontend-design.md` não tem rota nem pedido para ela, nem diz quem a serve ou como o link identifica o alerta.
 2. **Proposta de silêncio (US02):** a casa diz o que vai deixar de avisar e espera confirmação, mas a `Anomalia` não tem campo para a resposta da casa e não há pedido para confirmar.

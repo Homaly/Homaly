@@ -8,9 +8,9 @@ control "Dispositivos\n(cliente MCP)" as Disp
 database "Base de\ndados" as DB
 end
 participant "Servidor MCP\nAltice" as MCP
-participant "Lâmpada\n(sala)" as Lamp
+participant "Lâmpada (sala)\nou tomada" as Lamp
 
-note over R,API: A anomalia tem uma ação possível (ex.: US11, luz acesa há demasiado tempo)
+note over R,API: A anomalia tem uma ação possível\n(ex.: apagar a luz na US11, desligar a tomada na US14)
 API->>App: WS {tipo: 'anomalia'} com acaoProposta
 App-->R: notificação com um botão para aceitar a ação
 
@@ -19,16 +19,16 @@ R->App: toca em "Aceitar"
 App->App: o botão fica a carregar
 App->API: POST /anomalias/{id}/acao {aceitar: true}
 API->Disp: executar a ação proposta
-Disp->MCP: update_device_capabilities (lâmpada: power off)
-MCP->Lamp: apagar
+Disp->MCP: update_device_capabilities (lâmpada ou tomada: power off)
+MCP->Lamp: desligar
 MCP-->Disp: resposta do servidor
-Disp->MCP: get_device_details (lâmpada)
+Disp->MCP: get_device_details (o mesmo dispositivo)
 MCP-->Disp: power
-alt a lâmpada ficou apagada
+alt o dispositivo ficou desligado
 Disp-->API: ação feita
 API->DB: registar a ação e o resultado
 API-->App: Anomalia atualizada (resolvida)
-App-->R: a casa confirma que apagou a luz
+App-->R: a casa confirma que desligou (a luz ou a tomada)
 else falhou ou não se confirmou
 Disp-->API: erro
 API->DB: registar a falha
@@ -45,5 +45,3 @@ note over API,Lamp: A casa não age
 else não responde
 note over R,Lamp: A casa não age
 end
-
-note over MCP,Lamp: Por confirmar: a lâmpada não comunica desde 4 de novembro,\npor isso o estado lido pode estar desatualizado

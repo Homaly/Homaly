@@ -1,0 +1,73 @@
+title US14: aparelho esquecido ligado (Eficiência energética)
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+participant "Servidor MCP\nAltice" as MCP
+participant "Tomada\ninteligente" as Tomada
+
+loop a cada ciclo de leitura
+Disp->MCP: get_home_devices
+MCP-->Disp: tomada (power e potência instantânea)
+Disp->Motor: estado e potência da tomada
+end
+note over Motor: "A gastar" quer dizer potência acima de um limite baixo\n(por exemplo, 10 W, a afinar)
+Disp->MCP: get_home_security_status
+MCP-->Disp: estado do alarme
+Disp->Motor: estado do alarme
+Motor->DB: histórico da tomada, férias ditas à casa\ne que aparelho está na tomada (US01)
+DB-->Motor: contexto
+
+alt a casa devia estar vazia (férias ditas à casa ou alarme em AWAY) e a tomada está a gastar
+Motor->IA: segurança: aparelho a gastar com a casa vazia
+note right of IA: Aqui a IA não decide se avisa:\no alerta é sempre imediato
+IA->LLM: escrever a explicação
+LLM-->IA: explicação
+IA->DB: guardar Anomalia (segurança, ativa, acaoProposta: desligar a tomada)
+IA->Avisos: avisar já
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação imediata, com o botão para desligar
+ref over Avisos: Contacto externo, com as regras da US05 para a segurança
+else a gastar há três horas, quando o habitual é no máximo uma hora seguida
+Motor->IA: eficiência energética: aparelho ligado há três horas
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e pergunta
+IA->DB: guardar Anomalia (eficiência, ativa, acaoProposta: desligar a tomada)
+IA->Avisos: avisar
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: "o aquecedor está ligado há três horas, desligo?"\ncom o consumo atual e o botão para desligar
+note right of App: Se a conversa (US01) não disse que aparelho é,\na casa diz "o aparelho na tomada"
+note over Avisos: Eficiência energética: o contacto externo não recebe nada
+end
+
+alt aceita desligar
+R->App: toca em "Aceitar"
+ref over R,Tomada: US03: a casa desliga a tomada e confirma o resultado
+else responde que ainda está a ser usado
+R->App: "ainda está a ser usado"
+App->API: POST /anomalias/{id}/resposta {texto}
+API->IA: interpretar a resposta
+IA->DB: não voltar a perguntar sobre a tomada hoje; anomalia resolvida
+API-->App: Anomalia (estado: resolvida)
+else o aparelho deixa de gastar
+Disp->MCP: get_home_devices (ciclo seguinte)
+MCP-->Disp: potência abaixo do limite
+Disp->Motor: a tomada deixou de gastar
+Motor->DB: anomalia resolvida sozinha\n(resolucao: "o aparelho deixou de gastar às HH:MM")
+Motor->Avisos: anomalia resolvida
+Avisos->API: a anomalia mudou
+API->>App: WS {tipo: 'anomalia', anomalia} (estado: resolvida)
+ref over Avisos: SMS de resolvido, se o contacto externo já tinha recebido SMS (US05)
+end
+
+note over Motor,DB: O tempo habitual vem do histórico; na demo, do dataset simulado
