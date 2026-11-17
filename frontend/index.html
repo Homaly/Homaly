@@ -5,25 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Homaly</title>
     <!-- Igual ao fundo do ecrã (--color-surface); o script abaixo e o useTheme trocam-na com o tema. -->
-    <meta name="theme-color" content="#f5f8f8" />
+    <meta name="theme-color" content="#f4f5f9" />
     <script>
       (function () {
         var t = localStorage.getItem('homaly-theme') || 'system';
         var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         if (t === 'dark' || (t === 'system' && prefersDark)) {
           document.documentElement.classList.add('dark');
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0f1e23');
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#131321');
         }
       })();
     </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <!-- Só os ícones usados (4 KB em vez de 1,1 MB). Para usar um novo, juntá-lo a icon_names, por ordem alfabética.
-         display=block: enquanto a fonte carrega não aparece o nome do ícone em texto. -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=arrow_back,bolt,chat,check_circle,close,cloud_off,dark_mode,error,favorite,history,home,info,light_mode,send,settings,shield,thermostat,warning&display=block" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
-  <body class="bg-surface font-display text-on-surface antialiased">
+  <body class="bg-surface text-on-surface antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

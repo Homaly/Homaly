@@ -20,13 +20,13 @@ type BotaoProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   largo?: boolean;
 };
 
-/** Botão com 48 px de altura mínima (alvo de toque) e cantos de 12 px. */
+/** Botão em pílula, como na app Connected Home, com 48 px de altura mínima (alvo de toque). */
 export default function Botao({ variante = 'primario', largo, className, type = 'button', ...props }: BotaoProps) {
   return (
     <button
       type={type}
       className={cn(
-        'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 font-semibold transition-transform disabled:opacity-50 motion-safe:enabled:active:scale-[0.98]',
+        'inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 font-semibold transition-transform disabled:opacity-50 motion-safe:enabled:active:scale-[0.98]',
         VARIANTES[variante],
         largo && 'w-full',
         className

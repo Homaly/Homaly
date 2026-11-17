@@ -42,10 +42,10 @@ export default function Conversa() {
             <div key={m.id} className={cn('flex', m.autor === 'pessoa' ? 'justify-end' : 'justify-start')}>
               <p
                 className={cn(
-                  'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm',
+                  'max-w-[80%] rounded-2xl px-4 py-2.5 text-[15px]',
                   m.autor === 'pessoa'
                     ? 'bg-primary text-on-primary rounded-br-sm'
-                    : 'bg-surface-container border border-outline-variant rounded-bl-sm'
+                    : 'bg-surface-container rounded-bl-sm'
                 )}
               >
                 {m.texto}
@@ -60,7 +60,7 @@ export default function Conversa() {
       {/* Assenta em cima da barra de baixo (64 px), por baixo do contorno dela. */}
       <form
         onSubmit={submeter}
-        className="fixed bottom-16 inset-x-0 z-30 mx-auto max-w-md flex gap-2 px-4 py-2 bg-surface mb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-16 inset-x-0 z-30 mx-auto max-w-md flex gap-2 px-5 py-2 bg-surface mb-[env(safe-area-inset-bottom)]"
       >
         <Campo
           value={texto}
@@ -75,7 +75,7 @@ export default function Conversa() {
           className="size-12 shrink-0 rounded-full px-0"
           aria-label="Enviar"
         >
-          <Icone nome="send" />
+          <Icone nome="send" className="size-5" />
         </Botao>
       </form>
     </Layout>

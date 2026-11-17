@@ -26,7 +26,7 @@ function agruparPorDia(eventos: Evento[]) {
 function LinhaEvento({ e }: { e: Evento }) {
   const conteudo = (
     <>
-      <span className="w-12 shrink-0 text-xs tabular-nums text-muted">
+      <span className="w-12 shrink-0 text-sm tabular-nums text-muted">
         {format(new Date(e.em), 'HH:mm')}
       </span>
       <span className="flex-1 min-w-0">
@@ -35,13 +35,13 @@ function LinhaEvento({ e }: { e: Evento }) {
       </span>
       {e.anomaliaId && (
         <>
-          <Icone nome="error" className="text-lg text-accent-orange" />
+          <Icone nome="error" className="size-5 text-accent-orange" />
           <span className="sr-only">Ver anomalia</span>
         </>
       )}
     </>
   );
-  const classes = 'flex items-center gap-3 py-3 text-sm';
+  const classes = 'flex min-h-14 items-center gap-3 py-3';
   return e.anomaliaId ? (
     <Link to={`/anomalias/${e.anomaliaId}`} className={classes}>
       {conteudo}
@@ -61,15 +61,15 @@ export default function Historico() {
       ) : isError ? (
         <EstadoErro onRetry={refetch} />
       ) : data.length === 0 ? (
-        <EstadoVazio icon="history" texto="Ainda não há eventos" />
+        <EstadoVazio icon="history" texto="Ainda não há eventos" descricao="Os eventos dos dispositivos aparecem aqui." />
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {agruparPorDia(data).map(([dia, eventos]) => (
             <section key={dia}>
-              <h2 className="text-sm font-semibold text-muted first-letter:uppercase">
+              <h2 className="mb-3 text-xl font-semibold first-letter:uppercase">
                 {dia}
               </h2>
-              <div className="divide-y divide-outline-variant">
+              <div className="divide-y divide-outline-variant rounded-2xl bg-surface-container px-4">
                 {eventos.map(e => (
                   <LinhaEvento key={e.id} e={e} />
                 ))}

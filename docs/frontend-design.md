@@ -33,7 +33,7 @@ frontend/src/
   context/            Toast e tema
 ```
 
-**Dependências:** react, react-router-dom, @tanstack/react-query, tailwindcss v4, clsx, tailwind-merge, date-fns, vite-plugin-pwa. Ícones: Material Symbols (fonte do Google), como no frontend antigo. A fonte só traz os ícones listados em `icon_names` no `index.html`; um ícone novo tem de entrar nessa lista, senão aparece o nome em texto.
+**Dependências:** react, react-router-dom, @tanstack/react-query, tailwindcss v4, clsx, tailwind-merge, date-fns, vite-plugin-pwa. Mais lucide-react para os ícones; um ícone novo entra no mapa de `components/Icone.tsx`. Letra: Montserrat (fonte do Google).
 
 **Vem do frontend antigo** (`projSmartHome/frontend`): `ToastContext` (sem `motion`), `useTheme`, estilos de `index.css`, o padrão do `useApi`; `Topbar` simplificado (sem pesquisa, alertas nem engrenagem).
 
@@ -106,6 +106,10 @@ interface Definicoes { contacto: { nome: string; telemovel: string } | null; esp
 
 Com `VITE_USE_MOCKS=true`, a camada `api/` devolve uns poucos dados fixos (algumas anomalias, eventos, mensagens e definições) para os ecrãs terem conteúdo. Sem WebSocket falso: o tempo real só se testa com o backend.
 
+## Identidade visual
+
+Segue a app Connected Home da Altice, para a Homaly parecer da mesma família: fundo azul-noite (`#131321`), cartões num tom um pouco mais claro e sem contorno, cantos de 16 px, botões em pílula turquesa (`#00e0c6`) com texto escuro, rosa para o que é destrutivo, letra Montserrat e ícones de traço fino (Lucide). Os títulos são grandes e a negrito; os separadores do ecrã têm título grande, o detalhe tem título pequeno. As cores do tema escuro foram medidas nas capturas da app; o tema claro deriva delas. Não se usa o logótipo nem o nome da Altice.
+
 ## Cores e contraste
 
 As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis, nunca `slate-*`, `bg-white` nem `dark:`: o `.dark` troca os valores dos papéis. Texto e ícones passam WCAG 2.2 AA nos dois temas: 4,5:1 no texto, 3:1 nos ícones, nos contornos dos campos e no foco.
@@ -118,26 +122,28 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 | `text-on-surface` | Texto principal (é o do `body`) |
 | `text-on-surface-variant` | Texto de apoio: descrições, explicações curtas |
 | `text-muted` | Metadados: horas, ajudas, separadores inativos |
-| `border-outline-variant` | Contornos de cartões e divisórias |
+| `border-outline-variant` | Divisórias dentro dos cartões (os cartões não têm contorno) |
 | `border-field` | Contorno dos campos e do botão de contorno |
 | `bg-primary` + `text-on-primary` | Botão principal, mensagem da pessoa na conversa |
 
-- **Cor de estado:** `text-accent-green` (correu bem), `text-accent-orange` (pede atenção), `text-danger` (erro ou perigo), `text-primary-ink` (ligação ou ação). Passam também sobre o fundo claro da mesma cor (`bg-danger/10`, `bg-accent-green/15`).
+- **Cor de estado:** `text-accent-green` (correu bem), `text-accent-orange` (pede atenção), `text-danger` (erro, perigo ou destrutivo; rosa no escuro), `text-primary-ink` (ligação ou ação). Passam também sobre o fundo claro da mesma cor (`bg-danger/10`, `bg-accent-green/15`).
 - **As classes de anomalia não têm cor.** Distinguem-se pelo ícone e pelo nome; a cor fica para o estado.
-- **Não usar `text-primary`:** o ciano da marca tem 2:1 sobre fundo claro. O contorno de foco é global; não usar `outline-none`.
+- **Não usar `text-primary`:** o turquesa tem 1,6:1 sobre fundo claro. O contorno de foco é global; não usar `outline-none`.
 
 ## Peças base
 
-- **`Botao`** (`components/Botao.tsx`): 48 px de altura mínima, cantos de 12 px. Variantes `primario`, `secundario`, `contorno`, `texto`, `perigo`. Um só `primario` por ecrã ou por bloco.
-- **`Campo`** (`components/Campo.tsx`): 48 px, cantos de 12 px, letra de 16 px (o iOS não faz zoom). A caixa da conversa é redonda de propósito.
-- **`Icone`** (`components/Icone.tsx`): escondido do leitor de ecrã. Quando o ícone é a única informação, juntar texto em `sr-only`.
-- **Alvos de toque:** 48 px no mínimo. Os botões só de ícone têm a área de toque maior do que o desenho.
-- **Títulos de lista** (Início, Histórico): `text-sm font-semibold text-muted`.
+- **`Botao`** (`components/Botao.tsx`): pílula com 48 px de altura mínima. Variantes `primario`, `secundario`, `contorno`, `texto`, `perigo`. Um só `primario` por ecrã ou por bloco.
+- **`Campo`** (`components/Campo.tsx`): 48 px, cantos de 12 px, letra de 16 px (o iOS não faz zoom). A caixa da conversa é em pílula, como os botões.
+- **`Icone`** (`components/Icone.tsx`): Lucide com traço de 1,75 (2,25 no separador ativo), escondido do leitor de ecrã. Quando o ícone é a única informação, juntar texto em `sr-only`.
+- **Cartões:** `rounded-2xl bg-surface-container`, sem contorno. Listas (Histórico) num só cartão, com divisórias que não chegam às bordas.
+- **Alvos de toque:** 48 px no mínimo. Os botões do topo são um círculo de contorno de 40 px dentro de 48 px de toque.
+- **Títulos de secção** (Início, Histórico, Definições): `text-xl font-semibold`.
+- **Estados vazios:** ícone num círculo, título e uma frase, como na app.
 - **Movimento:** as animações param com "reduzir movimento".
 
 ## PWA
 
-`vite-plugin-pwa` com manifesto (nome Homaly, ícone, cores) e service worker básico. Instalável; sem push. O service worker guarda as fontes do Google, para a app abrir sem rede com letra e ícones. A cor da barra do telemóvel (`theme-color`) acompanha o tema.
+`vite-plugin-pwa` com manifesto (nome Homaly, ícone, cores) e service worker básico. Instalável; sem push. O service worker guarda a letra do Google, para a app abrir sem rede com a mesma letra; os ícones vêm no código. A cor da barra do telemóvel (`theme-color`) acompanha o tema.
 
 ## Verificação
 
@@ -156,7 +162,8 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 | Frontend define o contrato | Esperar pelo backend | Não ficar à espera um do outro |
 | Mocks só com dados fixos | Mocks completos com WebSocket falso; sem mocks | Chega para popular os ecrãs |
 | Sem testes automáticos | Testes com Vitest | Tempo do hackathon |
-| Ícones Material Symbols | lucide-react | É o que as peças copiadas do antigo usam |
+| Ícones Lucide (lucide-react) | Material Symbols, como no frontend antigo | São os da app Connected Home; vêm no código, sem fonte para carregar |
+| Identidade da app Connected Home | Identidade própria | A Homaly vive ao lado da app da Altice; parecer da mesma família ajuda no pitch |
 | Classes de anomalia sem cor | Uma cor por classe | As cores das classes repetiam as de estado: eficiência parecia "correu bem", segurança parecia erro |
 | Cores como papéis trocados pelo `.dark` | `dark:` em cada componente | Um só sítio por cor; o tema escuro não se esquece em nenhum componente |
 

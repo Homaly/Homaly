@@ -13,10 +13,15 @@ export default function Inicio() {
       ) : isError ? (
         <EstadoErro onRetry={refetch} />
       ) : data.length === 0 ? (
-        <EstadoVazio icon="check_circle" texto="Está tudo normal" tudoBem />
+        <EstadoVazio
+          icon="check_circle"
+          texto="Está tudo normal"
+          descricao="A casa avisa quando alguma coisa fugir ao habitual."
+          tudoBem
+        />
       ) : (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted">
+          <h2 className="text-xl font-semibold">
             {data.length === 1 ? '1 coisa por responder' : `${data.length} coisas por responder`}
           </h2>
           {data.map(a => (

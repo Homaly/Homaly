@@ -5,7 +5,7 @@ export type Theme = 'system' | 'light' | 'dark';
 const STORAGE_KEY = 'homaly-theme';
 
 /** Cor da barra de estado do telemóvel: igual ao fundo do ecrã (--color-surface) de cada tema. */
-const COR_BARRA = { claro: '#f5f8f8', escuro: '#0f1e23' };
+const COR_BARRA = { claro: '#f4f5f9', escuro: '#131321' };
 
 function applyTheme(theme: Theme) {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
