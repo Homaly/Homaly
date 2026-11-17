@@ -12,7 +12,7 @@ from html import escape
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
-from backend import anomalias, definicoes, relogio
+from backend import anomalias, contrato, definicoes
 from backend.contrato import Anomalia
 
 from . import envios
@@ -37,11 +37,13 @@ CABECALHOS = {
 }
 
 
-def _agora_partilhado():
-    return relogio.partilhado().agora()
+def _agora_real():
+    """As 24 horas contam em tempo real, mesmo com o relógio da app acelerado: é o contacto a
+    abrir o link."""
+    return contrato.agora()
 
 
-agora = _agora_partilhado  # os testes trocam-no
+agora = _agora_real  # os testes trocam-no
 
 router = APIRouter(tags=["página do alerta"])
 

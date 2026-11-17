@@ -4,8 +4,7 @@ import type { Anomalia, MensagemWs } from '../types/contract';
 import { useToast } from '../context/ToastContext';
 import { USE_MOCKS } from '.';
 import { chaves, guardarAnomaliaNaCache } from './hooks';
-
-const WS_URL = import.meta.env.VITE_WS_URL as string | undefined;
+import { WS_URL } from './enderecos';
 
 const URGENTES = new Set<Anomalia['classe']>(['seguranca', 'bem_estar']);
 

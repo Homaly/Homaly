@@ -51,7 +51,13 @@ def alerta(anomalia: Anomalia, nome_casa: str | None, codigo: str) -> str:
 
 def resolvido(anomalia: Anomalia, nome_casa: str | None, codigo: str, resolvida_em: datetime) -> str:
     texto = anomalia.resolucao.texto if anomalia.resolucao else SEM_TEXTO
-    quando = anomalia.resolucao.em if anomalia.resolucao else resolvida_em
+    # A hora da anomalia (a simulada, com o relógio acelerado); `resolvida_em` é a real.
+    if anomalia.resolucao:
+        quando = anomalia.resolucao.em
+    elif anomalia.resposta:
+        quando = anomalia.resposta.em
+    else:
+        quando = resolvida_em
     return "\n".join(
         [
             cabecalho(nome_casa),
