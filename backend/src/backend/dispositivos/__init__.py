@@ -25,7 +25,7 @@ from backend.formatos import Leitura
 from . import mapa, mudancas, simulacao
 from .mcp import ClienteMCP, Config, ErroDispositivos
 
-__all__ = ["ErroDispositivos", "alarme", "configurar", "em_silencio", "executar", "intervalo_s", "ler"]
+__all__ = ["ErroDispositivos", "alarme", "configurar", "em_silencio", "executar", "intervalo_s", "ler", "ultimas"]
 
 registo = logging.getLogger(__name__)
 
@@ -47,6 +47,7 @@ _cliente: Cliente | None = None
 _ids: dict[str, str] = {}
 _observador = mudancas.Observador()
 _calados: dict[str, datetime] = {}
+_ultimas: list[Leitura] = []  # a última leitura do ciclo, para a conversa (US01)
 
 
 def intervalo_s() -> float:
@@ -75,6 +76,12 @@ def _agora_real() -> datetime:
     return contrato.agora()
 
 
+def ultimas() -> list[Leitura]:
+    """A última leitura feita por `ler()`, sem ir ao MCP (vazia se o ciclo ainda não leu)."""
+    with _trinco:
+        return list(_ultimas)
+
+
 def em_silencio() -> dict[str, datetime]:
     """Os dispositivos que estavam calados na última leitura, e desde quando."""
     with _trinco:
@@ -83,9 +90,10 @@ def em_silencio() -> dict[str, datetime]:
 
 def configurar(cliente: Cliente | None) -> None:
     """Escolhe o cliente (o real, ou um falso nos testes); None volta ao real, criado do ambiente."""
-    global _cliente, _ids, _observador, _calados
+    global _cliente, _ids, _observador, _calados, _ultimas
     with _trinco:
         _cliente = cliente
+        _ultimas = []
         _ids = {}
         _observador = mudancas.Observador()
         _calados = {}
@@ -101,7 +109,7 @@ def _obter_cliente() -> Cliente:
 
 def ler(agora: datetime | None = None) -> list[Leitura]:
     """O estado da casa agora, uma `Leitura` por capability."""
-    global _ids
+    global _ids, _ultimas
     em = agora or contrato.agora()
     minutos = silencio_minutos()
     limite = _agora_real() - timedelta(minutes=minutos) if minutos > 0 else None
@@ -111,6 +119,7 @@ def ler(agora: datetime | None = None) -> list[Leitura]:
         _atualizar_calados(mapa.em_silencio(dados, limite) if limite else {})
         leituras = simulacao.aplicar(mapa.para_leituras(dados, em, limite), em)
         _registar_eventos(leituras)
+        _ultimas = leituras
     return leituras
 
 

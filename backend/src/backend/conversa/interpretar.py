@@ -1,10 +1,11 @@
-"""A IA lê o que a pessoa disse à casa e diz o que fazer com isso (US01, US14).
+"""A IA lê o que a pessoa disse à casa e diz o que fazer com isso, ou responde-lhe (US01, US14).
 
-O modelo devolve um JSON de um de quatro tipos (férias, rotina, aparelho, não percebi). Qualquer
+O modelo devolve um JSON de um de cinco tipos (férias, rotina, aparelho, resposta, não percebi). Qualquer
 outra coisa, ou um modelo que falha, dá `NAO_PERCEBI`: a casa nunca grava o que não percebeu.
 `ler_rotina` e `ler_data` são públicas porque a US02 usa as mesmas regras.
 """
 
+import json
 import logging
 import re
 from dataclasses import dataclass
@@ -28,21 +29,31 @@ DIAS_DA_SEMANA = [
 ]
 
 SISTEMA = """\
-És a IA de uma casa ligada. O responsável escreve-te em português e tu percebes o que ele quer \
-que a casa saiba. Responde só com JSON, num destes formatos:
+És a IA de uma casa ligada e falas com o responsável da casa, em português de Portugal, tratando-o \
+por tu. Ele pode dizer-te coisas que a casa deve saber ou fazer-te perguntas. Responde só com JSON, \
+num destes formatos:
 {"tipo": "ferias", "inicio": "AAAA-MM-DD", "fim": "AAAA-MM-DD", "motivo": "...", "resposta": "..."}
 {"tipo": "rotina", "descricao": "...", "dias": [1], "hora": "HH:MM" | null, "resposta": "..."}
 {"tipo": "aparelho", "nome": "...", "resposta": "..."}
+{"tipo": "resposta", "resposta": "..."}
 {"tipo": "nao_percebi"}
 - "ferias": a pessoa vai estar fora de casa. "inicio" e "fim" em ISO 8601; se disser só a data \
 de fim, o início é hoje.
 - "rotina": algo que acontece em dias certos (a empregada vem às terças). "dias" são números de \
 0 a 6, com 0 = segunda-feira. "hora" só se a pessoa a disser, senão null.
-- "aparelho": o que está ligado à tomada (por exemplo, "na tomada está o aquecedor"). "nome" é o \
-aparelho.
-- "resposta": uma frase curta e simpática, em português de Portugal, a confirmar o que percebeste.
-- Se não for nenhuma destas coisas, ou não tiveres a certeza, responde {"tipo": "nao_percebi"}.
-- Não inventes datas, dias nem aparelhos que a pessoa não tenha dito.
+- "aparelho": só quando a pessoa diz o que está ligado à tomada (por exemplo, "na tomada está o \
+aquecedor"). "nome" é o aparelho.
+- "resposta": perguntas sobre a casa ("a porta está fechada?", "está tudo bem?", "o que \
+aconteceu hoje?", "que rotinas sabes?"), cumprimentos e pedidos para a casa fazer alguma coisa. \
+Responde só com o que está em "O que a casa sabe agora"; se lá não estiver, diz que não sabes. \
+A casa não cumpre ordens pela conversa: a um pedido como "apaga a luz", explica que as ações são \
+propostas nos avisos, quando a casa repara em alguma coisa. A um cumprimento, diz o que te podem \
+dizer (férias, rotinas, o aparelho na tomada) e perguntar.
+- Nunca digas que fizeste, mudaste, ligaste ou apagaste alguma coisa.
+- "resposta" (em todos os tipos): curta e simpática, em português de Portugal; as datas por \
+extenso ("19 de novembro"), nunca AAAA-MM-DD.
+- Se não for nenhuma destas coisas, responde {"tipo": "nao_percebi"}.
+- Não inventes datas, dias, aparelhos nem estados da casa.
 """
 
 
@@ -54,12 +65,18 @@ class Interpretacao:
     aparelho: str | None = None
 
 
-def interpretar(texto: str, agora: datetime, modelo: Modelo) -> Interpretacao:
-    """O que a casa percebeu de `texto`; sem certeza, `NAO_PERCEBI` e nada para guardar."""
+def interpretar(
+    texto: str, agora: datetime, modelo: Modelo, estado: dict | None = None
+) -> Interpretacao:
+    """O que a casa percebeu de `texto`; sem certeza, `NAO_PERCEBI` e nada para guardar.
+
+    `estado` é o que a casa sabe agora (`conversa.estado`), para responder a perguntas.
+    """
     sistema = (
         SISTEMA
         + f"\nHoje é {DIAS_DA_SEMANA[agora.weekday()]}, {agora.date().isoformat()}."
         " Usa esta data para perceber 'amanhã', 'sexta' ou 'às terças'."
+        + f"\nO que a casa sabe agora: {json.dumps(estado or {}, ensure_ascii=False)}"
     )
     try:
         dados = modelo.completar_json(sistema, texto)
@@ -110,6 +127,8 @@ def _ler(dados: object, agora: datetime) -> Interpretacao | None:
     if not (isinstance(resposta, str) and resposta.strip()):
         return None
     tipo = dados.get("tipo")
+    if tipo == "resposta":
+        return Interpretacao(resposta)
     if tipo == "ferias":
         inicio = ler_data(dados.get("inicio"), agora)
         fim = ler_data(dados.get("fim"), agora)

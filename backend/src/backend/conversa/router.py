@@ -8,6 +8,7 @@ from pydantic import field_validator
 from backend.contexto import repositorio
 from backend.contrato import MensagemConversa
 from backend.contrato import Modelo as ModeloContrato
+from backend.conversa.estado import estado_da_casa
 from backend.conversa.interpretar import interpretar
 from backend.dependencias import obter_agora, obter_modelo_dep
 from backend.ia.modelo import Modelo
@@ -38,7 +39,7 @@ def enviar(
     agora: datetime = Depends(obter_agora),
 ) -> MensagemConversa:
     repositorio.guardar_mensagem(MensagemConversa(autor="pessoa", texto=corpo.texto, em=agora))
-    interpretacao = interpretar(corpo.texto, agora, modelo)
+    interpretacao = interpretar(corpo.texto, agora, modelo, estado=estado_da_casa(agora))
     if interpretacao.periodo:
         repositorio.guardar_periodo(interpretacao.periodo)
     if interpretacao.rotina:

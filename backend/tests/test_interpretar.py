@@ -130,3 +130,30 @@ def test_data_ilegivel():
     _nao_percebeu(
         {"tipo": "ferias", "inicio": "amanhã", "fim": "2026-11-25", "motivo": "x", "resposta": "Ok."}
     )
+
+
+# Perguntas: a casa responde com o que sabe e não guarda nada.
+
+
+def test_pergunta_responde_sem_guardar():
+    i = interpretar("a porta está fechada?", AGORA, ModeloFixo({"tipo": "resposta", "resposta": "Está fechada."}))
+    assert i.resposta == "Está fechada."
+    assert (i.periodo, i.rotina, i.aparelho) == (None, None, None)
+
+
+def test_pergunta_sem_texto_nao_percebe():
+    _nao_percebeu({"tipo": "resposta", "resposta": "  "})
+
+
+def test_o_estado_da_casa_vai_para_o_modelo():
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "x"})
+    interpretar("está frio?", AGORA, modelo, estado={"sensores": {"temperatura": "14 °C"}})
+    sistema, _ = modelo.chamadas[0]
+    assert '"temperatura": "14 °C"' in sistema
+
+
+def test_o_prompt_proibe_dizer_que_fez_alguma_coisa():
+    modelo = ModeloFixo({"tipo": "nao_percebi"})
+    interpretar("apaga a luz", AGORA, modelo)
+    sistema, _ = modelo.chamadas[0]
+    assert "Nunca digas que fizeste" in sistema
