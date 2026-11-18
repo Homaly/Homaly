@@ -1,0 +1,24 @@
+# Bloco para o Caddy da VM (acrescentar ao /etc/caddy/Caddyfile).
+# A PWA e a API partilham o dominio: a API fica em /api/* (o prefixo e retirado), porque
+# /conversa e /definicoes existem nos dois lados.
+homaly.duckdns.org {
+	encode zstd gzip
+
+	# Rotas de desenvolvimento (injetar anomalias e leituras): so por tunel SSH, nunca pela net.
+	@dev path /api/dev /api/dev/*
+	handle @dev {
+		respond 403
+	}
+
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8100
+	}
+
+	handle {
+		root * /srv/homaly/www
+		try_files {path} /index.html
+		@html path / /index.html
+		header @html Cache-Control "no-cache"
+		file_server
+	}
+}
