@@ -48,3 +48,14 @@ def test_rotina_com_hora_e_relogio_com_fuso():
     terca_22h = datetime(2026, 11, 24, 22, 30, tzinfo=timezone.utc)
     assert explicado_por_rotina(contexto, terca_22h)
     assert not explicado_por_rotina(contexto, terca_22h.replace(hour=3))
+
+
+def test_rotina_sem_hora_deixa_a_decisao_para_a_ia():
+    """'O jardineiro vem às quartas de manhã' não tem hora: a regra não sabe se 03:10 conta.
+    Avisa e a IA decide (ia.avaliar só cala segurança de dia, com uma rotina de hoje)."""
+    from backend.regras import explicado_por_rotina
+
+    jardineiro = Rotina("o jardineiro vem às quartas de manhã", dias=[2], hora=None)
+    contexto = Contexto(ferias=[], rotinas=[jardineiro], silencios=[], casa_vazia=False)
+    assert not explicado_por_rotina(contexto, datetime(2026, 11, 18, 3, 10))
+    assert not explicado_por_rotina(contexto, datetime(2026, 11, 18, 10, 15))

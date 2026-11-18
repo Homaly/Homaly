@@ -14,7 +14,8 @@ from datetime import datetime, timedelta
 from backend.contexto import repositorio
 from backend.contrato import Anomalia, PropostaSilencio, TextoEm
 from backend.conversa.interpretar import DIAS_DA_SEMANA, ler_rotina
-from backend.formatos import Silencio
+from backend.formatos import Rotina, Silencio
+from backend.ia.avaliar import AVISA_SEMPRE
 from backend.ia.modelo import Modelo
 
 registo = logging.getLogger(__name__)
@@ -28,9 +29,21 @@ com JSON:
 {"motivo": "nenhum" | "temporario" | "recorrente", "rotina": {"descricao": "...", "dias": [1], \
 "hora": "HH:MM" | null} | null}
 - "nenhum": a pessoa só explica ou diz que está tudo bem ("está tudo bem", "fui eu").
-- "temporario": é uma situação de hoje, que não vai repetir-se ("hoje tenho visitas").
-- "recorrente": acontece em dias certos ("a empregada vem às terças"). Preenche "rotina": \
-"dias" são números de 0 a 6, com 0 = segunda-feira; "hora" só se a pessoa a disser, senão null.
+- "temporario": só para uma situação de hoje, que não vai repetir-se ("hoje tenho visitas", \
+"hoje estou fora").
+- "recorrente": a resposta explica o que a anomalia diz que aconteceu com algo que se repete em \
+dias certos da semana (porta aberta: "a empregada vem às terças às 10h"; casa fria: "ao fim de \
+semana desligo o aquecimento"). Se o que a pessoa diz não explica esta anomalia (porta aberta: \
+"ao fim de semana fico em casa da minha mãe"), não é "recorrente": responde "nenhum". Preenche \
+"rotina": "dias" são números de 0 a 6, com \
+0 = segunda-feira, ..., 5 = sábado, 6 = domingo; "fim de semana" é [5, 6], "dias úteis" é \
+[0, 1, 2, 3, 4] e "todos os dias" é [0, 1, 2, 3, 4, 5, 6]. "hora" só se a pessoa a disser, \
+senão null.
+- Se fala de um dia futuro concreto ("amanhã tenho visitas"), não é "temporario" nem \
+"recorrente": responde "nenhum".
+- "temporario" e "recorrente" só quando a resposta explica esta anomalia; uma resposta sem \
+relação com o que aconteceu é "nenhum". Uma rotina só explica a anomalia se hoje for um dos dias \
+dela.
 - Fora de "recorrente", "rotina" é null.
 - Na dúvida, responde "nenhum". Não inventes dias nem horas que a pessoa não tenha dito.
 """
@@ -62,16 +75,20 @@ def responder(
         frase = f"Não volto a avisar sobre «{anomalia.titulo}» até ao fim do dia, ok?"
         return _com_proposta(resolvida, frase, ate, proposta)
 
-    if motivo == "recorrente":
+    if motivo == "recorrente" and us not in AVISA_SEMPRE:
         rotina = ler_rotina(dados.get("rotina"))
-        if rotina:
+        # Uma rotina só explica a anomalia se hoje for um dos dias dela (a IA às vezes esquece-se).
+        if rotina and agora.weekday() in rotina.dias:
             proposta = {
                 "tipo": "rotina",
                 "descricao": rotina.descricao,
                 "dias": rotina.dias,
                 "hora": rotina.hora.strftime("%H:%M") if rotina.hora else None,
             }
-            frase = f"Passo a contar com isto: {rotina.descricao}. Não aviso enquanto não o removeres, ok?"
+            frase = (
+                f"Passo a ter isto em conta: {rotina.descricao} ({_quando(rotina)}). "
+                "Quando bater certo, não aviso. Ok?"
+            )
             # O contrato ainda exige `ate`: "sem fim" é daqui a uns dez anos.
             return _com_proposta(resolvida, frase, agora + timedelta(days=3652), proposta)
 
@@ -86,6 +103,23 @@ def aplicar(proposta: dict) -> None:
         )
     else:
         repositorio.guardar_rotina(ler_rotina(proposta))
+
+
+GRUPOS_DE_DIAS = {
+    (0, 1, 2, 3, 4): "dias úteis",
+    (5, 6): "fim de semana",
+    (0, 1, 2, 3, 4, 5, 6): "todos os dias",
+}
+
+
+def _quando(rotina: Rotina) -> str:
+    """Os dias e a hora que ficam guardados, para a pessoa saber o que aceita: "sábado e domingo"."""
+    numeros = sorted(set(rotina.dias))
+    nomes = [DIAS_DA_SEMANA[d] for d in numeros]
+    dias = GRUPOS_DE_DIAS.get(tuple(numeros)) or (
+        nomes[0] if len(nomes) == 1 else f"{', '.join(nomes[:-1])} e {nomes[-1]}"
+    )
+    return f"{dias}, às {rotina.hora:%H:%M}" if rotina.hora else dias
 
 
 def _com_proposta(anomalia: Anomalia, texto: str, ate: datetime, proposta: dict) -> Decisao:

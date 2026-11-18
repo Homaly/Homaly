@@ -26,6 +26,10 @@ db.esquema(
     """
 )
 
+# A IA escreve o texto mas não pode calar estas: a porta esquecida aberta é um risco mesmo que
+# uma rotina explique quem a abriu (as rotinas explicam aberturas a horas estranhas, US07).
+AVISA_SEMPRE = {"US08"}
+
 TITULO_POR_CLASSE = {
     "seguranca": "Alerta de segurança",
     "bem_estar": "A rotina mudou",
@@ -43,9 +47,12 @@ Decide se vale a pena enviar uma notificação e escreve-a. Responde só com JSO
 - "titulo": curto.
 - "explicacao": em português de Portugal, simples, com o que aconteceu e o que é habitual.
 - Não inventes factos que não estejam no desvio ou no contexto. Se "habitual" for null, não digas \
-o que é habitual.
+o que é habitual nem o que "normalmente" acontece: escreve só o que aconteceu.
 - Nas rotinas, "dias" vão de 0 (segunda-feira) a 6 (domingo). Uma rotina explica o desvio quando \
-é o dia dela e a hora é próxima da dela; noutro dia, ou a uma hora muito diferente, avisa.
+é o dia dela e a hora é próxima da dela; se a rotina não tiver hora, basta ser o dia dela e a \
+parte do dia que a descrição disser ("de manhã": das 07:00 às 13:00; "à tarde": das 13:00 às \
+20:00). Uma rotina nunca explica nada entre as 00:00 e as 06:00, a não ser que a hora dela seja \
+essa. Noutro dia, ou a uma hora muito diferente, avisa.
 - "acao": uma frase curta para a pessoa, no infinitivo (por exemplo, "Apagar a lâmpada da sala" ou \
 "Desligar o aquecedor"), só se a casa puder apagar a lâmpada ou desligar a tomada; caso \
 contrário, null.
@@ -76,7 +83,12 @@ def avaliar(
     if resposta is None:
         titulo, explicacao, acao = _recurso(desvio)
     else:
-        if not resposta["avisar"] and not desvio.imediato:
+        if (
+            not resposta["avisar"]
+            and not desvio.imediato
+            and desvio.us not in AVISA_SEMPRE
+            and (desvio.classe != "seguranca" or _ha_rotina_hoje(contexto, agora))
+        ):
             registo.info("A IA não avisou (%s): %s", desvio.us, resposta["explicacao"])
             return None
         titulo, explicacao, acao = resposta["titulo"], resposta["explicacao"], resposta["acao"]
@@ -91,6 +103,24 @@ def avaliar(
     )
     registar_us(anomalia.id, desvio.us)
     return anomalia
+
+
+def _ha_rotina_hoje(contexto: Contexto, agora: datetime) -> bool:
+    """Se a IA pode calar um aviso de segurança: só com uma rotina de hoje que lhe dê razão.
+
+    Com hora, a hora da rotina tem de estar a menos de duas horas de agora; sem hora, nunca de
+    madrugada (00:00 às 06:00). O resto (a parte do dia, se explica mesmo) fica com a IA.
+    """
+    minutos_agora = agora.hour * 60 + agora.minute
+    for r in contexto.rotinas:
+        if agora.weekday() not in r.dias:
+            continue
+        if r.hora is None:
+            if agora.hour >= 6:
+                return True
+        elif abs(r.hora.hour * 60 + r.hora.minute - minutos_agora) <= 120:
+            return True
+    return False
 
 
 def _acao_possivel(us: str, acao: str | None) -> str | None:
