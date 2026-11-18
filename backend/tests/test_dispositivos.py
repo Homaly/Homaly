@@ -101,6 +101,13 @@ def test_ler_faz_um_so_pedido_e_devolve_leituras(falso):
     assert Leitura("temperatura", "temperatureValue", 23.1, AGORA) in leituras
 
 
+def test_ultimas_guarda_a_ultima_leitura_sem_ir_ao_mcp(falso):
+    assert dispositivos.ultimas() == []
+    leituras = dispositivos.ler(AGORA)
+    assert dispositivos.ultimas() == leituras
+    assert len(falso.chamadas) == 1  # ultimas() não pede nada ao MCP
+
+
 def test_ler_sem_mcp_levanta_erro(falso):
     falso.falhar = True
 

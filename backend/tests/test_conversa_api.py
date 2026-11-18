@@ -67,3 +67,23 @@ def test_post_conversa_texto_vazio(cliente):
     _com(FERIAS)
     assert cliente.post("/conversa", json={"texto": "   "}).status_code == 422
     assert cliente.get("/conversa").json() == []
+
+
+def test_pergunta_recebe_o_estado_da_casa(cliente):
+    """O POST /conversa passa ao modelo o que a casa sabe: o contexto e os avisos ativos."""
+    from backend import anomalias
+    from backend.contexto import repositorio
+    from backend.contrato import Anomalia
+
+    repositorio.guardar_aparelho("aquecedor")
+    anomalias.guardar(Anomalia(classe="seguranca", titulo="Porta da rua aberta", explicacao="x", detetada_em=AGORA))
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "A porta da rua está aberta."})
+    app.dependency_overrides[obter_modelo_dep] = lambda: modelo
+    app.dependency_overrides[obter_agora] = lambda: AGORA
+
+    r = cliente.post("/conversa", json={"texto": "está tudo bem?"})
+
+    assert r.json()["texto"] == "A porta da rua está aberta."
+    sistema, _ = modelo.chamadas[0]
+    assert "Porta da rua aberta" in sistema
+    assert "aquecedor" in sistema
