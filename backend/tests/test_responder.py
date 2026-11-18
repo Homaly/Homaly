@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+
+import pytest
 
 from backend.contexto.repositorio import carregar_contexto
 from backend.contrato import Anomalia
@@ -90,9 +92,55 @@ def test_recorrente_propoe_rotina():
     p = d.anomalia.proposta_silencio
     assert p.estado == "pendente"
     assert p.texto == (
-        "Passo a contar com isto: a empregada vem às terças à tarde. Não aviso enquanto não o removeres, ok?"
+        "Passo a ter isto em conta: a empregada vem às terças à tarde (terça-feira, às 14:00). "
+        "Quando bater certo, não aviso. Ok?"
     )
     assert p.ate.year == 2036
+
+
+def _num(dia_da_semana: int) -> datetime:
+    """AGORA (uma terça) movido para o dia da semana pedido."""
+    return AGORA + timedelta(days=dia_da_semana - AGORA.weekday())
+
+
+def test_rotina_de_outro_dia_nao_explica_a_anomalia():
+    """Uma rotina das quintas não explica a porta aberta numa terça: resolve sem proposta."""
+    quintas = {"descricao": "às quintas tenho ginásio", "dias": [3], "hora": None}
+    d = responder(anomalia(), "US08", "x", AGORA, ModeloFixo({"motivo": "recorrente", "rotina": quintas}))
+    assert d.anomalia.estado == "resolvida"
+    assert d.anomalia.proposta_silencio is None
+    assert d.proposta is None
+
+
+def test_porta_esquecida_aberta_nao_propoe_rotina():
+    """US08 avisa sempre (avaliar.AVISA_SEMPRE): uma rotina nunca a calaria."""
+    d = responder(anomalia("seguranca"), "US08", "x", AGORA, ModeloFixo({"motivo": "recorrente", "rotina": ROTINA}))
+    assert d.anomalia.estado == "resolvida"
+    assert d.proposta is None
+
+
+def test_rotina_sem_hora_diz_so_os_dias():
+    fds = {"descricao": "ao fim de semana desligo o aquecimento", "dias": [5, 6], "hora": None}
+    d = responder(anomalia(), "US10", "x", _num(5), ModeloFixo({"motivo": "recorrente", "rotina": fds}))
+    assert d.anomalia.proposta_silencio.texto == (
+        "Passo a ter isto em conta: ao fim de semana desligo o aquecimento (fim de semana). "
+        "Quando bater certo, não aviso. Ok?"
+    )
+
+
+@pytest.mark.parametrize(
+    "dias, hora, esperado",
+    [
+        ([0, 1, 2, 3, 4], "19:00", "dias úteis, às 19:00"),
+        ([6, 0], None, "segunda-feira e domingo"),
+        ([0, 2, 4], None, "segunda-feira, quarta-feira e sexta-feira"),
+        (list(range(7)), None, "todos os dias"),
+    ],
+)
+def test_quando(dias, hora, esperado):
+    rotina = {"descricao": "x", "dias": dias, "hora": hora}
+    d = responder(anomalia(), "US10", "x", _num(dias[0]), ModeloFixo({"motivo": "recorrente", "rotina": rotina}))
+    assert f"x ({esperado})." in d.anomalia.proposta_silencio.texto
 
 
 def test_recorrente_em_seguranca_propoe():

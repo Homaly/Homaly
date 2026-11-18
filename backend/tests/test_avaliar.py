@@ -29,9 +29,45 @@ def test_modelo_decide_avisar():
     assert us_da_anomalia(a.id) == "US08"
 
 
+NAO_AVISAR = {"avisar": False, "titulo": "T", "explicacao": "E", "acao": None}
+
+
 def test_modelo_decide_nao_avisar():
+    d = desvio(us="US11", classe="eficiencia")
+    assert avaliar(d, CONTEXTO_VAZIO, agora=AGORA, modelo=ModeloFixo(NAO_AVISAR)) is None
+
+
+def com_rotinas(*rotinas: Rotina) -> Contexto:
+    return Contexto([], list(rotinas), [], False)
+
+
+def test_seguranca_so_cala_com_rotina_de_hoje():
+    """AGORA é terça às 15:00. A IA só pode calar a US07 com uma rotina que lhe dê razão."""
+    us07 = desvio(us="US07")
+    casos = [
+        (CONTEXTO_VAZIO, False),
+        (com_rotinas(Rotina("jardineiro", [2], None)), False),  # quarta, não hoje
+        (com_rotinas(Rotina("empregada", [1], time(10, 0))), False),  # hoje, mas 5 h antes
+        (com_rotinas(Rotina("empregada", [1], time(14, 0))), True),  # hoje, uma hora antes
+        (com_rotinas(Rotina("jardineiro", [1], None)), True),  # hoje, sem hora
+    ]
+    for contexto, cala in casos:
+        a = avaliar(us07, contexto, agora=AGORA, modelo=ModeloFixo(NAO_AVISAR))
+        assert (a is None) == cala, contexto.rotinas
+
+
+def test_rotina_sem_hora_nunca_cala_seguranca_de_madrugada():
+    madrugada = AGORA.replace(hour=3, minute=10)
+    contexto = com_rotinas(Rotina("jardineiro", [1], None))
+    assert avaliar(desvio(us="US07"), contexto, agora=madrugada, modelo=ModeloFixo(NAO_AVISAR)) is not None
+
+
+def test_porta_esquecida_aberta_avisa_mesmo_que_modelo_diga_que_nao():
+    """US08: uma rotina explica quem abriu a porta, não que ela tenha ficado aberta."""
     modelo = ModeloFixo({"avisar": False, "titulo": "T", "explicacao": "E", "acao": None})
-    assert avaliar(desvio(), CONTEXTO_VAZIO, agora=AGORA, modelo=modelo) is None
+    a = avaliar(desvio(), CONTEXTO_VAZIO, agora=AGORA, modelo=modelo)
+    assert a is not None
+    assert a.titulo == "T"
 
 
 def test_imediato_avisa_mesmo_que_modelo_diga_que_nao():
