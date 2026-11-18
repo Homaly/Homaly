@@ -32,12 +32,15 @@ def com_a_casa_vazia(contexto: Contexto, agora: datetime) -> str:
 
 
 def explicado_por_rotina(contexto: Contexto, agora: datetime) -> bool:
-    """Uma rotina desse dia da semana, a até uma hora da sua hora (ou o dia todo, sem hora)."""
+    """Uma rotina desse dia da semana, a até uma hora da sua hora.
+
+    Uma rotina sem hora ("o jardineiro vem às quartas de manhã") não explica nada aqui: a regra
+    não sabe se 03:10 conta. O desvio segue e a IA decide (ia.avaliar nunca a deixa calar de
+    madrugada).
+    """
     for r in contexto.rotinas:
-        if agora.weekday() not in r.dias:
+        if agora.weekday() not in r.dias or r.hora is None:
             continue
-        if r.hora is None:
-            return True
         # A hora da rotina é hora local, no fuso de `agora` (que no ciclo real traz fuso).
         if abs(agora - datetime.combine(agora.date(), r.hora, tzinfo=agora.tzinfo)) <= MARGEM_ROTINA:
             return True
