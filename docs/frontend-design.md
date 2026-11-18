@@ -16,7 +16,7 @@ Barra em baixo com quatro separadores:
 | Separador | Rota | Ecrã | História |
 |-----------|------|------|----------|
 | Início | `/` | Anomalias ativas, ou "Está tudo normal" | US02 |
-| Conversa | `/conversa` | Conversa por texto com a casa | US01 |
+| Conversa | `/conversa` | Conversa por texto com a casa; o texto pode ser ditado | US01 |
 | Histórico | `/historico` | Eventos e anomalias, do mais recente para o mais antigo | US06 |
 | Definições | `/definicoes` | Contacto externo e tempo de espera | US04 |
 
@@ -102,6 +102,14 @@ interface Definicoes { contacto: { nome: string; telemovel: string } | null; esp
 - **WebSocket em baixo:** reconecta sozinho e mostra "sem ligação em tempo real" até voltar.
 - **Ação aceite:** o botão fica a carregar até o backend confirmar; se falhar, toast de erro e nada muda. Nunca se mostra a ação como feita sem confirmação.
 
+## Ditado na Conversa
+
+O botão do microfone, dentro da caixa da Conversa, passa a voz a texto com a Web Speech API do browser, em português de Portugal (`hooks/useDitado.ts`). Ditar substitui o que estava na caixa: o que é ouvido vai aparecendo enquanto a pessoa fala; se o ditado falhar sem ouvir nada, o texto anterior volta. Para sozinho quando a pessoa se cala, e não envia: a pessoa revê e carrega em enviar. Tocar outra vez no microfone para; enviar a meio deita fora o que ainda não chegou.
+
+- **Onde funciona:** Chrome (Android e computador) e Edge; no Safari do iPhone está por testar. No Firefox, e fora de HTTPS ou de `localhost`, o botão não aparece. No telemóvel, testar pela ligação USB (`localhost`), como na instalação.
+- **Privacidade:** no Chrome, o áudio vai para os servidores da Google para ser transcrito; no Safari, para os da Apple. Não passa pelo backend.
+- **Erros:** sem autorização do microfone, sem som, sem rede ou sem microfone: toast com o que fazer.
+
 ## Mocks
 
 Com `VITE_USE_MOCKS=true`, a camada `api/` devolve uns poucos dados fixos (algumas anomalias, eventos, mensagens e definições) para os ecrãs terem conteúdo. Sem WebSocket falso: o tempo real só se testa com o backend.
@@ -181,6 +189,8 @@ O `--mode development` faz a build ler `frontend/.env.development` e `frontend/.
 | Sem testes automáticos | Testes com Vitest | Tempo do hackathon |
 | Ícones Lucide (lucide-react) | Material Symbols, como no frontend antigo | São os da app Connected Home; vêm no código, sem fonte para carregar |
 | Identidade da app Connected Home | Identidade própria | A Homaly vive ao lado da app da Altice; parecer da mesma família ajuda no pitch |
+| Ditado pela Web Speech API do browser | Gravar o áudio e transcrevê-lo no backend (ex.: Whisper) | Sem backend nem chave nova; chega para a demonstração. O áudio vai para a Google ou a Apple, não para o servidor da equipa |
+| O ditado não envia sozinho | Enviar quando a pessoa se cala | A transcrição pode vir errada; a pessoa revê antes, como a casa pergunta antes de agir |
 | Classes de anomalia sem cor | Uma cor por classe | As cores das classes repetiam as de estado: eficiência parecia "correu bem", segurança parecia erro |
 | Cores como papéis trocados pelo `.dark` | `dark:` em cada componente | Um só sítio por cor; o tema escuro não se esquece em nenhum componente |
 
