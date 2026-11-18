@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import date, datetime, time
 
 from backend.conversa.interpretar import NAO_PERCEBI, interpretar
 from backend.formatos import Rotina
@@ -18,7 +18,8 @@ def test_ferias():
     r = interpretar("vou de férias até dia 25", AGORA, modelo)
     assert r.periodo is not None
     assert r.periodo.inicio == datetime(2026, 11, 18, tzinfo=LX)
-    assert r.periodo.fim == datetime(2026, 11, 25, tzinfo=LX)
+    # "até dia 25": o dia 25 conta todo, não só a meia-noite.
+    assert r.periodo.fim == datetime.combine(date(2026, 11, 25), time.max, tzinfo=LX)
     assert r.resposta == "Boas férias! Até dia 25."
     sistema, mensagem = modelo.chamadas[0]
     assert "2026-11-17" in sistema + mensagem
@@ -111,6 +112,36 @@ def test_ferias_ao_contrario():
     _nao_percebeu(
         {"tipo": "ferias", "inicio": "2026-11-25", "fim": "2026-11-18", "motivo": "x", "resposta": "Ok."}
     )
+
+
+def _ferias(inicio, fim):
+    modelo = ModeloFixo({"tipo": "ferias", "inicio": inicio, "fim": fim, "motivo": "", "resposta": "Ok."})
+    return interpretar("férias", AGORA, modelo).periodo
+
+
+def test_ferias_ate_domingo_contam_o_domingo_todo():
+    periodo = _ferias("2026-11-17", "2026-11-22")
+    domingo_a_tarde = datetime(2026, 11, 22, 15, 0, tzinfo=LX)
+    assert periodo.inicio <= domingo_a_tarde <= periodo.fim
+    assert periodo.fim < datetime(2026, 11, 23, tzinfo=LX)
+
+
+def test_ferias_so_hoje():
+    periodo = _ferias("2026-11-17", "2026-11-17")
+    assert periodo is not None
+    assert periodo.inicio <= AGORA <= periodo.fim
+
+
+def test_ferias_a_partir_de_uma_hora():
+    # "a partir de hoje à tarde": de manhã a casa ainda não está vazia.
+    periodo = _ferias("2026-11-17T14:00", "2026-11-22")
+    assert periodo.inicio == datetime(2026, 11, 17, 14, 0, tzinfo=LX)
+    assert not periodo.inicio <= datetime(2026, 11, 17, 11, 0, tzinfo=LX) <= periodo.fim
+
+
+def test_ferias_com_hora_de_fim_fica_essa_hora():
+    periodo = _ferias("2026-11-17", "2026-11-22T18:00")
+    assert periodo.fim == datetime(2026, 11, 22, 18, 0, tzinfo=LX)
 
 
 def test_dia_invalido():

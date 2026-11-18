@@ -9,7 +9,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import date, datetime, time
 
 from backend.formatos import Periodo, Rotina
 from backend.ia.modelo import Modelo
@@ -38,7 +38,9 @@ num destes formatos:
 {"tipo": "resposta", "resposta": "..."}
 {"tipo": "nao_percebi"}
 - "ferias": a pessoa vai estar fora de casa. "inicio" e "fim" em ISO 8601; se disser só a data \
-de fim, o início é hoje.
+de fim, o início é hoje. Só a data (AAAA-MM-DD) quando a pessoa não diz a hora: o fim conta o dia \
+todo. Com a hora ou a parte do dia, AAAA-MM-DDTHH:MM ("a partir das 15h", "hoje à tarde" = 14:00, \
+"à noite" = 20:00).
 - "rotina": algo que acontece em dias certos (a empregada vem às terças). "dias" são números de \
 0 a 6, com 0 = segunda-feira. "hora" só se a pessoa a disser, senão null.
 - "aparelho": só quando a pessoa diz o que está ligado à tomada (por exemplo, "na tomada está o \
@@ -97,6 +99,17 @@ def ler_data(valor: object, agora: datetime) -> datetime | None:
     return data if data.tzinfo else data.replace(tzinfo=agora.tzinfo)
 
 
+def _ate_ao_fim_do_dia(valor: object, fim: datetime | None) -> datetime | None:
+    """Um fim só com a data ("até domingo") conta o dia todo, não só a meia-noite."""
+    if fim is None or not isinstance(valor, str):
+        return fim
+    try:
+        date.fromisoformat(valor)
+    except ValueError:
+        return fim  # trazia a hora: fica essa
+    return datetime.combine(fim.date(), time.max, tzinfo=fim.tzinfo)
+
+
 def ler_rotina(dados: object) -> Rotina | None:
     """A rotina de `{"descricao", "dias", "hora"}` se estiver bem formada; senão `None`."""
     if not isinstance(dados, dict):
@@ -131,7 +144,7 @@ def _ler(dados: object, agora: datetime) -> Interpretacao | None:
         return Interpretacao(resposta)
     if tipo == "ferias":
         inicio = ler_data(dados.get("inicio"), agora)
-        fim = ler_data(dados.get("fim"), agora)
+        fim = _ate_ao_fim_do_dia(dados.get("fim"), ler_data(dados.get("fim"), agora))
         motivo = dados.get("motivo")
         if inicio is None or fim is None or fim <= inicio or not isinstance(motivo, str):
             return None
