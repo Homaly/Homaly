@@ -75,6 +75,11 @@ class Estado:
     pendente: Desvio | None = None  # o desvio em curso, até haver um sinal
 
 
+def tem_pendente() -> bool:
+    """Há um desvio em curso guardado (o ciclo só reconstrói a anomalia da US09 se a regra o voltar a ver)."""
+    return _carregar().pendente is not None
+
+
 def _comandado(dispositivo: str, tipo: str) -> bool:
     return dispositivos.comandado_ha_pouco(dispositivo, tipo)
 
@@ -110,7 +115,10 @@ def verificar(leituras: list[Leitura], contexto: Contexto, agora: datetime) -> l
     vistos = _detetor.ver(leituras)
     if vistos:
         # A hora é a do ciclo (o relógio da demo pode estar acelerado), não a da leitura.
-        estado = replace(estado, ultimo=replace(vistos[-1], em=momento))
+        # Com a porta entre os sinais da volta, o último é a porta (quem a abriu pode ter saído),
+        # seja qual for a ordem em que o MCP devolve os dispositivos.
+        ultimo = next((v for v in vistos if v.dispositivo == "porta"), vistos[-1])
+        estado = replace(estado, ultimo=replace(ultimo, em=momento))
     saidas, pendente = _decidir(estado, bool(vistos), contexto, momento, agora)
     _guardar(replace(estado, pendente=pendente))
     return saidas

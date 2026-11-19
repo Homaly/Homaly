@@ -186,6 +186,37 @@ def test_o_ciclo_real_reconstroi_as_ativas_da_base_de_dados():
     assert c.ocorrencias["US08"].anomalia.id == ativa.id
 
 
+def _us09_ativa() -> Anomalia:
+    a = Anomalia(classe="bem_estar", titulo="Sem sinais de vida", explicacao="x", detetada_em=AGORA)
+    anomalias.guardar(a)
+    registar_us(a.id, "US09")
+    return a
+
+
+def test_o_ciclo_real_nao_reconstroi_a_us09_sem_desvio_pendente_na_regra():
+    # Sem estado da regra (tabela nova, estado descartado ou estragado) a regra nunca a daria
+    # por acabada: reconstruída, ficava para sempre e engolia o próximo desvio da US09.
+    _us09_ativa()
+    c, _ = ciclo.real(_RelogioFixo())
+    assert "US09" not in c.ocorrencias
+
+    avaliadas, publicadas = [], []
+    c.regras = [lambda l, ctx, agora: [Desvio(us="US09", classe="bem_estar", resumo="Novo.", habitual=None)]]
+    c.avaliar = lambda d, ctx: avaliadas.append(d) or Anomalia(classe=d.classe, titulo="t", explicacao="x")
+    c.publicar = lambda a, imediato=False: publicadas.append(a)
+    c.passo([], AGORA)
+    assert len(avaliadas) == 1 and len(publicadas) == 1
+
+
+def test_o_ciclo_real_reconstroi_a_us09_com_desvio_pendente_na_regra():
+    from backend.regras import us09
+
+    a = _us09_ativa()
+    us09._guardar(us09.Estado(pendente=Desvio(us="US09", classe="bem_estar", resumo="Antes.", habitual=None)))
+    c, _ = ciclo.real(_RelogioFixo())
+    assert c.ocorrencias["US09"].anomalia.id == a.id
+
+
 class _RelogioFixo:
     def agora(self) -> datetime:
         return AGORA

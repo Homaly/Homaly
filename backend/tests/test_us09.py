@@ -128,6 +128,30 @@ def test_arranque_depois_da_hora_habitual_nao_avisa_de_manha():
     assert us09.verificar(porta_fechada(sexta(9)), SEM_FERIAS, sexta(9)) == []
 
 
+def test_porta_e_camara_na_mesma_volta_o_ultimo_sinal_e_a_porta():
+    # A ordem do MCP põe a câmara depois da porta: quem abriu a porta pode ter saído.
+    sab = lambda h, m=0: datetime(2026, 11, 21, h, m)  # noqa: E731
+    assert us09.verificar(camara("antes", sab(9, 50)), SEM_FERIAS, sab(9, 50)) == []
+    volta = [
+        Leitura("porta", "sensorState", "alarm", sab(10)),
+        Leitura("camara", "motionDetected", "movimento", sab(10)),
+    ]
+    assert us09.verificar(volta, SEM_FERIAS, sab(10)) == []
+    assert us09._carregar().ultimo.dispositivo == "porta"
+    saidas = []
+    for h in range(11, 15):
+        saidas += us09.verificar(
+            [Leitura("camara", "motionDetected", "movimento", sab(h))] + porta_fechada(sab(h)), SEM_FERIAS, sab(h)
+        )
+    assert saidas == []
+
+
+def test_tem_pendente():
+    assert us09.tem_pendente() is False
+    [desvio] = voltas(sexta(6), sexta(8, 45))
+    assert us09.tem_pendente() is True
+
+
 def test_um_buraco_nas_leituras_de_manha_nao_avisa(monkeypatch):
     monkeypatch.setenv("US09_LACUNA_MINUTOS", "30")
     assert us09.verificar(porta_fechada(sexta(6)), SEM_FERIAS, sexta(6)) == []
