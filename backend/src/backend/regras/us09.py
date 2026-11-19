@@ -1,7 +1,7 @@
 """US09: a porta não abriu até à hora habitual (Bem-estar e rotina).
 
 A hora limite vem do histórico: a primeira abertura do dia mais tardia desse tipo
-de dia, mais habitual.MARGEM_US09 (backend.habitual.limite_porta_nao_abriu).
+de dia, mais 30 min (backend.habitual.limite_porta_nao_abriu).
 "A porta abriu hoje" é qualquer leitura aberta (alarm) desde a meia-noite.
 
 - Casa vazia (férias ditas à casa): não avisa; é normal a porta não abrir. Se a anomalia
