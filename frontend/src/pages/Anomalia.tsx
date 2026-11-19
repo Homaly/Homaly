@@ -6,14 +6,14 @@ import Layout from '../components/Layout';
 import { ClasseBadge } from '../components/AnomaliaCard';
 import { EstadoCarregar, EstadoErro } from '../components/Estados';
 import Botao from '../components/Botao';
-import Campo from '../components/Campo';
 import Icone from '../components/Icone';
 import { useAnomalia, useDecidirAcao, useDecidirSilencio, useResponderAnomalia } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
 import type { PropostaSilencio } from '../types/contract';
 import { cn } from '../lib/cn';
 
-const RESPOSTA_SEM_MOTIVO = 'Está tudo bem';
+/** Um toque resolve o aviso; a casa não pede justificações (é ela que repara no que se repete). */
+const RESPOSTA = 'Está tudo bem';
 
 export default function Anomalia() {
   const { id = '' } = useParams();
@@ -22,20 +22,14 @@ export default function Anomalia() {
   const decidir = useDecidirAcao(id);
   const silencio = useDecidirSilencio(id);
   const { showToast } = useToast();
-  const [texto, setTexto] = useState('');
-  const [aExplicar, setAExplicar] = useState(false);
   /** Só depois de responder neste ecrã: mostra o agradecimento e o que acontece a seguir. */
-  const [enviado, setEnviado] = useState<{ semMotivo: boolean } | null>(null);
+  const [enviado, setEnviado] = useState(false);
 
   const ocupado = responder.isPending || decidir.isPending || silencio.isPending;
 
-  const enviarResposta = (t: string) =>
-    responder.mutate(t, {
-      onSuccess: () => {
-        setEnviado({ semMotivo: t === RESPOSTA_SEM_MOTIVO });
-        setTexto('');
-        setAExplicar(false);
-      },
+  const enviarResposta = () =>
+    responder.mutate(RESPOSTA, {
+      onSuccess: () => setEnviado(true),
       onError: () => showToast('Não foi possível enviar a resposta', 'error'),
     });
 
@@ -106,11 +100,7 @@ export default function Anomalia() {
                   )}
                   {/* Com proposta de silêncio, é ela que diz o que acontece a seguir. */}
                   {enviado && !a.propostaSilencio && (
-                    <p className="text-sm text-muted">
-                      {enviado.semMotivo
-                        ? 'Se voltar a acontecer, a casa avisa outra vez.'
-                        : 'A casa vai ter isto em conta da próxima vez.'}
-                    </p>
+                    <p className="text-sm text-muted">Se voltar a acontecer, a casa avisa outra vez.</p>
                   )}
                 </div>
               </div>
@@ -140,60 +130,15 @@ export default function Anomalia() {
                 </section>
               )}
 
-              {!aExplicar ? (
-                // Uma ação principal por ecrã: com ação proposta, é o Aceitar; sem ela, é esta.
-                <Botao
-                  variante={a.acaoProposta ? 'contorno' : 'primario'}
-                  largo
-                  onClick={() => setAExplicar(true)}
-                  disabled={ocupado}
-                >
-                  Está tudo bem
-                </Botao>
-              ) : (
-                <form
-                  onSubmit={e => {
-                    e.preventDefault();
-                    enviarResposta(texto.trim() || RESPOSTA_SEM_MOTIVO);
-                  }}
-                  className="space-y-3"
-                >
-                  <label className="block space-y-2">
-                    <span className="block">
-                      <span className="font-semibold">Está tudo bem. Quer dizer porquê?</span>{' '}
-                      <span className="text-sm text-muted">Opcional</span>
-                    </span>
-                    <Campo
-                      autoFocus
-                      enterKeyHint="send"
-                      autoCapitalize="sentences"
-                      value={texto}
-                      onChange={e => setTexto(e.target.value)}
-                      placeholder="Fiquei em casa doente"
-                    />
-                  </label>
-                  <div className="space-y-1">
-                    <Botao type="submit" largo disabled={ocupado}>
-                      {responder.isPending
-                        ? 'A enviar…'
-                        : texto.trim()
-                          ? 'Confirmar'
-                          : 'Confirmar sem motivo'}
-                    </Botao>
-                    <Botao
-                      variante="texto"
-                      largo
-                      onClick={() => {
-                        setAExplicar(false);
-                        setTexto('');
-                      }}
-                      disabled={ocupado}
-                    >
-                      Cancelar
-                    </Botao>
-                  </div>
-                </form>
-              )}
+              {/* Uma ação principal por ecrã: com ação proposta, é o Aceitar; sem ela, é esta. */}
+              <Botao
+                variante={a.acaoProposta ? 'contorno' : 'primario'}
+                largo
+                onClick={enviarResposta}
+                disabled={ocupado}
+              >
+                {responder.isPending ? 'A enviar…' : RESPOSTA}
+              </Botao>
             </>
           )}
         </article>
@@ -202,7 +147,7 @@ export default function Anomalia() {
   );
 }
 
-/** US02: a casa diz o que vai deixar de avisar e até quando; só se aplica depois do Sim. */
+/** US02: a casa propõe passar a contar com o que se repete; só se aplica depois do Sim. */
 function Silencio({
   proposta,
   ocupado,
@@ -232,7 +177,9 @@ function Silencio({
   }
   return (
     <p role="status" className="text-sm text-on-surface-variant">
-      {proposta.estado === 'aceite' ? `Combinado. ${proposta.texto}` : 'Combinado. A casa continua a avisar.'}
+      {proposta.estado === 'aceite'
+        ? 'Combinado. A casa passa a contar com isso.'
+        : 'Combinado. A casa continua a avisar.'}
     </p>
   );
 }

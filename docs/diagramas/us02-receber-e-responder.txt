@@ -8,7 +8,6 @@ control "Avisos\n(espera e SMS)" as Avisos
 control "Agente\nde IA" as IA
 database "Base de\ndados" as DB
 end
-participant "Modelo de IA\n(por decidir)" as LLM
 
 note over IA,DB: Antes: o motor detetou um desvio e a IA decidiu avisar (US07 a US13)
 IA->DB: guardar Anomalia (estado: ativa, classe, explicação)
@@ -26,41 +25,32 @@ App->API: GET /anomalias/{id}
 API->DB: anomalia
 DB-->API: Anomalia
 API-->App: explicação, ação proposta e imagem, se houver
-R->App: escreve a resposta
-App->API: POST /anomalias/{id}/resposta {texto}
+R->App: "Está tudo bem" (um toque, sem texto)
+note right of App: Serve para o falso alarme e para\n"era a sério e já tratei": o botão não ensina nada à casa
+App->API: POST /anomalias/{id}/resposta {texto: "Está tudo bem"}
 API->Avisos: o responsável respondeu
 Avisos->Avisos: cancelar o tempo de espera, se ainda corre
-API->IA: interpretar a resposta
-IA->LLM: resposta + anomalia + contexto
-LLM-->IA: há motivo? é temporário ou recorrente?
+API->DB: anomalia resolvida e resposta registada
+API->DB: avisos anteriores da mesma história (anomalia_us)
+DB-->API: horas de deteção
+API->API: padrão: 3 vezes à mesma hora (±1 h), no mesmo dia\nda semana em 4 semanas ou em 3 dias seguidos?
 
-alt "está tudo bem", sem motivo
-IA->DB: anomalia resolvida e resposta registada
+alt não se repete, ou é a US08, ou já há rotina, ou já foi recusado
 note right of DB: Fecha só esta ocorrência:\nse voltar a acontecer, a casa avisa outra vez
-else com motivo
-IA-->API: proposta: o que deixa de avisar e até quando
-API-->App: "não volto a avisar sobre a porta até amanhã, ok?"
-note over App,API: O contrato ainda não tem campo para esta proposta\nnem pedido para a confirmar
-App-->R: mostra a proposta
-alt confirma
-R->App: confirma
-App->API: confirmação
-API->IA: aplicar
-alt motivo temporário, ex.: "fiquei em casa doente"
-alt anomalia de segurança
-IA->DB: fecha só esta ocorrência
-else outras classes
-IA->DB: silenciar este tipo de anomalia até ao fim do dia
+else começa a ser habitual
+API-->App: proposta: "Isto tem-se repetido: a porta abre a esta hora\n(terça-feira, às 15:00). Passo a contar com isso?"
+App-->R: mostra a proposta (Sim / Não)
+alt Sim
+R->App: Sim
+App->API: POST /anomalias/{id}/silencio {aceitar: true}
+API->DB: guardar a rotina (como as ditas no chat, US01)
+else Não
+R->App: Não
+App->API: POST /anomalias/{id}/silencio {aceitar: false}
+API->DB: guardar a recusa: este padrão não volta a ser proposto
 end
-else motivo recorrente, ex.: "a empregada vem às terças"
-IA->DB: guardar a regra recorrente na rotina (US01), até ser removida
 end
-else não confirma
-note over IA: Não silencia nada
-end
-IA->DB: anomalia resolvida e resposta registada
-end
-note over IA,DB: Segurança: nunca fica silenciada além da ocorrência atual,\na não ser com uma regra recorrente explícita
+note over API,DB: Segurança: nunca fica silenciada além da ocorrência atual,\na não ser com uma rotina aceite. A IA não lê a resposta (decisão de 2026-11-18)
 
 API-->App: Anomalia (estado: resolvida, resposta)
 API->>App: WS {tipo: 'anomalia', anomalia}

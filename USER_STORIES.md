@@ -46,11 +46,10 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 
 **Critérios de aceitação**
 - **Dado** que a casa detetou uma anomalia, **então** recebo uma notificação com o que aconteceu, o que é habitual e a que classe pertence.
-- **Dado** que respondo "está tudo bem" sem dar motivo, **então** a anomalia fica resolvida e registada, mas só esta ocorrência: se voltar a acontecer, a casa avisa outra vez.
-- **Dado** que explico o motivo, **então** a casa diz o que vai deixar de avisar e até quando (por exemplo, "não volto a avisar sobre a porta até amanhã, ok?"), e só aplica depois de eu confirmar.
-- **Dado** que o motivo é temporário ("fiquei em casa doente"), **então** a casa deixa de avisar sobre esse tipo de anomalia até ao fim do dia.
-- **Dado** que o motivo é recorrente ("a empregada vem às terças"), **então** passa a fazer parte da rotina da casa (US01) até eu o remover.
-- **Dado** que a anomalia é de segurança, **então** a casa nunca a silencia para além da ocorrência atual, a não ser com uma regra recorrente explícita.
+- **Dado** que toco em "Está tudo bem" (um botão só, sem justificar nada), **então** a anomalia fica resolvida e registada, mas só esta ocorrência: se voltar a acontecer, a casa avisa outra vez. Serve tanto para um falso alarme como para um problema que eu já tratei.
+- **Dado** que o mesmo aviso se repete à mesma hora (três vezes no mesmo dia da semana em quatro semanas, ou em três dias seguidos), **então** a casa propõe passar a contar com isso como rotina (por exemplo, "a porta abre a esta hora, terça-feira, às 10:00") e só a guarda depois de eu confirmar.
+- **Dado** que recuso a proposta, **então** a casa continua a avisar e não volta a propor a mesma rotina.
+- **Dado** que a anomalia é a porta esquecida aberta (US08), **então** a casa nunca propõe uma rotina para ela.
 
 ### US03 — Autorizar a casa a agir
 
