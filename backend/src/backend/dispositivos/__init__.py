@@ -143,6 +143,8 @@ def _registar_eventos(leituras: list[Leitura]) -> None:
 
 def executar(dispositivo: str, tipo: str, valor: str | int) -> bool:
     """Muda o dispositivo e devolve True se, ao lê-lo de novo, tem o valor pedido."""
+    if simulacao.simulado(dispositivo, tipo):  # a válvula da água (US15): o kit não a tem
+        return simulacao.executar(dispositivo, tipo, str(valor))
     _validar(dispositivo, tipo, valor)
     cliente = _obter_cliente()
     id_dispositivo = _id(dispositivo)

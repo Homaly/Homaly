@@ -55,7 +55,7 @@ parte do dia que a descrição disser ("de manhã": das 07:00 às 13:00; "à tar
 20:00). Uma rotina nunca explica nada entre as 00:00 e as 06:00, a não ser que a hora dela seja \
 essa. Noutro dia, ou a uma hora muito diferente, avisa.
 - "acao": uma frase curta para a pessoa, no infinitivo (por exemplo, "Apagar a lâmpada da sala" ou \
-"Desligar o aquecedor"), só se a casa puder apagar a lâmpada ou desligar a tomada; caso \
+"Desligar o aquecedor"), só se a casa puder apagar a lâmpada, desligar a tomada ou fechar a água; caso \
 contrário, null.
 """
 
