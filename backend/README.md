@@ -41,6 +41,8 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `GROQ_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY` | A chave do fornecedor escolhido | — |
 | `IA_MODELO` | Troca o modelo do fornecedor. O plano grátis do Groq dá 8 000 tokens por minuto (umas 6 a 10 avaliações) | `openai/gpt-oss-120b` (groq), `gemini-3.5-flash-lite` (gemini), `anthropic/claude-haiku-5.5` (openrouter) |
 | `LUZ_HORAS` | US11: ao fim de quantas horas acesa a casa pergunta pela luz (na demo, por exemplo `0.05` = 3 min) | `5` |
+| `PRESENCA_MINUTOS`, `SAIU_MINUTOS`, `AUSENCIA_MINUTOS` | US14: movimento na divisão da tomada há menos disto quer dizer que alguém usa o aparelho; a porta fechou e ninguém se mexe em casa há isto quer dizer que saíram; ninguém na divisão da tomada há isto. Afinados com o histórico (até 47 min sem movimento com o aparelho em uso); na demo, por exemplo `2` e `3` | `10`, `20`, `60` minutos |
+| `TOMADA_DIVISAO`, `CAMARA_DIVISAO` | US14: a divisão da tomada e a da câmara do kit. As outras câmaras chamam-se `camara_<divisão>`; `camara_entrada` está lá fora e não conta | `sala`, `sala` |
 
 ## Módulos
 
@@ -71,7 +73,7 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `dispositivos/simulacao.py` | `/dev/leituras`: leituras injetadas para a demo, por cima das reais. |
 | `regras/porta.py` | US08 e US12 num só aviso por abertura da porta; devolve `Resolucao` quando a porta fecha. |
 | `regras/temperatura.py` | US10: abaixo de 16 °C durante duas horas; devolve `Resolucao` quando volta a subir. |
-| `regras/us07.py`, `us09.py`, `us14.py` | US07: a porta abre a uma hora anormal ou com a casa vazia (só se resolve com resposta). US09: a casa não vê sinais de vida (movimento ou som na câmara, lâmpada, tomada a gastar, porta; `sinais.py`): ainda nenhum à hora habitual do primeiro sinal mais 1 h 30, ou `US09_HORAS` sem nenhum nas horas ativas; devolve `Resolucao` no próximo sinal, ou quando a casa fica vazia. O estado fica na tabela `estado_us09`. US14: a tomada a gastar há muito mais do que é costume; devolve `Resolucao` quando deixa de gastar. Um silêncio temporário nunca cala um desvio de segurança. |
+| `regras/us07.py`, `us09.py`, `us14.py` | US07: a porta abre a uma hora anormal ou com a casa vazia (só se resolve com resposta). US09: a casa não vê sinais de vida (movimento ou som na câmara, lâmpada, tomada a gastar, porta; `sinais.py`): ainda nenhum à hora habitual do primeiro sinal mais 1 h 30, ou `US09_HORAS` sem nenhum nas horas ativas; devolve `Resolucao` no próximo sinal, ou quando a casa fica vazia. O estado fica na tabela `estado_us09`. US14: o aparelho na tomada a gastar sem ninguém a usá-lo. Junta a porta e o movimento das câmaras de dentro (`regras/presenca.py`, o último movimento por divisão): com alguém na divisão da tomada não avisa; um aparelho que precisa de alguém por perto (todos menos os de `SOZINHOS`, como a máquina de lavar) avisa quando saíram (a porta fechou e ninguém se mexe há `SAIU_MINUTOS`) ou quando não há ninguém na divisão há `AUSENCIA_MINUTOS`; sem câmaras de dentro, ou com um aparelho que pode ficar sozinho, avisa como antes, a 3× o habitual. Devolve `Resolucao` quando deixa de gastar ou quando volta a haver alguém na divisão. Um silêncio temporário nunca cala um desvio de segurança. |
 
 ## Como ligar o teu módulo
 

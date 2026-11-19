@@ -26,7 +26,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 | US11 | Luz acesa há demasiado tempo | Eficiência energética | Lâmpada, porta |
 | US12 | Porta aberta com a casa a arrefecer | Eficiência energética | Porta, temperatura |
 | US13 | Veículo desconhecido na entrada | Segurança | Câmara |
-| US14 | Aparelho esquecido ligado | Eficiência energética | Tomada |
+| US14 | Aparelho esquecido ligado | Eficiência energética | Tomada, porta, câmaras de dentro |
 | US15 | Água a correr sem parar | Eficiência energética / Segurança | Contador de água (simulado) |
 
 ## Histórias transversais
@@ -193,16 +193,21 @@ Um **sinal de vida** é qualquer coisa que mostre que alguém está a mexer na c
 
 ### US14 — Aparelho esquecido ligado (Eficiência energética)
 
-**Como** responsável da casa, **quero** que a casa me pergunte quando o aparelho ligado à tomada está a gastar há muito mais tempo do que é costume, **para** o desligar à distância e não gastar energia nem correr riscos.
+**Como** responsável da casa, **quero** que a casa me pergunte quando o aparelho ligado à tomada fica a gastar sem ninguém a usá-lo, **para** o desligar à distância e não gastar energia nem correr riscos.
+
+A casa junta a tomada, a porta e o movimento das câmaras de dentro de casa para saber se alguém saiu, se está ao pé do aparelho ou noutra divisão.
 
 **Critérios de aceitação**
-- **Dado** que o aparelho na tomada costuma estar ligado no máximo uma hora seguida, **quando** está a gastar há três horas, **então** recebo "o aquecedor está ligado há três horas, desligo?" com o consumo atual e a ação de desligar a tomada.
+- **Dado** que há movimento na divisão da tomada, **então** a casa não avisa: alguém está a usar o aparelho. Se já tinha avisado, a anomalia resolve-se ("voltou a haver alguém na sala às 14:32").
+- **Dado** que o aquecedor está a gastar, **quando** a porta abre e fecha depois de ele ligar e não há movimento em casa durante 20 minutos, **então** recebo "o aquecedor está a gastar desde as 14:05, e a porta fechou às 14:11 sem movimento em casa desde então: parece que saíram", com a ação de desligar a tomada.
+- **Dado** que há alguém em casa mas não na divisão da tomada há uma hora, **quando** o aparelho precisa de alguém por perto (um aquecedor, um ferro, a televisão), **então** recebo "o aquecedor está a gastar e não há ninguém na sala desde as 14:05 (há movimento na cozinha)", com a ação de desligar a tomada.
+- **Dado** que o aparelho pode ficar a trabalhar sozinho (a máquina de lavar, o frigorífico), ou que a casa não tem câmaras dentro de casa, **quando** está a gastar há muito mais tempo do que é costume (três vezes o período mais longo do histórico), **então** recebo o aviso, com o consumo atual e a ação de desligar a tomada.
 - **Dado** que aceito desligar, **então** a casa desliga a tomada e confirma (US03).
-- **Dado** que respondo que ainda está a ser usado, **então** a casa não volta a perguntar nesse dia.
+- **Dado** que carrego em "Está tudo bem", **então** a casa não age e fecha só este aviso (US03).
 - **Dado** que a casa devia estar vazia (férias ditas à casa), **quando** a tomada está a gastar, **então** o aviso é de segurança, é imediato e segue as regras do contacto externo (US05).
 - **Dado** que o aparelho deixa de gastar, **então** a anomalia resolve-se sozinha.
 
-**Dispositivos:** tomada inteligente, que mede a potência e se liga e desliga pelo servidor MCP. "A gastar" quer dizer potência acima de um limite baixo (por exemplo, 10 W), a afinar. A casa sabe que aparelho está na tomada porque o responsável lho diz na conversa ("na tomada está o aquecedor", US01); se não souber, diz "o aparelho na tomada". O tempo habitual vem do histórico; na demo, do dataset simulado.
+**Dispositivos:** tomada inteligente, que mede a potência e se liga e desliga pelo servidor MCP; sensor de porta; câmaras de dentro de casa (só `motionDetected`). "A gastar" quer dizer potência acima de um limite baixo (por exemplo, 10 W), a afinar. A casa sabe que aparelho está na tomada porque o responsável lho diz na conversa ("na tomada está o aquecedor", US01); se não souber, diz "o aparelho na tomada" e trata-o como um que precisa de alguém por perto. A câmara do kit está na sala; as outras divisões têm a sua (`camara_<divisão>`; na demo, injetadas por `/dev/leituras`). Os tempos (10 minutos de movimento recente, 20 para "saíram", uma hora sem ninguém na divisão) vêm do histórico, onde há até 47 minutos sem movimento com o aparelho em uso; na demo, baixam-se no `.env`. O tempo habitual vem do histórico; na demo, do dataset simulado.
 
 ### US15 — Água a correr sem parar (Eficiência energética e Segurança)
 

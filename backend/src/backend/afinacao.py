@@ -91,7 +91,7 @@ def avisos_em(h: habitual.Habitual, mudancas, dias: list[date]) -> list[tuple[da
     ciclo = Ciclo(
         regras=[r.verificar for r in REGRAS],
         avaliar=avaliar,
-        publicar=lambda a: None,
+        publicar=lambda a, imediato=False: None,
         obter_contexto=lambda: Contexto(ferias=[FERIAS], rotinas=[], silencios=[], casa_vazia=False),
         registar_historico=lambda d, m, a: None,
     )
