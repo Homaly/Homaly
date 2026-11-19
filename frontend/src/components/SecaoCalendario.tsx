@@ -68,11 +68,11 @@ function Ligado({ calendario }: { calendario: Calendario }) {
           disabled={sincronizar.isPending}
           onClick={() =>
             sincronizar.mutate(undefined, {
-              onError: () => showToast('Não foi possível ler o calendário', 'error'),
+              onError: () => showToast('Não foi possível atualizar o calendário', 'error'),
             })
           }
         >
-          {sincronizar.isPending ? 'A ler…' : 'Ler agora'}
+          {sincronizar.isPending ? 'A atualizar…' : 'Atualizar'}
         </Botao>
         <Link
           to="/definicoes/calendario/remover"
