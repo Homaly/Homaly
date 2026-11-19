@@ -28,12 +28,15 @@ passa): não avisa nem resolve.
 O estado (o último sinal, desde quando a casa vigia, a última leitura e o desvio em curso) fica na
 tabela `estado_us09`: depois de um reinício a regra volta a ver o mesmo desvio e o ciclo, que o
 reconstruiu, não avisa outra vez. Os valores anteriores de cada dispositivo ficam só em memória:
-depois de um reinício, a primeira volta é o ponto de partida.
+depois de um reinício, a primeira volta é o ponto de partida e conta como um buraco (um sinal de
+enquanto o backend esteve parado perdeu-se). Um estado estragado na tabela fica no registo e a
+regra recomeça do zero, em vez de parar o ciclo.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
@@ -43,6 +46,8 @@ from backend.regras import casa_vazia, ferias_agora
 from backend.sinais import Sinal
 
 from ._comum import com_fuso, hora, numero
+
+registo = logging.getLogger(__name__)
 
 db.esquema(
     """
@@ -95,8 +100,11 @@ def verificar(leituras: list[Leitura], contexto: Contexto, agora: datetime) -> l
     if not sinais.comunica(leituras):  # a casa não sabe nada
         return [estado.pendente] if estado.pendente else []
 
-    if estado.lida_em is None or momento - estado.lida_em > lacuna():
-        estado = replace(estado, vigia_desde=momento)  # houve um buraco: o que aconteceu nele não se sabe
+    # Um buraco: o que aconteceu nele não se sabe. Um detetor sem valores anteriores (um processo
+    # novo) também é um: os sinais de enquanto o backend esteve parado perderam-se.
+    buraco = estado.lida_em is None or momento - estado.lida_em > lacuna() or not _detetor.anteriores
+    if buraco:
+        estado = replace(estado, vigia_desde=momento)
     estado = replace(estado, lida_em=momento)
 
     vistos = _detetor.ver(leituras)
@@ -211,7 +219,14 @@ def _de_json(texto: str) -> Estado:
 def _carregar() -> Estado:
     with db.ligar() as con:
         linha = con.execute("SELECT dados FROM estado_us09 WHERE id = 1").fetchone()
-    return _de_json(linha["dados"]) if linha else Estado()
+    if linha is None:
+        return Estado()
+    try:
+        return _de_json(linha["dados"])
+    except (ValueError, KeyError, TypeError) as e:
+        # Um estado estragado não pode parar o ciclo (que corre todas as regras na mesma volta).
+        registo.warning("estado_us09 estragado (%s): a US09 recomeça do zero.", e)
+        return Estado()
 
 
 def _guardar(estado: Estado) -> None:

@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from backend import falsos, habitual, sinais
+from backend import db, falsos, habitual, sinais
 from backend.avisos import Avisos
 from backend.ciclo import Ciclo, correr
 from backend.contrato import Anomalia
@@ -219,3 +219,31 @@ def test_um_estado_do_futuro_e_esquecido():
 
     assert voltas(sexta(6)) == []
     assert us09._carregar().pendente is None
+
+
+def test_depois_de_um_reinicio_a_primeira_volta_e_um_buraco():
+    # Às 07:00 a luz estava apagada; o backend reinicia (um deploy) e a luz acende entretanto.
+    # Esse sinal perdeu-se: a casa não pode dizer que viu a manhã toda sem sinais.
+    assert us09.verificar(lampada("off", sexta(6)), SEM_FERIAS, sexta(6)) == []
+    assert us09.verificar(lampada("off", sexta(7)), SEM_FERIAS, sexta(7)) == []
+
+    us09._detetor = sinais.Detetor()  # um processo novo
+    saidas = []
+    for t in (sexta(7, 20), sexta(7, 40), sexta(8), sexta(8, 20), sexta(8, 45)):
+        saidas += us09.verificar(lampada("on", t), SEM_FERIAS, t)
+    assert saidas == []
+
+
+@pytest.mark.parametrize("dados", [
+    "isto não é JSON",
+    "{}",  # faltam as chaves
+    "[]",
+    '{"ultimo": null, "vigia_desde": 5, "lida_em": null, "pendente": null}',  # tipo errado
+    '{"ultimo": {"dispositivo": "porta"}, "vigia_desde": null, "lida_em": null, "pendente": null}',
+])
+def test_um_estado_estragado_nao_para_o_ciclo(dados, caplog):
+    with db.ligar() as con:
+        con.execute("INSERT OR REPLACE INTO estado_us09 (id, dados) VALUES (1, ?)", (dados,))
+    assert us09.verificar(porta_fechada(sexta(6)), SEM_FERIAS, sexta(6)) == []
+    assert "estado_us09" in caplog.text
+    assert us09._carregar().lida_em is not None  # a volta gravou um estado novo
