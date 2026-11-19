@@ -6,11 +6,22 @@
 - Nunca abre de madrugada.
 - Na tomada, um desumidificador: ligado no máximo uma hora seguida, algumas vezes por dia,
   com a família em casa.
-- A semana de FERIAS_DO_HISTORICO: a porta não abre e a tomada não gasta.
+- Sinais de vida (US09), com a lâmpada e o movimento na câmara (a hora do movimento):
+  - Dias úteis: acorda entre as 6h45 e as 7h15 (luz ligada) e há movimento a cada
+    10–40 min até sair; apaga a luz um minuto antes de sair. Ao chegar, movimento e luz
+    ligada 5 min depois, e movimento a cada 15–50 min (também na saída curta) até se
+    deitar, entre as 22h30 e as 23h30 e depois da tomada da noite (luz desligada).
+  - Fins de semana: acorda entre as 7h30 e as 8h00 (luz ligada); movimento a cada
+    15–50 min sempre que está em casa; deita-se 30–60 min depois da última abertura
+    (luz desligada).
+- A semana de FERIAS_DO_HISTORICO: a porta não abre, a tomada não gasta e não há sinais.
 
-Só se escrevem as mudanças (porta a abrir e a fechar, tomada a ligar e a desligar).
-Os extremos (07:30, 08:30, 19:30; 09:30, 11:00, 23:00) são forçados num dia de cada,
-para o habitual ficar exato. A semente é fixa: voltar a correr gera o mesmo ficheiro.
+Só se escrevem as mudanças (porta a abrir e a fechar, tomada a ligar e a desligar, luz
+a ligar e a desligar, cada movimento). Os extremos (07:30, 08:30, 19:30; 09:30, 11:00,
+23:00; acordar às 07:15 e às 08:00) são forçados num dia de cada, para o habitual ficar
+exato. A porta e a tomada usam a semente SEMENTE e os sinais novos um gerador à parte
+(SEMENTE + 1), para a porta e a tomada não mudarem. A semente é fixa: voltar a correr
+gera o mesmo ficheiro.
 
 Uso (em backend/): uv run python scripts/gerar_historico.py
 """
@@ -65,9 +76,55 @@ def fim_de_semana(rng: random.Random, dia: date, n: int) -> tuple[list[datetime]
     return aberturas, tomada
 
 
-def gerar() -> list[tuple[str, str, str, datetime]]:
+Linha = tuple[str, str, str, datetime]
+
+
+def movimentos(rng: random.Random, desde: datetime, ate: datetime, passo: tuple[int, int]) -> list[Linha]:
+    """Movimento na câmara a cada passo[0]–passo[1] minutos, depois de desde e antes de ate."""
+    linhas = []
+    t = desde + timedelta(minutes=rng.randint(*passo))
+    while t < ate:
+        linhas.append(("camara", "motionDetected", t.isoformat(), t))
+        t += timedelta(minutes=rng.randint(*passo))
+    return linhas
+
+
+def luz(valor: str, em: datetime) -> Linha:
+    return ("lampada", "power", valor, em)
+
+
+def sinais_util(rng: random.Random, dia: date, n: int, aberturas: list[datetime],
+                tomada: list[tuple[datetime, int]]) -> list[Linha]:
+    saida, chegada = aberturas[0], aberturas[1]
+    acorda = hora(dia, 7, 15) if n == 2 else entre(rng, dia, (6, 45), (7, 15))
+    linhas = [luz("on", acorda)]
+    linhas += movimentos(rng, acorda, saida - timedelta(minutes=1), (10, 40))
+    linhas.append(luz("off", saida - timedelta(minutes=1)))
+
+    em_casa = chegada + timedelta(minutes=5)
+    fim_da_tomada = max(inicio + timedelta(minutes=minutos) for inicio, minutos in tomada)
+    deita = max(entre(rng, dia, (22, 30), (23, 30)), fim_da_tomada + timedelta(minutes=5))
+    linhas += [("camara", "motionDetected", em_casa.isoformat(), em_casa), luz("on", em_casa)]
+    linhas += movimentos(rng, em_casa, deita, (15, 50))
+    linhas.append(luz("off", deita))
+    return linhas
+
+
+def sinais_fim_de_semana(rng: random.Random, dia: date, n: int, aberturas: list[datetime]) -> list[Linha]:
+    primeira, regresso, saida, ultima = aberturas
+    acorda = hora(dia, 8, 0) if n == 2 else entre(rng, dia, (7, 30), (8, 0))
+    deita = ultima + timedelta(minutes=rng.randint(30, 60))
+    linhas = [luz("on", acorda)]
+    for chega, sai in ((acorda, primeira), (regresso, saida), (ultima, deita)):
+        linhas += movimentos(rng, chega, sai, (15, 50))
+    linhas.append(luz("off", deita))
+    return linhas
+
+
+def gerar() -> list[Linha]:
     rng = random.Random(SEMENTE)
-    linhas: list[tuple[str, str, str, datetime]] = []
+    rng_sinais = random.Random(SEMENTE + 1)
+    linhas: list[Linha] = []
     contagem = {"util": 0, "fim_de_semana": 0}
     dia = INICIO
     while dia <= FIM:
@@ -75,13 +132,17 @@ def gerar() -> list[tuple[str, str, str, datetime]]:
             tipo = "util" if dia.weekday() < 5 else "fim_de_semana"
             fazer = dia_util if tipo == "util" else fim_de_semana
             aberturas, tomada = fazer(rng, dia, contagem[tipo])
-            contagem[tipo] += 1
             for a in aberturas:
                 linhas.append(("porta", "sensorState", "alarm", a))
                 linhas.append(("porta", "sensorState", "normal", a + timedelta(minutes=1)))
             for inicio, minutos in tomada:
                 linhas.append(("tomada", "instantPower", str(rng.randint(190, 230)), inicio))
                 linhas.append(("tomada", "instantPower", "0", inicio + timedelta(minutes=minutos)))
+            if tipo == "util":
+                linhas += sinais_util(rng_sinais, dia, contagem[tipo], aberturas, tomada)
+            else:
+                linhas += sinais_fim_de_semana(rng_sinais, dia, contagem[tipo], aberturas)
+            contagem[tipo] += 1
         dia += timedelta(days=1)
     linhas.sort(key=lambda l: l[3])
     return linhas

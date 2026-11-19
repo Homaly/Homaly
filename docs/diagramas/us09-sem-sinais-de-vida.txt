@@ -1,0 +1,64 @@
+title US09: a casa não vê sinais de vida (Bem-estar e rotina)
+
+actor "Responsável\nda casa" as R
+boundary "PWA Homaly\n(telemóvel)" as App
+participantgroup #lightblue **Backend (Python)**
+boundary "API REST\n+ WebSocket" as API
+control "Avisos\n(espera e SMS)" as Avisos
+control "Agente\nde IA" as IA
+control "Motor de\nanomalias" as Motor
+control "Dispositivos\n(cliente MCP)" as Disp
+database "Base de\ndados" as DB
+end
+participant "Modelo de IA\n(por decidir)" as LLM
+participant "Servidor MCP\nAltice" as MCP
+participant "Câmara, lâmpada,\ntomada e porta" as Sens
+
+note over Motor,DB: Sinal de vida: movimento ou som na câmara, a lâmpada mexida,\na tomada a começar a gastar ou a porta a abrir.\nNa demo, o histórico vem do dataset simulado e o relógio é acelerado.
+
+loop a cada ciclo de leitura
+Disp->MCP: get_home_devices
+MCP-->Disp: motionDetected, soundDetected, power, instantPower, sensorState
+note right of Disp: Deixa de fora os dispositivos que não comunicam\nhá SENSOR_SILENCIO_MINUTOS: um sensor calado\nnão conta como falta de atividade
+Disp->Motor: leituras
+Motor->Motor: houve um sinal de vida? guarda a hora e o tipo do último
+end
+
+alt manhã sem atividade
+Motor->DB: hora habitual do primeiro sinal de vida deste tipo de dia
+DB-->Motor: ex.: antes das 9h (histórico)
+Motor->Motor: são 10h30 (hora habitual + margem) e ainda não houve nenhum sinal hoje
+Motor->IA: bem-estar e rotina: nenhum sinal de vida esta manhã, e o último visto
+else a atividade parou
+Motor->DB: há atividade habitual a esta hora?
+DB-->Motor: sim (histórico)
+Motor->Motor: três horas sem sinais, e o último não foi a porta (a pessoa deve estar em casa)
+Motor->IA: bem-estar e rotina: a atividade parou, com a hora e o tipo do último sinal
+end
+note over Motor: Não há desvio se o último sinal foi a porta (a pessoa pode ter saído),\nse é uma hora sem atividade habitual (a dormir),\nse a casa devia estar vazia (férias) ou se nenhum dispositivo comunica
+
+IA->DB: histórico e o que foi dito na conversa
+DB-->IA: contexto
+IA->LLM: desvio + contexto
+LLM-->IA: decisão e explicação
+note right of IA: "Vou ficar em casa" não cala o aviso:\nsó quer dizer que a porta pode não abrir
+IA->DB: guardar Anomalia (bem-estar e rotina, ativa)
+IA->Avisos: avisar
+Avisos->API: anomalia nova
+API->>App: WS {tipo: 'anomalia', anomalia}
+App-->R: notificação com o habitual e o último sinal visto
+Avisos->Avisos: iniciar o tempo de espera da casa
+ref over Avisos: Contacto externo, se não houver resposta (US05)
+
+opt aparece um sinal de vida
+Sens->MCP: ex.: movimento na câmara
+Disp->MCP: get_home_devices
+MCP-->Disp: motionDetected
+Disp->Motor: leituras
+Motor->DB: anomalia resolvida sozinha ("resolvido: movimento na câmara às 11:05")
+Motor->Avisos: anomalia resolvida
+Avisos->API: a anomalia mudou
+API->>App: WS {tipo: 'anomalia', anomalia} (estado: resolvida)
+ref over Avisos: SMS de resolvido, se o contacto externo já tinha sido avisado (US05)
+end
+note over MCP,Sens: A câmara tem de estar dentro de casa.\nO formato de motionDetected com movimento ainda não foi confirmado.

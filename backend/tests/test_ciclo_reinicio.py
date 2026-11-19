@@ -1,7 +1,7 @@
 """Um reinício do backend não duplica anomalias nem SMS.
 
-As regras da porta, da luz e da temperatura guardam o estado em SQLite e continuam a ver o desvio
-depois de um reinício. O ciclo reconstrói as suas ocorrências a partir das anomalias ativas, para
+As regras da porta, da luz, da temperatura e dos sinais de vida guardam o estado em SQLite e
+continuam a ver o desvio depois de um reinício. O ciclo reconstrói as suas ocorrências a partir das anomalias ativas, para
 não criar uma anomalia nova (e uma SMS nova) por cima da antiga.
 """
 
@@ -138,19 +138,25 @@ def test_resolvida_pelo_responsavel_o_desvio_seguinte_e_uma_anomalia_nova():
     assert nova.id != antiga.id
 
 
-def test_us07_e_us09_nao_se_reconstroem():
-    # Só disparam num momento (a abertura; a hora limite do dia): depois de um reinício não voltam
-    # a ver o mesmo desvio, por isso não duplicam. Reconstruí-las engolia o desvio seguinte.
+def test_us07_nao_se_reconstroi():
+    # Só dispara num momento (a abertura): depois de um reinício não volta a ver o mesmo desvio,
+    # por isso não duplica. Reconstruí-la engolia o desvio seguinte (a madrugada seguinte).
     m = Montagem()
-    m.ciclo.restaurar([("US07", m.ativa("US07")), ("US09", m.ativa("US09", classe="bem_estar"))])
+    m.ciclo.restaurar([("US07", m.ativa("US07"))])
 
-    m.saidas[:] = [
-        Desvio(us="US07", classe="seguranca", resumo="A porta abriu às 03:10.", habitual=None),
-        Desvio(us="US09", classe="bem_estar", resumo="A porta não abriu até às 10:30.", habitual=None),
-    ]
+    m.saidas[:] = [Desvio(us="US07", classe="seguranca", resumo="A porta abriu às 03:10.", habitual=None)]
     m.ciclo.passo([], AGORA)
 
-    assert {d.us for d in m.avaliadas} == {"US07", "US09"}
+    assert [d.us for d in m.avaliadas] == ["US07"]
+
+
+def test_us09_reconstroi_se_e_nao_volta_a_avisar():
+    # A US09 guarda o estado em SQLite: depois de um reinício volta a ver o mesmo desvio.
+    m = Montagem()
+    m.ciclo.restaurar([("US09", m.ativa("US09", classe="bem_estar"))])
+    m.saidas[:] = [Desvio(us="US09", classe="bem_estar", resumo="Ainda não houve…", habitual=None)]
+    m.ciclo.passo([], AGORA)
+    assert m.avaliadas == [] and m.publicadas == []
 
 
 def test_com_duas_ativas_da_mesma_us_fica_a_mais_recente():
@@ -178,6 +184,37 @@ def test_o_ciclo_real_reconstroi_as_ativas_da_base_de_dados():
 
     assert set(c.ocorrencias) == {"US08"}
     assert c.ocorrencias["US08"].anomalia.id == ativa.id
+
+
+def _us09_ativa() -> Anomalia:
+    a = Anomalia(classe="bem_estar", titulo="Sem sinais de vida", explicacao="x", detetada_em=AGORA)
+    anomalias.guardar(a)
+    registar_us(a.id, "US09")
+    return a
+
+
+def test_o_ciclo_real_nao_reconstroi_a_us09_sem_desvio_pendente_na_regra():
+    # Sem estado da regra (tabela nova, estado descartado ou estragado) a regra nunca a daria
+    # por acabada: reconstruída, ficava para sempre e engolia o próximo desvio da US09.
+    _us09_ativa()
+    c, _ = ciclo.real(_RelogioFixo())
+    assert "US09" not in c.ocorrencias
+
+    avaliadas, publicadas = [], []
+    c.regras = [lambda l, ctx, agora: [Desvio(us="US09", classe="bem_estar", resumo="Novo.", habitual=None)]]
+    c.avaliar = lambda d, ctx: avaliadas.append(d) or Anomalia(classe=d.classe, titulo="t", explicacao="x")
+    c.publicar = lambda a, imediato=False: publicadas.append(a)
+    c.passo([], AGORA)
+    assert len(avaliadas) == 1 and len(publicadas) == 1
+
+
+def test_o_ciclo_real_reconstroi_a_us09_com_desvio_pendente_na_regra():
+    from backend.regras import us09
+
+    a = _us09_ativa()
+    us09._guardar(us09.Estado(pendente=Desvio(us="US09", classe="bem_estar", resumo="Antes.", habitual=None)))
+    c, _ = ciclo.real(_RelogioFixo())
+    assert c.ocorrencias["US09"].anomalia.id == a.id
 
 
 class _RelogioFixo:

@@ -440,3 +440,15 @@ def test_intervalo_invalido(monkeypatch, texto):
 
 def test_alarme(falso):
     assert dispositivos.alarme() == "AWAY"
+
+
+def test_um_comando_fica_registado_um_minuto(falso, monkeypatch):
+    falso.detalhes[LAMPADA] = [detalhes("power", "off")]
+    agora = [1000.0]
+    monkeypatch.setattr(dispositivos.time, "monotonic", lambda: agora[0])
+    assert not dispositivos.comandado_ha_pouco("lampada", "power")
+    dispositivos.executar("lampada", "power", "off")
+    assert dispositivos.comandado_ha_pouco("lampada", "power")
+    assert not dispositivos.comandado_ha_pouco("lampada", "brightness")
+    agora[0] += 61
+    assert not dispositivos.comandado_ha_pouco("lampada", "power")

@@ -51,10 +51,14 @@ Regra = Callable[[list[Leitura], Contexto, datetime], list[Desvio | Resolucao]]
 # Histórias cuja anomalia só se resolve com a resposta do responsável.
 SO_COM_RESPOSTA = {"US07"}
 
-# Histórias que não se reconstroem depois de um reinício: só disparam num momento (US07: a
-# abertura; US09: a hora limite do dia) e não voltam a ver o mesmo desvio, por isso não duplicam.
-# Reconstruí-las engolia o desvio seguinte (a madrugada da noite seguinte, o dia seguinte).
-NAO_RECONSTRUIR = {"US07", "US09"}
+# Histórias que não se reconstroem depois de um reinício: a US07 só dispara num momento (a
+# abertura) e não volta a ver o mesmo desvio, por isso não duplica. Reconstruí-la engolia o
+# desvio seguinte (a madrugada da noite seguinte). A US09 guarda o estado em SQLite: depois de um
+# reinício volta a ver o mesmo desvio e fecha-o com o sinal seguinte, por isso reconstrói-se, mas só
+# se a regra tiver um desvio pendente (`us09.tem_pendente`, ver `real`): sem ele (tabela nova,
+# estado descartado ou estragado) a regra nunca a daria por acabada e a anomalia reconstruída
+# ficava para sempre, engolindo o próximo desvio. Essa anomalia órfã fica ativa, para o responsável.
+NAO_RECONSTRUIR = {"US07"}
 
 
 @dataclass
@@ -121,8 +125,8 @@ class Ciclo:
     def restaurar(self, ativas: Iterable[tuple[str, Anomalia]]) -> int:
         """No arranque: as anomalias ativas (us, anomalia), da mais recente para a mais antiga,
         voltam a ser ocorrências. Sem isto, as regras que guardam o estado em SQLite (porta, luz,
-        temperatura) continuavam a ver o desvio e o ciclo criava outra anomalia, com outra SMS,
-        deixando a antiga ativa para sempre. Devolve quantas reconstruiu."""
+        temperatura, sinais de vida) continuavam a ver o desvio e o ciclo criava outra anomalia,
+        com outra SMS, deixando a antiga ativa para sempre. Devolve quantas reconstruiu."""
         for us, anomalia in ativas:
             if us in NAO_RECONSTRUIR or us in self.ocorrencias:
                 continue  # das repetidas, fica a mais recente
@@ -273,8 +277,12 @@ def real(relogio: Relogio) -> tuple[Ciclo, Callable[[], list[Leitura]]]:
         registar_historico=historico.registar_desvio,
         obter_anomalia=anomalias.obter,
     )
+    from backend.regras import us09
+
     ativas = ((us_da_anomalia(a.id), a) for a in anomalias.listar("ativa"))
-    reconstruidas = ciclo.restaurar((us, a) for us, a in ativas if us is not None)
+    reconstruidas = ciclo.restaurar(
+        (us, a) for us, a in ativas if us is not None and (us != "US09" or us09.tem_pendente())
+    )
     if reconstruidas:
         registo.info("Reconstruídas %d ocorrência(s) a partir das anomalias ativas.", reconstruidas)
     return ciclo, lambda: dispositivos.ler(relogio.agora())

@@ -21,7 +21,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 | US06 | Ver o que aconteceu em casa | Transversal | Todos |
 | US07 | Porta aberta a uma hora anormal | Segurança | Porta |
 | US08 | Porta esquecida aberta | Segurança | Porta |
-| US09 | A porta não abriu à hora habitual | Bem-estar e rotina | Porta |
+| US09 | A casa não vê sinais de vida | Bem-estar e rotina | Câmara, lâmpada, tomada, porta |
 | US10 | Casa fria durante horas | Saúde e conforto | Temperatura |
 | US11 | Luz acesa há demasiado tempo | Eficiência energética | Lâmpada, porta |
 | US12 | Porta aberta com a casa a arrefecer | Eficiência energética | Porta, temperatura |
@@ -36,7 +36,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 **Como** responsável da casa, **quero** dizer à casa por palavras o que vai mudar na rotina, **para** ela não me avisar de coisas que eu já sei.
 
 **Critérios de aceitação**
-- **Dado** que escrevo "amanhã vamos de férias uma semana", **então** a casa confirma o que percebeu e durante esse período não avisa que a porta não abriu.
+- **Dado** que escrevo "amanhã vamos de férias uma semana", **então** a casa confirma o que percebeu e durante esse período não avisa que não vê sinais de vida (US09).
 - **Dado** que disse à casa que vamos de férias, **quando** a porta abre durante esse período, **então** a casa trata-o como alerta de segurança (US07), em vez de o ignorar.
 - **Dado** que escrevo "a empregada vem às terças à tarde", **então** a casa deixa de tratar a porta a abrir nesse período como anomalia.
 - **Dado** que a casa não percebeu a mensagem, **então** pede para eu a dizer de outra forma, sem assumir nada.
@@ -121,15 +121,29 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 
 **Dispositivos:** sensor de porta.
 
-### US09 — A porta não abriu à hora habitual (Bem-estar e rotina)
+### US09 — A casa não vê sinais de vida (Bem-estar e rotina)
 
-**Como** responsável da casa, **quero** que a casa repare quando a manhã de quem lá vive foge ao habitual, **para** saber cedo se alguém não estiver bem.
+**Como** responsável da casa, **quero** que a casa repare quando deixa de haver sinais de vida de quem lá vive, **para** saber cedo se alguém desmaiou, caiu ou não está bem.
+
+Um **sinal de vida** é qualquer coisa que mostre que alguém está a mexer na casa: movimento ou som na câmara, a lâmpada ligada, desligada ou com o brilho mudado, a tomada a começar a gastar (a chaleira, a máquina do café, a televisão) ou a porta a abrir. A porta passa a ser um sinal entre vários, em vez do único.
 
 **Critérios de aceitação**
-- **Dado** que a porta abre habitualmente antes das 10h, **quando** não abre até às 10h30, **então** recebo uma notificação com a hora habitual e o que aconteceu hoje.
-- **Dado** que disse à casa que ia ficar em casa, **então** a casa não avisa.
 
-**Dispositivos:** sensor de porta. Na demo, precisa de histórico simulado e de relógio acelerado.
+*Manhã sem atividade*
+- **Dado** que no histórico o primeiro sinal de vida do dia chega habitualmente antes das 9h, **quando** não há nenhum até à hora limite (a habitual mais a margem, por exemplo 10h30), **então** recebo uma notificação com a hora habitual e o último sinal visto ("o último sinal foi a luz desligada às 23:40 de ontem").
+
+*A atividade parou*
+- **Dado** que hoje já houve sinais de vida e o último não foi a porta (a pessoa deve estar em casa), **quando** passam três horas sem nenhum sinal, a uma hora em que o histórico mostra atividade, **então** recebo uma notificação com a hora e o tipo do último sinal ("o último movimento na sala foi às 14:20").
+- **Dado** que o último sinal foi a porta a abrir e fechar, **então** a casa não conta esse silêncio: a pessoa pode ter saído. Se ela voltar, a câmara vê-a entrar e a vigilância recomeça.
+- **Dado** que é uma hora em que o histórico não mostra atividade (a pessoa costuma estar a dormir), **então** o silêncio não conta.
+
+*Comum aos dois casos*
+- **Dado** que a casa já avisou, **quando** aparece um sinal de vida, **então** a anomalia resolve-se sozinha e fica no histórico com o sinal e a hora ("resolvido: movimento na câmara às 11:05"). Se o contacto externo já tinha recebido uma SMS, recebe a SMS de resolvido (US05).
+- **Dado** que disse à casa que ia ficar em casa, **então** a casa continua a vigiar: é com a pessoa em casa que uma queda pode acontecer. Ficar em casa só quer dizer que a porta pode não abrir.
+- **Dado** que a casa devia estar vazia (férias ditas à casa), **então** a casa não avisa. Se a anomalia já estava ativa, resolve-se com esse motivo, e não "sozinha".
+- **Dado** que um dispositivo deixou de comunicar, **então** o silêncio dele não conta como falta de atividade. Se nenhum dispositivo que dá sinais de vida comunica, a casa não sabe o que se passa e não avisa por bem-estar.
+
+**Dispositivos:** câmara (só `motionDetected` e `soundDetected`, pelo servidor MCP, sem imagem), lâmpada, tomada e sensor de porta. A câmara tem de estar dentro de casa, na divisão onde a pessoa passa mais tempo. O formato de `motionDetected` quando há movimento ainda não foi confirmado (a 2026-11-19 vinha vazio), nem se `motionHumanoidFilter` o limita a pessoas. A margem da manhã e as três horas são valores a afinar com o histórico. Na demo, precisa de histórico simulado com a câmara e a lâmpada, além da porta e da tomada, e de relógio acelerado.
 
 ### US10 — Casa fria durante horas (Saúde e conforto)
 

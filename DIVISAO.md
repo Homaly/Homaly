@@ -106,10 +106,10 @@ O tempo de espera passa para Candeias, com a US05. Toda a mudança a uma anomali
 ### Vila: US07, US09, US14, o ciclo e o histórico
 
 - **O ciclo:** a cada polling, chama `ler()`, corre todas as regras, passa cada desvio a `avaliar()` e publica. Escreve-se no primeiro dia com versões falsas de tudo; quando as reais chegam, substituem as falsas.
-- **Histórico simulado:** várias semanas da casa em `dados/historico.csv`, e o "habitual": a que horas a porta costuma abrir.
+- **Histórico simulado:** várias semanas da casa em `dados/historico.csv`, e o "habitual": a que horas a porta costuma abrir, a que horas chega o primeiro sinal de vida do dia e a que horas costuma haver atividade (para a US09, o histórico precisa também da câmara e da lâmpada).
 - **`avisos.publicar`:** grava a anomalia, envia-a pelo WebSocket e chama `contacto_externo.agendar` (anomalia nova) ou `contacto_externo.resolvida` (anomalia resolvida).
 - **US07:** porta aberta a uma hora anormal. Com a casa vazia (férias ditas à casa), o desvio é `imediato` e não é a IA que decide.
-- **US09:** a porta não abriu até à hora habitual.
+- **US09:** a casa não vê sinais de vida (movimento ou som na câmara, a lâmpada, a tomada ou a porta). Dois casos: nenhum sinal até à hora habitual mais a margem, ou três horas sem sinais com a pessoa em casa (o último sinal não foi a porta), a uma hora com atividade habitual. Resolve-se sozinha com o próximo sinal de vida. Um dispositivo calado não conta como falta de atividade, e "vou ficar em casa" não cala o aviso.
 - **US14:** o aparelho na tomada a gastar (potência acima de um limite baixo, por exemplo 10 W) há muito mais tempo do que é costume. A casa pergunta se desliga, e a ação de desligar é a da US03. Com a casa vazia, o desvio é `imediato` e de segurança. Resolve-se sozinha quando o aparelho deixa de gastar. O nome do aparelho vem da conversa (US01); se a casa não o souber, diz "o aparelho na tomada".
 - **Propostas a levar à equipa:** histórico pré-carregado e relógio acelerado na demo.
 

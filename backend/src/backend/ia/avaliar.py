@@ -54,6 +54,7 @@ o que é habitual nem o que "normalmente" acontece: escreve só o que aconteceu.
 parte do dia que a descrição disser ("de manhã": das 07:00 às 13:00; "à tarde": das 13:00 às \
 20:00). Uma rotina nunca explica nada entre as 00:00 e as 06:00, a não ser que a hora dela seja \
 essa. Noutro dia, ou a uma hora muito diferente, avisa.
+- A falta de sinais de vida (US09) nunca se explica por a pessoa ter dito que ia ficar em casa: é com ela em casa que uma queda pode acontecer.
 - "acao": uma frase curta para a pessoa, no infinitivo (por exemplo, "Apagar a lâmpada da sala" ou \
 "Desligar o aquecedor"), só se a casa puder apagar a lâmpada, desligar a tomada ou fechar a água; caso \
 contrário, null.
