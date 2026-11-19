@@ -195,7 +195,7 @@ class Ciclo:
         assert ocorrencia.anomalia is not None
         ocorrencia.anomalia.classe = desvio.classe
         ocorrencia.anomalia.explicacao = explicacao_do_desvio(desvio)  # sem IA, mas com o habitual
-        self.publicar(ocorrencia.anomalia)
+        self.publicar(ocorrencia.anomalia, imediato=desvio.imediato)  # subir a segurança com a casa vazia avisa já o contacto
 
     def _acabar_ocorrencias(
         self, desvios: dict[str, Desvio], resolucoes: dict[str, Resolucao], agora: datetime

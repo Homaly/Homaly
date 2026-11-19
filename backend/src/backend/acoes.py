@@ -45,6 +45,7 @@ class Acao:
 ACOES: dict[str, Acao] = {
     "US11": Acao("lampada", "power", "off", "Apagar a luz"),
     "US14": Acao("tomada", "power", "off", "Desligar a tomada"),
+    "US15": Acao("agua", "valvula", "fechada", "Fechar a água"),  # válvula simulada (simulacao.py)
 }
 """A ação que a casa sabe fazer em cada user story."""
 

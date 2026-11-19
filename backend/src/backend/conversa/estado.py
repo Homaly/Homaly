@@ -54,6 +54,10 @@ def _sensores(leituras: list[Leitura], calados: dict[str, datetime], agora: date
         watts = valores.get(("tomada", "instantPower"))
         gasto = f", a gastar {watts:g} W" if tomada == "on" and isinstance(watts, (int, float)) else ""
         sensores["tomada"] = ("ligada" if tomada == "on" else "desligada") + gasto
+    if (caudal := valores.get(("agua", "caudal"))) is not None and isinstance(caudal, (int, float)):
+        sensores["água"] = f"a correr ({caudal:g} L/min)" if caudal > 0.1 else "parada"
+    if valores.get(("agua", "valvula")) == "fechada":
+        sensores["válvula da água"] = "fechada"
     for nome, desde in calados.items():
         sensores.setdefault(nome, f"sem comunicar desde {_hora(desde, agora)}")
     return sensores

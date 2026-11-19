@@ -27,6 +27,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 | US12 | Porta aberta com a casa a arrefecer | Eficiência energética | Porta, temperatura |
 | US13 | Veículo desconhecido na entrada | Segurança | Câmara |
 | US14 | Aparelho esquecido ligado | Eficiência energética | Tomada |
+| US15 | Água a correr sem parar | Eficiência energética / Segurança | Contador de água (simulado) |
 
 ## Histórias transversais
 
@@ -60,7 +61,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 - **Dado** que aceito, **então** a casa executa a ação e confirma o resultado.
 - **Dado** que recuso ou não respondo, **então** a casa não age.
 
-**Dispositivos:** lâmpada e tomada inteligente, os dois dispositivos que a casa comanda. Depois de agir, a casa lê de novo o estado do dispositivo para confirmar o resultado.
+**Dispositivos:** lâmpada e tomada inteligente, os dois dispositivos que a casa comanda, e a válvula da água (simulada, US15). Depois de agir, a casa lê de novo o estado do dispositivo para confirmar o resultado.
 
 ### US04 — Escolher um contacto externo
 
@@ -188,6 +189,20 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 - **Dado** que o aparelho deixa de gastar, **então** a anomalia resolve-se sozinha.
 
 **Dispositivos:** tomada inteligente, que mede a potência e se liga e desliga pelo servidor MCP. "A gastar" quer dizer potência acima de um limite baixo (por exemplo, 10 W), a afinar. A casa sabe que aparelho está na tomada porque o responsável lho diz na conversa ("na tomada está o aquecedor", US01); se não souber, diz "o aparelho na tomada". O tempo habitual vem do histórico; na demo, do dataset simulado.
+
+### US15 — Água a correr sem parar (Eficiência energética e Segurança)
+
+**Como** responsável da casa, **quero** que a casa me avise quando a água corre sem parar, **para** fechar a torneira ou a água antes de a desperdiçar ou de haver estragos.
+
+**Critérios de aceitação**
+- **Dado** que a água corre sem parar há uma hora com um caudal normal, **então** recebo "a água está a correr sem parar desde as 18:00; uma torneira pode ter ficado aberta", com a ação de fechar a água.
+- **Dado** que corre só um fio de água sem parar há uma hora (por exemplo, de madrugada), **então** recebo "corre um fio de água sem parar; pode ser um autoclismo ou uma torneira a pingar", com a ação de fechar a água.
+- **Dado** que corre muita água (12 litros por minuto ou mais) durante cinco minutos, **então** o aviso é de segurança, é imediato ("pode ser um cano rebentado") e segue as regras do contacto externo (US05).
+- **Dado** que a casa devia estar vazia (férias ditas à casa), **quando** a água corre, **então** o aviso é de segurança e imediato.
+- **Dado** que aceito fechar a água, **então** a casa fecha a válvula e confirma (US03).
+- **Dado** que a água pára, **então** a anomalia resolve-se sozinha e diz quantos litros correram.
+
+**Dispositivos:** contador de água com válvula. O kit não o tem: na demo, o caudal (litros por minuto) entra pelas leituras injetadas (`/dev/leituras`, dispositivo `agua`, tipo `caudal`) e a válvula é simulada. "A correr" é um caudal acima de 0,1 L/min. Os limites (uma hora, 2 L/min para o fio de água, 12 L/min durante cinco minutos para o cano) afinam-se no `.env`. Um uso normal, como um banho ou a máquina da loiça, não chega a uma hora seguida.
 
 ## Limites conhecidos
 
