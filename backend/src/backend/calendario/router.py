@@ -31,7 +31,7 @@ registo = logging.getLogger(__name__)
 APP_URL_POR_OMISSAO = "http://localhost:5173"
 VALIDADE_STATE_S = 10 * 60
 COOKIE_STATE = "homaly_calendario_state"
-INTERVALO_LER_AGORA_S = 30  # "Ler agora" gasta a Google e a IA: no máximo uma vez por meio minuto
+INTERVALO_LER_AGORA_S = 30  # "Atualizar" gasta a Google e a IA: no máximo uma vez por meio minuto
 MESES = [
     "janeiro", "fevereiro", "março", "abril", "maio", "junho",
     "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
@@ -40,7 +40,7 @@ MESES = [
 # state → (quando expira, verificador PKCE), em hora real. Um processo só; perde-se ao reiniciar,
 # e aí liga-se outra vez.
 _pedidos: dict[str, tuple[float, str]] = {}
-_ultima_leitura_pedida: float | None = None  # hora real (monotónica) do último "Ler agora"
+_ultima_leitura_pedida: float | None = None  # hora real (monotónica) do último "Atualizar"
 
 router = APIRouter(prefix="/calendario", tags=["calendário"])
 
