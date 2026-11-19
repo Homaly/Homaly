@@ -12,9 +12,10 @@ VIGIADOS: dict[tuple[str, str], dict[object, str]] = {
     ("porta", "sensorState"): {"alarm": "Abriu", "normal": "Fechou"},
     ("lampada", "power"): {"on": "Acendeu", "off": "Apagou"},
     ("tomada", "power"): {"on": "Ligou", "off": "Desligou"},
+    ("agua", "valvula"): {"fechada": "Fechou", "aberta": "Abriu"},
 }
 
-NOMES = {"porta": "Porta da rua", "lampada": "Luz da sala", "tomada": "Tomada"}
+NOMES = {"porta": "Porta da rua", "lampada": "Luz da sala", "tomada": "Tomada", "agua": "Válvula da água"}
 
 
 class Observador:

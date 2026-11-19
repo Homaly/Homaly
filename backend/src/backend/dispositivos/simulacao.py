@@ -4,6 +4,9 @@ Servem para mostrar ao vivo o que não se consegue provocar na sala, como a temp
 16 °C (US10) ou a descer com a porta aberta (US12). O resto da casa continua real.
 
 Os pedidos `/dev/leituras` só existem com `HOMALY_DEV=1` (ver `main.py`), porque não pedem login.
+
+Também guarda os dispositivos que o kit não tem e a casa comanda na demo: a válvula da água
+(US15). Fechá-la põe o caudal a zero até alguém injetar outro (ou limpar as leituras).
 """
 
 import threading
@@ -23,8 +26,12 @@ _sobrepostas: dict[tuple[str, str], Valor] = {}
 
 def sobrepor(dispositivo: str, tipo: str, valor: Valor) -> None:
     global _sobrepostas
+    novas = {(dispositivo, tipo): valor}
+    a_correr = (dispositivo, tipo) == ("agua", "caudal") and isinstance(valor, (int, float)) and valor > 0
     with _trinco:
-        _sobrepostas = {**_sobrepostas, (dispositivo, tipo): valor}
+        if a_correr and _sobrepostas.get(("agua", "valvula")) == "fechada":
+            novas[("agua", "valvula")] = "aberta"  # a água voltou a correr: a válvula foi aberta
+        _sobrepostas = {**_sobrepostas, **novas}
 
 
 def remover(dispositivo: str, tipo: str) -> bool:
@@ -35,6 +42,24 @@ def remover(dispositivo: str, tipo: str) -> bool:
             return False
         _sobrepostas = {k: v for k, v in _sobrepostas.items() if k != (dispositivo, tipo)}
         return True
+
+
+# (dispositivo, tipo) que a casa comanda sem o MCP -> os valores aceites
+SIMULADOS: dict[tuple[str, str], set[str]] = {("agua", "valvula"): {"aberta", "fechada"}}
+
+
+def simulado(dispositivo: str, tipo: str) -> bool:
+    return (dispositivo, tipo) in SIMULADOS
+
+
+def executar(dispositivo: str, tipo: str, valor: str) -> bool:
+    """Comanda um dispositivo simulado. Fechar a água corta o caudal."""
+    if valor not in SIMULADOS.get((dispositivo, tipo), set()):
+        raise ValueError(f"Não se pode pôr '{dispositivo}' {tipo}={valor}")
+    sobrepor(dispositivo, tipo, valor)
+    if (dispositivo, tipo, valor) == ("agua", "valvula", "fechada"):
+        sobrepor("agua", "caudal", 0.0)
+    return True
 
 
 def limpar() -> None:
