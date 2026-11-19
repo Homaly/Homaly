@@ -5,7 +5,9 @@ Filtrar silêncios expirados é de quem os lê; aqui devolve-se tudo.
 """
 
 import json
+import sqlite3
 from datetime import UTC, datetime, time
+from typing import Literal
 
 from backend import db
 from backend.calendario import armazem as calendario
@@ -41,6 +43,12 @@ db.esquema(
         id   INTEGER PRIMARY KEY CHECK (id = 1),  -- só há uma tomada
         nome TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS rotinas_recusadas (
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        descricao TEXT NOT NULL,
+        dias      TEXT NOT NULL,  -- lista JSON, 0 = segunda
+        hora      TEXT            -- "HH:MM" ou NULL
+    );
     CREATE TABLE IF NOT EXISTS propostas_silencio (
         anomalia_id TEXT PRIMARY KEY,
         dados       TEXT NOT NULL  -- JSON
@@ -58,11 +66,30 @@ def guardar_periodo(p: Periodo) -> None:
 
 
 def guardar_rotina(r: Rotina) -> None:
+    _inserir_rotina("rotinas", r)
+
+
+def guardar_recusa(r: Rotina) -> None:
+    """Uma rotina que a casa propôs e a pessoa recusou: a casa não a volta a propor."""
+    _inserir_rotina("rotinas_recusadas", r)
+
+
+def rotinas_recusadas() -> list[Rotina]:
+    with db.ligar() as con:
+        return [_ler_rotina(linha) for linha in con.execute("SELECT * FROM rotinas_recusadas ORDER BY id")]
+
+
+def _inserir_rotina(tabela: Literal["rotinas", "rotinas_recusadas"], r: Rotina) -> None:
+    # O nome da tabela vem sempre de cá (Literal), nunca de quem pede.
     with db.ligar() as con:
         con.execute(
-            "INSERT INTO rotinas (descricao, dias, hora) VALUES (?, ?, ?)",
+            f"INSERT INTO {tabela} (descricao, dias, hora) VALUES (?, ?, ?)",
             (r.descricao, json.dumps(r.dias), r.hora.strftime("%H:%M") if r.hora else None),
         )
+
+
+def _ler_rotina(linha: sqlite3.Row) -> Rotina:
+    return Rotina(linha["descricao"], json.loads(linha["dias"]), time.fromisoformat(linha["hora"]) if linha["hora"] else None)
 
 
 def guardar_silencio(s: Silencio) -> None:
@@ -86,10 +113,7 @@ def carregar_contexto(agora: datetime) -> Contexto:
             Periodo(datetime.fromisoformat(linha["inicio"]), datetime.fromisoformat(linha["fim"]), linha["motivo"])
             for linha in con.execute("SELECT * FROM ferias ORDER BY id")
         ]
-        rotinas = [
-            Rotina(linha["descricao"], json.loads(linha["dias"]), time.fromisoformat(linha["hora"]) if linha["hora"] else None)
-            for linha in con.execute("SELECT * FROM rotinas ORDER BY id")
-        ]
+        rotinas = [_ler_rotina(linha) for linha in con.execute("SELECT * FROM rotinas ORDER BY id")]
         silencios = [
             Silencio(linha["us"], datetime.fromisoformat(linha["ate"]) if linha["ate"] else None, linha["motivo"])
             for linha in con.execute("SELECT * FROM silencios ORDER BY id")

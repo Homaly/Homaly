@@ -6,14 +6,13 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import field_validator
 
-from backend import anomalias, tempo_real
+from backend import anomalias, db, tempo_real
 from backend.contexto import repositorio
 from backend.contrato import Anomalia
 from backend.contrato import Modelo as ModeloContrato
-from backend.dependencias import obter_agora, obter_modelo_dep
+from backend.dependencias import obter_agora
 from backend.ia.avaliar import us_da_anomalia
-from backend.ia.modelo import Modelo
-from backend.resposta.responder import aplicar, responder
+from backend.resposta.responder import aplicar, recusar, responder
 
 router = APIRouter(prefix="/anomalias", tags=["anomalias"])
 
@@ -53,7 +52,6 @@ class Aceitacao(ModeloContrato):
 def responder_anomalia(
     id: str,
     corpo: NovaResposta,
-    modelo: Modelo = Depends(obter_modelo_dep),
     agora: datetime = Depends(obter_agora),
     publicar: Callable[[Anomalia], None] = Depends(obter_publicar),
 ) -> Anomalia:
@@ -62,7 +60,16 @@ def responder_anomalia(
         raise HTTPException(404, "Anomalia não encontrada")
     if anomalia.estado != "ativa":
         raise HTTPException(409, "Esta anomalia já foi respondida")
-    decisao = responder(anomalia, us_da_anomalia(id), corpo.texto, agora, modelo)
+    us = us_da_anomalia(id)
+    decisao = responder(
+        anomalia,
+        us,
+        corpo.texto,
+        agora,
+        anteriores=_detetadas(us, excluir=id),
+        rotinas=repositorio.carregar_contexto(agora).rotinas,
+        recusadas=repositorio.rotinas_recusadas(),
+    )
     if decisao.proposta:
         repositorio.guardar_proposta(id, decisao.proposta)
     publicar(decisao.anomalia)
@@ -87,6 +94,8 @@ def decidir_silencio(
         raise HTTPException(409, "Não há nenhuma proposta de silêncio por decidir")
     if corpo.aceitar:
         aplicar(proposta)
+    else:
+        recusar(proposta)
     estado = "aceite" if corpo.aceitar else "recusada"
     decidida = anomalia.model_copy(
         update={"proposta_silencio": anomalia.proposta_silencio.model_copy(update={"estado": estado})}
@@ -94,3 +103,18 @@ def decidir_silencio(
     publicar(decidida)
     repositorio.apagar_proposta(id)
     return decidida
+
+
+def _detetadas(us: str | None, excluir: str) -> list[datetime]:
+    """Quando foram detetados os outros avisos da mesma US (para ver se já se repete)."""
+    if us is None:
+        return []
+    with db.ligar() as con:
+        linhas = con.execute(
+            """
+            SELECT a.detetada_em FROM anomalias a JOIN anomalia_us u ON u.anomalia_id = a.id
+            WHERE u.us = ? AND a.id != ?
+            """,
+            (us, excluir),
+        ).fetchall()
+    return [datetime.fromisoformat(linha["detetada_em"]) for linha in linhas]
