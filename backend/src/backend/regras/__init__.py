@@ -2,7 +2,8 @@
 (a Resolucao diz como o problema acabou).
 
 O ciclo encontra os ficheiros sozinho: para acrescentar uma regra basta criar o ficheiro.
-Aqui ficam as ajudas da US07, US09 e US14; as outras estão em _comum.py.
+Aqui ficam as ajudas da US07, US14 e US15, e da US09 (casa_vazia e ferias_agora: com férias
+ditas à casa não se espera atividade); as outras estão em _comum.py.
 """
 
 from __future__ import annotations

@@ -41,16 +41,6 @@ def test_a_semana_de_ferias_nao_conta(tmp_path):
     assert h.tomada_max == timedelta(0)
 
 
-def test_primeira_abertura_e_limite_da_us09():
-    h = habitual.padrao()
-    assert h.primeira_abertura == {"util": time(8, 30), "fim_de_semana": time(11, 0)}
-    assert h.limite_porta_nao_abriu(datetime(2026, 11, 20)) == time(9, 0)  # sexta
-    assert h.limite_porta_nao_abriu(datetime(2026, 11, 21)) == time(11, 30)  # sábado
-    assert h.texto_primeira_abertura(datetime(2026, 11, 20)) == (
-        "Nos dias úteis, a porta costuma abrir pela primeira vez até às 08:30."
-    )
-
-
 def test_excluir_dias(tmp_path):
     csv = tmp_path / "h.csv"
     csv.write_text(
@@ -59,7 +49,7 @@ def test_excluir_dias(tmp_path):
         "porta,sensorState,alarm,2026-10-21T09:15:00\n"
     )
     h = habitual.carregar(csv, excluir={datetime(2026, 10, 21).date()})
-    assert h.primeira_abertura == {"util": time(8, 0)}
+    assert h.porta == {"util": (time(8, 0), time(8, 0))}
 
 
 def test_primeiro_sinal_e_limite_da_us09():
@@ -81,9 +71,8 @@ def test_horas_com_atividade():
 
 
 def test_tempo_ativo_so_conta_as_horas_com_atividade():
-    h = habitual.Habitual(porta={}, tomada_max=timedelta(0), primeira_abertura={},
-                          primeiro_sinal={}, atividade={"util": frozenset({6, 7, 19, 20, 21, 22}),
-                                                        "fim_de_semana": frozenset()})
+    h = habitual.Habitual(porta={}, tomada_max=timedelta(0), primeiro_sinal={},
+                          atividade={"util": frozenset({6, 7, 19, 20, 21, 22}), "fim_de_semana": frozenset()})
     sexta = lambda hh, mm=0: datetime(2026, 11, 20, hh, mm)
     assert h.tempo_ativo(sexta(19, 30), sexta(22, 30)) == timedelta(hours=3)
     assert h.tempo_ativo(sexta(0, 30), sexta(7, 0)) == timedelta(hours=1)  # Review Focus 4: o sono não conta
