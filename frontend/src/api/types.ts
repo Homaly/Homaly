@@ -1,4 +1,4 @@
-import type { Anomalia, Definicoes, Evento, MensagemConversa } from '../types/contract';
+import type { Anomalia, Calendario, Definicoes, Evento, MensagemConversa } from '../types/contract';
 
 export interface Api {
   listarAnomaliasAtivas(): Promise<Anomalia[]>;
@@ -15,4 +15,11 @@ export interface Api {
   enviarMensagem(texto: string): Promise<MensagemConversa>;
   obterDefinicoes(): Promise<Definicoes>;
   guardarDefinicoes(d: Definicoes): Promise<Definicoes>;
+  obterCalendario(): Promise<Calendario>;
+  /** Lê o calendário outra vez. Devolve o estado novo. */
+  sincronizarCalendario(): Promise<Calendario>;
+  /** Desliga o calendário e apaga o que veio dele. Devolve o estado novo. */
+  removerCalendario(): Promise<Calendario>;
+  /** Para onde navegar para ligar à Google; volta a /definicoes?calendario=ligado|erro. */
+  urlLigarCalendario(): string;
 }

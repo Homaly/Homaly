@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Calendar,
   CircleAlert,
   CircleCheck,
   CloudOff,
@@ -26,6 +27,7 @@ import { cn } from '../lib/cn';
 /** Os ícones da app (Lucide, traço fino como na app Connected Home). Para usar um novo, junte-o aqui. */
 const ICONES = {
   arrow_back: ArrowLeft,
+  calendar: Calendar,
   bolt: Zap,
   chat: MessageCircle,
   check_circle: CircleCheck,

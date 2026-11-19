@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Layout from '../components/Layout';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
+import SecaoCalendario from '../components/SecaoCalendario';
 import { EstadoCarregar, EstadoErro } from '../components/Estados';
 import { useDefinicoes, useGuardarDefinicoes } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
@@ -123,7 +124,10 @@ export default function Definicoes() {
   const { data, isPending, isError, refetch } = useDefinicoes();
   return (
     <Layout title="Definições">
-      {isPending ? <EstadoCarregar /> : isError ? <EstadoErro onRetry={refetch} /> : <Formulario inicial={data} />}
+      <div className="space-y-8">
+        <SecaoCalendario />
+        {isPending ? <EstadoCarregar /> : isError ? <EstadoErro onRetry={refetch} /> : <Formulario inicial={data} />}
+      </div>
     </Layout>
   );
 }

@@ -7,6 +7,12 @@ import { chaves, guardarAnomaliaNaCache } from './hooks';
 import { WS_URL } from './enderecos';
 
 const URGENTES = new Set<Anomalia['classe']>(['seguranca', 'bem_estar']);
+/**
+ * Quanto tempo sem ligação antes de mostrar "Sem ligação em tempo real". Ao abrir a app, ou ao
+ * sair dela (por exemplo, para o login da Google), o WebSocket fecha-se por instantes: isso não é
+ * uma falha e não deve piscar o aviso.
+ */
+const AVISO_MS = 3000;
 
 /**
  * Se uma anomalia que chega pelo WebSocket merece aviso no ecrã (US02): é nova e ativa,
@@ -27,21 +33,29 @@ export function useRealtime(): boolean {
   const qc = useQueryClient();
   const { showToast } = useToast();
   const ativo = !USE_MOCKS && !!WS_URL;
-  const [ligado, setLigado] = useState(false);
+  const [ligado, setLigado] = useState(true);
 
   useEffect(() => {
     if (!ativo) return;
     let ws: WebSocket | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let aviso: ReturnType<typeof setTimeout> | undefined;
     let tentativas = 0;
     let fechado = false;
     // O último estado visto de cada anomalia, para quando a lista ainda não está em cache.
     const vistas = new Map<string, Anomalia>();
 
+    const avisarSeNaoLigar = () => {
+      aviso ??= setTimeout(() => setLigado(false), AVISO_MS);
+    };
+
     const ligar = () => {
+      avisarSeNaoLigar();
       ws = new WebSocket(WS_URL!);
       ws.onopen = () => {
         tentativas = 0;
+        clearTimeout(aviso);
+        aviso = undefined;
         setLigado(true);
         // Pode ter-se perdido algo enquanto estava em baixo.
         qc.invalidateQueries();
@@ -65,8 +79,8 @@ export function useRealtime(): boolean {
         else if (msg.tipo === 'evento') qc.invalidateQueries({ queryKey: chaves.eventos });
       };
       ws.onclose = () => {
-        setLigado(false);
         if (fechado) return;
+        avisarSeNaoLigar();
         const atraso = Math.min(30_000, 1000 * 2 ** tentativas++);
         timer = setTimeout(ligar, atraso);
       };
@@ -76,6 +90,7 @@ export function useRealtime(): boolean {
     return () => {
       fechado = true;
       clearTimeout(timer);
+      clearTimeout(aviso);
       ws?.close();
     };
   }, [ativo, qc, showToast]);

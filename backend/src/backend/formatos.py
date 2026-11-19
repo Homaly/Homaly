@@ -3,7 +3,7 @@
 Mudar um destes campos obriga a avisar a equipa toda.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, time
 
 from backend.contrato import Classe
@@ -38,6 +38,15 @@ class Rotina:
 
 
 @dataclass
+class Compromisso:
+    """Um evento de um dia, vindo do calendário (ex.: "Dentista", das 15:00 às 16:00)."""
+
+    descricao: str
+    inicio: datetime
+    fim: datetime
+
+
+@dataclass
 class Silencio:
     """Resposta a uma anomalia (US02)."""
 
@@ -55,6 +64,7 @@ class Contexto:
     silencios: list[Silencio]
     casa_vazia: bool
     aparelho_tomada: str | None = None  # o aparelho dito na conversa (US14)
+    compromissos: list[Compromisso] = field(default_factory=list)  # os de hoje, do calendário
 
 
 @dataclass

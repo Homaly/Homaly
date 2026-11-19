@@ -8,6 +8,7 @@ import json
 from datetime import UTC, datetime, time
 
 from backend import db
+from backend.calendario import armazem as calendario
 from backend.contrato import MensagemConversa, _com_fuso
 from backend.formatos import Contexto, Periodo, Rotina, Silencio
 
@@ -94,13 +95,22 @@ def carregar_contexto(agora: datetime) -> Contexto:
             for linha in con.execute("SELECT * FROM silencios ORDER BY id")
         ]
         aparelho = con.execute("SELECT nome FROM aparelho_tomada WHERE id = 1").fetchone()
+    # O que veio do calendário Google junta-se ao que foi dito no chat; dos compromissos, só os de hoje.
+    do_calendario = calendario.itens()
+    ferias += do_calendario.ferias
+    rotinas += do_calendario.rotinas
     return Contexto(
         ferias=ferias,
         rotinas=rotinas,
         silencios=silencios,
         casa_vazia=any(p.inicio <= agora <= p.fim for p in ferias),
         aparelho_tomada=aparelho["nome"] if aparelho else None,
+        compromissos=[c for c in do_calendario.compromissos if _no_dia(c.inicio, agora)],
     )
+
+
+def _no_dia(d: datetime, agora: datetime) -> bool:
+    return _com_fuso(d).astimezone(agora.tzinfo).date() == agora.date()
 
 
 def guardar_mensagem(m: MensagemConversa) -> None:
