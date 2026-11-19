@@ -28,6 +28,8 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Container
 
+from backend.sinais import LIMITE_W  # noqa: F401  (habitual.LIMITE_W é lido pela US14)
+
 HISTORICO = Path(__file__).resolve().parents[2] / "dados" / "historico.csv"
 
 # A semana de férias do histórico simulado (o gerador usa a mesma).
@@ -35,7 +37,6 @@ FERIAS_DO_HISTORICO = (date(2026, 11, 2), date(2026, 11, 8))
 
 MARGEM_PORTA = timedelta(hours=1)
 MARGEM_US09 = timedelta(minutes=30)
-LIMITE_W = 10.0  # "a gastar": potência acima disto (US14), a afinar
 VEZES_O_HABITUAL = 3  # US14: avisa a partir de 3x o período mais longo do histórico
 
 NOME_DO_TIPO = {"util": "Nos dias úteis", "fim_de_semana": "Ao fim de semana"}
