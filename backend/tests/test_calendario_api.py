@@ -51,7 +51,7 @@ def google_falsa(monkeypatch):
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "id-teste")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "segredo-teste")
     monkeypatch.setenv("APP_URL", "https://homaly.test")
-    monkeypatch.setattr(calendario_router, "_ultima_leitura_pedida", 0.0)
+    monkeypatch.setattr(calendario_router, "_ultima_leitura_pedida", None)
     falsa = GoogleFalsa()
     cliente_http = httpx.Client(transport=httpx.MockTransport(falsa))
     app.dependency_overrides[obter_cliente_google] = lambda: cliente_http
@@ -241,3 +241,12 @@ def test_a_primeira_leitura_rebenta_e_fica_ligado_com_erro(cliente, google_falsa
     monkeypatch.setattr(calendario_router, "sincronizar", rebentar)
     assert _ligar(cliente).headers["location"].endswith("calendario=ligado")
     assert cliente.get("/calendario").json()["erro"] is not None
+
+
+def test_ler_agora_logo_depois_de_a_maquina_arrancar(cliente, google_falsa, monkeypatch):
+    """O relógio monotónico conta desde o arranque da máquina: na CI pode ir em poucos segundos."""
+    _ligar(cliente)
+    monkeypatch.setattr(calendario_router.relogio_real, "monotonic", lambda: 5.0)
+    antes = len(google_falsa.pedidos)
+    cliente.post("/calendario/sincronizar")
+    assert len(google_falsa.pedidos) - antes == 2

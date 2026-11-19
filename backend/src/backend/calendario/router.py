@@ -40,7 +40,7 @@ MESES = [
 # state → (quando expira, verificador PKCE), em hora real. Um processo só; perde-se ao reiniciar,
 # e aí liga-se outra vez.
 _pedidos: dict[str, tuple[float, str]] = {}
-_ultima_leitura_pedida = 0.0
+_ultima_leitura_pedida: float | None = None  # hora real (monotónica) do último "Ler agora"
 
 router = APIRouter(prefix="/calendario", tags=["calendário"])
 
@@ -119,8 +119,11 @@ def pedir_sincronizar(
     global _ultima_leitura_pedida
     if armazem.ligacao() is None:
         raise HTTPException(409, "O calendário não está ligado.")
-    if relogio_real.monotonic() - _ultima_leitura_pedida >= INTERVALO_LER_AGORA_S:
-        _ultima_leitura_pedida = relogio_real.monotonic()
+    agora_real = relogio_real.monotonic()
+    # Sem leitura pedida antes, lê sempre: o relógio monotónico conta desde o arranque da máquina,
+    # que pode ter sido há menos de 30 s (um servidor ou a CI acabados de ligar).
+    if _ultima_leitura_pedida is None or agora_real - _ultima_leitura_pedida >= INTERVALO_LER_AGORA_S:
+        _ultima_leitura_pedida = agora_real
         sincronizar(agora, modelo, cliente=cliente)
     return estado(agora)
 
