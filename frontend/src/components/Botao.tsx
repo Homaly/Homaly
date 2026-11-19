@@ -6,7 +6,7 @@ export type VarianteBotao = 'primario' | 'secundario' | 'contorno' | 'texto' | '
 const VARIANTES: Record<VarianteBotao, string> = {
   /** A ação principal do ecrã; no máximo um por ecrã ou por bloco. */
   primario: 'bg-primary text-on-primary',
-  /** Alternativa ao lado do primário (ex.: Recusar). */
+  /** Alternativa ao lado do primário (ex.: Não, na proposta de rotina). */
   secundario: 'bg-surface-tonal text-on-surface',
   /** Ação secundária isolada (ex.: "Está tudo bem" quando há uma ação proposta). */
   contorno: 'border border-field text-on-surface',

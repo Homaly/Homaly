@@ -56,9 +56,9 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 **Como** responsável da casa, **quero** que a casa me proponha uma ação e só a execute se eu aceitar, **para** ela nunca fazer nada sem a minha autorização.
 
 **Critérios de aceitação**
-- **Dado** que a anomalia tem uma ação possível, **então** a notificação inclui um botão para a aceitar.
-- **Dado** que aceito, **então** a casa executa a ação e confirma o resultado.
-- **Dado** que recuso ou não respondo, **então** a casa não age.
+- **Dado** que a anomalia tem uma ação possível, **então** o aviso tem dois botões: a ação, com o nome dela ("Apagar a luz", "Desligar a tomada"), e "Está tudo bem".
+- **Dado** que carrego na ação, **então** a casa executa-a e confirma o resultado.
+- **Dado** que carrego em "Está tudo bem" ou não respondo, **então** a casa não age. "Está tudo bem" fecha só este aviso: se voltar a acontecer, mesmo no mesmo dia, a casa pergunta outra vez (e, se se repetir à mesma hora, propõe uma rotina, US02).
 
 **Dispositivos:** lâmpada e tomada inteligente, os dois dispositivos que a casa comanda. Depois de agir, a casa lê de novo o estado do dispositivo para confirmar o resultado.
 

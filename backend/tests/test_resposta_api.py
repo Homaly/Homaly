@@ -171,3 +171,14 @@ def test_obter_publicar_usa_avisos_quando_existe(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "backend.avisos", types.SimpleNamespace(publicar=publicar))
     assert obter_publicar() is publicar
+
+
+def test_esta_tudo_bem_num_aviso_com_acao_nao_cala_o_resto_do_dia(cliente, publicadas):
+    """Fecha só este aviso: se voltar a acontecer no mesmo dia, a casa pergunta outra vez."""
+    a = Anomalia(classe="eficiencia", titulo="Aparelho ligado há 3 h", explicacao="x", detetada_em=AGORA)
+    anomalias.guardar(a)
+    with db.ligar() as con:
+        con.execute("INSERT INTO anomalia_us (anomalia_id, us) VALUES (?, ?)", (a.id, "US14"))
+    r = _responder(cliente, a)
+    assert r.json()["estado"] == "resolvida"
+    assert carregar_contexto(AGORA).silencios == []

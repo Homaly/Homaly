@@ -33,9 +33,9 @@ export default function Anomalia() {
       onError: () => showToast('Não foi possível enviar a resposta', 'error'),
     });
 
-  const enviarDecisao = (aceitar: boolean) =>
-    decidir.mutate(aceitar, {
-      onSuccess: () => showToast(aceitar ? 'Feito' : 'A casa não vai agir', 'success'),
+  const fazerAcao = () =>
+    decidir.mutate(true, {
+      onSuccess: () => showToast('Feito', 'success'),
       onError: () => showToast('A casa não conseguiu confirmar. Nada foi alterado.', 'error'),
     });
 
@@ -116,21 +116,15 @@ export default function Anomalia() {
             </div>
           ) : (
             <>
+              {/* Dois botões, não três: a ação que a casa propõe (com o nome dela) e "Está tudo
+                  bem". Um "Recusar" à parte dizia o mesmo que "Está tudo bem". */}
               {a.acaoProposta && (
-                <section className="space-y-3 rounded-2xl bg-surface-container p-4">
-                  <p className="font-semibold">A casa propõe: {a.acaoProposta.descricao}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Botao onClick={() => enviarDecisao(true)} disabled={ocupado}>
-                      {decidir.isPending && decidir.variables === true ? 'A confirmar…' : 'Aceitar'}
-                    </Botao>
-                    <Botao variante="secundario" onClick={() => enviarDecisao(false)} disabled={ocupado}>
-                      Recusar
-                    </Botao>
-                  </div>
-                </section>
+                <Botao largo onClick={fazerAcao} disabled={ocupado}>
+                  {decidir.isPending ? 'A confirmar…' : a.acaoProposta.descricao}
+                </Botao>
               )}
 
-              {/* Uma ação principal por ecrã: com ação proposta, é o Aceitar; sem ela, é esta. */}
+              {/* Uma ação principal por ecrã: com ação proposta, é ela; sem ela, é esta. */}
               <Botao
                 variante={a.acaoProposta ? 'contorno' : 'primario'}
                 largo
