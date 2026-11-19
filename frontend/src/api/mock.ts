@@ -1,6 +1,6 @@
 // Dados falsos fixos, só para popular os ecrãs enquanto o backend não responde.
 // Ativos com VITE_USE_MOCKS=true. As escritas alteram os dados em memória.
-import type { Anomalia, Definicoes, Evento, MensagemConversa } from '../types/contract';
+import type { Anomalia, Calendario, Definicoes, Evento, MensagemConversa } from '../types/contract';
 import type { Api } from './types';
 
 const agora = Date.now();
@@ -73,6 +73,37 @@ let conversa: MensagemConversa[] = [
 ];
 
 let definicoes: Definicoes = { contacto: null, esperaMinutos: 5 };
+const SEM_CALENDARIO: Calendario = { configurado: true, ligado: false, email: null, lidoEm: null, erro: null, itens: [] };
+// Ligar navega para outra página e a memória perde-se: o estado do calendário fica na sessão.
+const CHAVE_CALENDARIO = 'homaly-mock-calendario';
+const lerCalendario = (): Calendario => {
+  try {
+    const guardado = sessionStorage.getItem(CHAVE_CALENDARIO);
+    return guardado ? (JSON.parse(guardado) as Calendario) : SEM_CALENDARIO;
+  } catch {
+    return SEM_CALENDARIO;
+  }
+};
+const gravarCalendario = (c: Calendario) => {
+  try {
+    sessionStorage.setItem(CHAVE_CALENDARIO, JSON.stringify(c));
+  } catch {
+    // sem sessionStorage (ex.: janela privada): o mock fica sem calendário
+  }
+  return c;
+};
+const CALENDARIO_LIGADO: Calendario = {
+  configurado: true,
+  ligado: true,
+  email: 'ana@gmail.com',
+  lidoEm: new Date().toISOString(),
+  erro: null,
+  itens: [
+    { tipo: 'ferias', texto: 'Férias no Algarve: de 1 de dezembro a 8 de dezembro' },
+    { tipo: 'rotina', texto: 'a empregada vem: terça-feira, às 10:00' },
+    { tipo: 'compromisso', texto: 'Dentista: hoje, das 16:00 às 17:00' },
+  ],
+};
 
 const espera = <T,>(valor: T) => new Promise<T>(r => setTimeout(() => r(structuredClone(valor)), 300));
 
@@ -138,5 +169,13 @@ export const mockApi: Api = {
   guardarDefinicoes: d => {
     definicoes = d;
     return espera(definicoes);
+  },
+  obterCalendario: () => espera(lerCalendario()),
+  sincronizarCalendario: () => espera(lerCalendario()),
+  removerCalendario: () => espera(gravarCalendario(SEM_CALENDARIO)),
+  // Sem Google: "liga" logo e volta às Definições como o backend faria.
+  urlLigarCalendario: () => {
+    gravarCalendario({ ...CALENDARIO_LIGADO, lidoEm: new Date().toISOString() });
+    return '/definicoes?calendario=ligado';
   },
 };

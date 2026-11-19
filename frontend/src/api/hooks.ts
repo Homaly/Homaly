@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Anomalia, Definicoes, MensagemConversa } from '../types/contract';
+import type { Anomalia, Calendario, Definicoes, MensagemConversa } from '../types/contract';
 import { api } from '.';
 
 export const chaves = {
@@ -8,6 +8,7 @@ export const chaves = {
   eventos: ['eventos'] as const,
   conversa: ['conversa'] as const,
   definicoes: ['definicoes'] as const,
+  calendario: ['calendario'] as const,
 };
 
 export const useAnomaliasAtivas = () =>
@@ -81,5 +82,23 @@ export function useGuardarDefinicoes() {
   return useMutation({
     mutationFn: (d: Definicoes) => api.guardarDefinicoes(d),
     onSuccess: d => qc.setQueryData(chaves.definicoes, d),
+  });
+}
+
+export const useCalendario = () => useQuery({ queryKey: chaves.calendario, queryFn: api.obterCalendario });
+
+export function useSincronizarCalendario() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.sincronizarCalendario(),
+    onSuccess: (c: Calendario) => qc.setQueryData(chaves.calendario, c),
+  });
+}
+
+export function useRemoverCalendario() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.removerCalendario(),
+    onSuccess: (c: Calendario) => qc.setQueryData(chaves.calendario, c),
   });
 }

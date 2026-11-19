@@ -51,6 +51,20 @@ export interface Definicoes {
   nomeCasa?: string;
 }
 
+/** O Google Calendar ligado à casa (GET /calendario). */
+export interface Calendario {
+  /** A app está registada na Google (GOOGLE_CLIENT_ID no .env do backend). */
+  configurado: boolean;
+  ligado: boolean;
+  email: string | null;
+  /** ISO 8601: a última leitura que correu bem. */
+  lidoEm: string | null;
+  /** O que correu mal na última leitura, já em português. */
+  erro: string | null;
+  /** O que a casa sabe pelo calendário, já escrito (ex.: "a empregada vem: terça-feira, às 10:00"). */
+  itens: { tipo: 'ferias' | 'rotina' | 'compromisso'; texto: string }[];
+}
+
 /** Mensagens que o servidor envia pelo WebSocket /ws. */
 export type MensagemWs =
   | { tipo: 'anomalia'; anomalia: Anomalia }

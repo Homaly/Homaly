@@ -84,5 +84,9 @@ def _contexto(agora: datetime) -> dict:
             for r in contexto.rotinas
         ],
         "aparelho_na_tomada": contexto.aparelho_tomada,
+        "compromissos_hoje": [
+            f"{c.descricao}, das {c.inicio.astimezone(agora.tzinfo):%H:%M} às {c.fim.astimezone(agora.tzinfo):%H:%M}"
+            for c in contexto.compromissos
+        ],
         "casa_vazia": contexto.casa_vazia,
     }

@@ -7,8 +7,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import acoes, anomalias, ciclo, contacto_externo, definicoes, dev, eventos, relogio, tempo_real
+from .calendario import google as calendario_google
+from .calendario import router as calendario_router
+from .calendario import sincronizar as calendario_sincronizar
 from .contacto_externo import pagina, sms
 from .conversa import router as conversa
+from .dependencias import obter_agora, obter_modelo_dep
 from .dispositivos import simulacao
 from .resposta import router as resposta
 
@@ -23,7 +27,15 @@ async def _vida(app: FastAPI):
     # HOMALY_DEV=1, para as anomalias de /dev/anomalias?contacto=true também chegarem a sair.
     com_contacto = parar is not None or os.environ.get("HOMALY_DEV") == "1"
     parar_contacto = contacto_externo.arrancar() if com_contacto else None
+    # O calendário Google lê-se de hora a hora, se a app estiver registada na Google (.env).
+    parar_calendario = (
+        calendario_sincronizar.arrancar(obter_agora, obter_modelo_dep)
+        if calendario_google.credenciais() is not None
+        else None
+    )
     yield
+    if parar_calendario is not None:
+        parar_calendario.set()
     if parar is not None:
         parar.set()
     if parar_contacto is not None:
@@ -43,6 +55,7 @@ app.include_router(conversa.router)
 app.include_router(resposta.router)
 app.include_router(acoes.router)
 app.include_router(definicoes.router)
+app.include_router(calendario_router.router)
 app.include_router(pagina.router)  # a página do alerta, para o contacto externo (sem login)
 
 if os.environ.get("HOMALY_DEV") == "1":

@@ -1,5 +1,6 @@
-import type { Anomalia, Definicoes, Evento, MensagemConversa } from '../types/contract';
+import type { Anomalia, Calendario, Definicoes, Evento, MensagemConversa } from '../types/contract';
 import { apiFetch } from './client';
+import { API_URL } from './enderecos';
 import type { Api } from './types';
 
 const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
@@ -16,4 +17,8 @@ export const realApi: Api = {
   obterDefinicoes: () => apiFetch<Definicoes>('/definicoes'),
   guardarDefinicoes: d =>
     apiFetch<Definicoes>('/definicoes', { method: 'PUT', body: JSON.stringify(d) }),
+  obterCalendario: () => apiFetch<Calendario>('/calendario'),
+  sincronizarCalendario: () => apiFetch<Calendario>('/calendario/sincronizar', { method: 'POST' }),
+  removerCalendario: () => apiFetch<Calendario>('/calendario', { method: 'DELETE' }),
+  urlLigarCalendario: () => `${API_URL}/calendario/google/ligar`,
 };

@@ -40,7 +40,8 @@ TITULO_POR_CLASSE = {
 SISTEMA = """\
 És a IA de uma casa ligada que avisa o responsável quando algo foge ao habitual.
 Recebes, em JSON, um desvio detetado por uma regra simples e o contexto que o responsável deu à casa \
-(férias, rotinas, se a casa está vazia, o aparelho ligado à tomada).
+(férias, rotinas, se a casa está vazia, o aparelho ligado à tomada, os compromissos de hoje no \
+calendário).
 Decide se vale a pena enviar uma notificação e escreve-a. Responde só com JSON, neste formato:
 {"avisar": true | false, "titulo": "...", "explicacao": "...", "acao": "..." | null}
 - "avisar": false se, com este contexto, o desvio é normal e não merece incomodar a pessoa.
@@ -183,6 +184,7 @@ def _perguntar(
                 "rotinas": [asdict(r) for r in contexto.rotinas],
                 "casa_vazia": contexto.casa_vazia,
                 "aparelho_tomada": contexto.aparelho_tomada,
+                "compromissos_hoje": [asdict(c) for c in contexto.compromissos],
             },
             "agora": agora.isoformat(),
             "hoje": f"{DIAS_DA_SEMANA[agora.weekday()]}, {agora:%H:%M}",
