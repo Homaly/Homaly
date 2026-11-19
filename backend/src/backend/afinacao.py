@@ -21,7 +21,7 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Iterator
 
-from backend import habitual
+from backend import habitual, sinais
 from backend.ciclo import Ciclo, correr
 from backend.contrato import Anomalia
 from backend.formatos import Contexto, Leitura, Periodo
@@ -37,30 +37,33 @@ FERIAS = Periodo(
 )
 
 
-def _mudancas(caminho: Path) -> list[tuple[datetime, str, str]]:
+def _mudancas(caminho: Path) -> list[tuple[datetime, str, str, str]]:
+    """As mudanças do histórico: (quando, dispositivo, tipo, valor)."""
     with open(caminho, newline="", encoding="utf-8") as f:
-        return [(datetime.fromisoformat(l["em"]), l["dispositivo"], l["valor"]) for l in csv.DictReader(f)]
+        return [(datetime.fromisoformat(l["em"]), l["dispositivo"], l["tipo"], l["valor"])
+                for l in csv.DictReader(f)]
 
 
-def pollings(mudancas: list[tuple[datetime, str, str]], dias: list[date]) -> Iterator[tuple[datetime, list[Leitura]]]:
-    """Um polling a cada POLLING e em cada mudança, nos dias dados, com o último estado."""
+def pollings(mudancas: list[tuple[datetime, str, str, str]], dias: list[date]) -> Iterator[tuple[datetime, list[Leitura]]]:
+    """Um polling a cada POLLING e em cada mudança, nos dias dados, com o último estado
+    de cada (dispositivo, tipo) do histórico, partindo de sinais.BASE."""
     inicio = datetime.combine(dias[0], time.min)
     fim = datetime.combine(dias[-1], time.max)
-    momentos = {m for m, _, _ in mudancas if inicio <= m <= fim}
+    momentos = {m for m, *_ in mudancas if inicio <= m <= fim}
     t = inicio
     while t <= fim:
         momentos.add(t)
         t += POLLING
-    estado = {"porta": "normal", "tomada": "0"}
+    estado = dict(sinais.BASE)
     i = 0
     for agora in sorted(momentos):
-        while i < len(mudancas) and mudancas[i][0] <= agora:
-            estado[mudancas[i][1]] = mudancas[i][2]
+        while i < len(mudancas):
+            em, dispositivo, tipo, valor = mudancas[i]
+            if em > agora:
+                break
+            estado[(dispositivo, tipo)] = float(valor) if (dispositivo, tipo) == ("tomada", "instantPower") else valor
             i += 1
-        yield agora, [
-            Leitura("porta", "sensorState", estado["porta"], agora),
-            Leitura("tomada", "instantPower", float(estado["tomada"]), agora),
-        ]
+        yield agora, [Leitura(d, t, v, agora) for (d, t), v in estado.items()]
 
 
 @contextlib.contextmanager
@@ -116,29 +119,31 @@ def _min(t: time) -> datetime:
     return datetime.combine(date.min, t)
 
 
-def folgas(h: habitual.Habitual, mudancas, dias: list[date]) -> Folgas:
+def folgas(h: habitual.Habitual, mudancas, dias: list[date], caminho: Path = habitual.HISTORICO) -> Folgas:
     f = Folgas()
     nos_dias = [m for m in mudancas if m[0].date() in dias and not habitual._nas_ferias(m[0])]
-    primeiras: dict[date, time] = {}
     desde: datetime | None = None
-    for em, dispositivo, valor in nos_dias:
-        if dispositivo == "porta" and valor == "alarm":
-            primeiras.setdefault(em.date(), em.time())
+    for em, dispositivo, tipo, valor in nos_dias:
+        if (dispositivo, tipo) == ("porta", "sensorState") and valor == "alarm":
             janela = h.porta.get(habitual.tipo_de_dia(em))
             if janela:
                 t = _min(em.time())
                 f.us07.append(min(t - (_min(janela[0]) - habitual.MARGEM_PORTA),
                                   (_min(janela[1]) + habitual.MARGEM_PORTA) - t))
-        elif dispositivo == "tomada":
+        elif (dispositivo, tipo) == ("tomada", "instantPower"):
             if float(valor) > habitual.LIMITE_W:
                 desde = desde or em
             elif desde is not None:
                 f.us14.append(h.limite_tomada - (em - desde))
                 desde = None
-    for dia, primeira in primeiras.items():
-        limite = h.limite_porta_nao_abriu(dia)
+    primeiros: dict[date, datetime] = {}
+    for sinal in habitual.sinais_de_vida(caminho):
+        if sinal.em.date() in dias:
+            primeiros.setdefault(sinal.em.date(), sinal.em)
+    for dia, primeiro in primeiros.items():
+        limite = h.limite_sem_sinais(dia)
         if limite:
-            f.us09.append(_min(limite) - _min(primeira))
+            f.us09.append(_min(limite) - _min(primeiro.time()))
     return f
 
 
@@ -160,7 +165,7 @@ def relatorio(caminho: Path = habitual.HISTORICO) -> tuple[Counter, dict[str, ti
         vistos = avisos_em(h, mudancas, dias)
         todos += vistos
         falsos.update(us for _, us, _ in vistos)
-        f = folgas(h, mudancas, dias)
+        f = folgas(h, mudancas, dias, caminho)
         for us, valores in (("US07", f.us07), ("US09", f.us09), ("US14", f.us14)):
             if valores:
                 m = min(valores)
