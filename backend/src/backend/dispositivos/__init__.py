@@ -6,7 +6,8 @@
   repetiria o último valor (ex.: a porta "aberta" desde ontem com o kit desligado). As regras tratam
   "sem leitura" como "nada mudou". `em_silencio()` diz quais estão calados e desde quando.
 - `executar(dispositivo, tipo, valor)`: liga/desliga a lâmpada ou a tomada, ou muda o brilho da
-  lâmpada, e confirma lendo o dispositivo de novo.
+  lâmpada, e confirma lendo o dispositivo de novo. Lembra o comando durante COMANDO_SEGUNDOS:
+  `comandado_ha_pouco(dispositivo, tipo)` deixa as regras ignorar o que a própria casa mudou.
 - `alarme()`: o estado do alarme (`DISARMED`, `STAY` ou `AWAY`), para a casa vazia (US07, US14).
 
 Uma falha a falar com o MCP levanta `ErroDispositivos`: o ciclo deve saltar essa volta.
@@ -25,7 +26,7 @@ from backend.formatos import Leitura
 from . import mapa, mudancas, simulacao
 from .mcp import ClienteMCP, Config, ErroDispositivos
 
-__all__ = ["ErroDispositivos", "alarme", "configurar", "em_silencio", "executar", "intervalo_s", "ler", "ultimas"]
+__all__ = ["ErroDispositivos", "alarme", "comandado_ha_pouco", "configurar", "em_silencio", "executar", "intervalo_s", "ler", "ultimas"]
 
 registo = logging.getLogger(__name__)
 
@@ -34,6 +35,9 @@ TENTATIVAS = 3
 PAUSA_S = 1.0
 
 COMANDADOS = {"lampada", "tomada"}
+
+# Quanto tempo (real, não o do relógio acelerado) um comando da casa conta como "feito pela casa".
+COMANDO_SEGUNDOS = 60.0
 
 
 class Cliente(Protocol):
@@ -47,6 +51,7 @@ _cliente: Cliente | None = None
 _ids: dict[str, str] = {}
 _observador = mudancas.Observador()
 _calados: dict[str, datetime] = {}
+_comandos: dict[tuple[str, str], float] = {}  # (dispositivo, tipo) -> time.monotonic() do comando
 _ultimas: list[Leitura] = []  # a última leitura do ciclo, para a conversa (US01)
 
 
@@ -97,6 +102,7 @@ def configurar(cliente: Cliente | None) -> None:
         _ids = {}
         _observador = mudancas.Observador()
         _calados = {}
+        _comandos.clear()
 
 
 def _obter_cliente() -> Cliente:
@@ -146,6 +152,8 @@ def executar(dispositivo: str, tipo: str, valor: str | int) -> bool:
     if simulacao.simulado(dispositivo, tipo):  # a válvula da água (US15): o kit não a tem
         return simulacao.executar(dispositivo, tipo, str(valor))
     _validar(dispositivo, tipo, valor)
+    with _trinco:
+        _comandos[(dispositivo, tipo)] = time.monotonic()
     cliente = _obter_cliente()
     id_dispositivo = _id(dispositivo)
     cliente.chamar("update_device_capabilities", {"deviceId": id_dispositivo, "body": {"type": tipo, "value": valor}})
@@ -157,6 +165,13 @@ def executar(dispositivo: str, tipo: str, valor: str | int) -> bool:
             return True
     registo.warning("%s não confirmou %s=%s", dispositivo, tipo, valor)
     return False
+
+
+def comandado_ha_pouco(dispositivo: str, tipo: str) -> bool:
+    """True se `executar` mandou este (dispositivo, tipo) há menos de COMANDO_SEGUNDOS segundos."""
+    with _trinco:
+        quando = _comandos.get((dispositivo, tipo))
+    return quando is not None and time.monotonic() - quando < COMANDO_SEGUNDOS
 
 
 def _validar(dispositivo: str, tipo: str, valor: object) -> None:
