@@ -36,9 +36,9 @@ A documentação dos pedidos, onde se pode experimentá-los, fica em http://loca
 | `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID` | O textbee, que envia as SMS ao contacto externo (US05). Sem a chave, as SMS não saem: ficam no registo e em `GET /dev/sms` | Sem textbee |
 | `SMS_MAXIMO_HORA` | No máximo estas SMS por hora. Só contam as que o textbee aceitou (as recusadas, as sem ligação e as sem chave não gastam tarifário). No limite, a SMS volta a tentar de minuto a minuto, sem gastar as 3 tentativas, até a hora libertar um lugar. A app não tem login, e isto impede que alguém gaste o tarifário do telemóvel do textbee | `10` (`0` tira o limite) |
 | `HOMALY_URL_PUBLICO` | O início do link da SMS, para a página do alerta; o telemóvel do contacto tem de o alcançar | `http://localhost:8000` |
-| `IA_FORNECEDOR` | Que modelo de IA a casa usa: `groq` (recomendado), `gemini` ou `falso`, que não usa nenhum (a casa fica com o resumo do desvio). Os dois reais têm plano grátis; cada pessoa cria a sua chave (links no `.env.example`). Se o modelo falhar ou demorar mais de 10 s, a casa usa o resumo do desvio | `falso` |
-| `GROQ_API_KEY`, `GEMINI_API_KEY` | A chave do fornecedor escolhido | — |
-| `IA_MODELO` | Troca o modelo do fornecedor. O plano grátis do Groq dá 8 000 tokens por minuto (umas 6 a 10 avaliações) | `openai/gpt-oss-120b` (groq), `gemini-3.5-flash-lite` (gemini) |
+| `IA_FORNECEDOR` | Que modelo de IA a casa usa: `groq` (recomendado), `gemini`, `openrouter` (pago) ou `falso`, que não usa nenhum (a casa fica com o resumo do desvio). Groq e Gemini têm plano grátis; cada pessoa cria a sua chave (links no `.env.example`). Se o modelo falhar ou demorar mais de 10 s, a casa usa o resumo do desvio | `falso` |
+| `GROQ_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY` | A chave do fornecedor escolhido | — |
+| `IA_MODELO` | Troca o modelo do fornecedor. O plano grátis do Groq dá 8 000 tokens por minuto (umas 6 a 10 avaliações) | `openai/gpt-oss-120b` (groq), `gemini-3.5-flash-lite` (gemini), `anthropic/claude-haiku-5.5` (openrouter) |
 | `LUZ_HORAS` | US11: ao fim de quantas horas acesa a casa pergunta pela luz (na demo, por exemplo `0.05` = 3 min) | `5` |
 
 ## Módulos

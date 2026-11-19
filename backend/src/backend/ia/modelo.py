@@ -1,8 +1,8 @@
 """O modelo de IA, trocável: quem o usa só conhece `Modelo`.
 
 `IA_FORNECEDOR` escolhe o modelo. `falso` (ou por definir) não usa nenhum: a casa fica com o resumo
-do desvio. `groq` e `gemini` usam a API no formato da OpenAI, com a chave em `GROQ_API_KEY` ou
-`GEMINI_API_KEY`; `IA_MODELO` troca o modelo por omissão do fornecedor.
+do desvio. `groq`, `gemini` e `openrouter` usam a API no formato da OpenAI, com a chave em `GROQ_API_KEY`,
+`GEMINI_API_KEY` ou `OPENROUTER_API_KEY`; `IA_MODELO` troca o modelo por omissão do fornecedor.
 """
 
 import json
@@ -27,6 +27,11 @@ FORNECEDORES = {
         "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
         "GEMINI_API_KEY",
         "gemini-3.5-flash-lite",
+    ),
+    "openrouter": (
+        "https://openrouter.ai/api/v1/chat/completions",
+        "OPENROUTER_API_KEY",
+        "anthropic/claude-haiku-5.5",
     ),
 }
 
