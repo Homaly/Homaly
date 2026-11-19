@@ -95,7 +95,7 @@ Cada entrada indica o grau de certeza. Só a secção "Decidido" reflete escolha
 
 - **Sensor de porta:** na porta da rua.
 - **Lâmpada e sensor de temperatura:** na mesma divisão, a sala.
-- **Câmara:** apontada à entrada de veículos da casa (ver US13).
+- **Câmaras: várias, uma por sítio, para servir todas as user stories** (decidido a 2026-11-19). A do kit fica dentro de casa, na sala, para os sinais de vida (US09) e para saber se há alguém ao pé da tomada (US14). Outras divisões têm a sua (`camara_<divisão>`). A entrada de veículos (US13) tem uma câmara própria, `camara_entrada`, que não conta para saber se há alguém dentro de casa. O kit só tem uma câmara: na demo, as outras entram como leituras injetadas.
 
 ### Equipa e tempo
 
@@ -110,7 +110,7 @@ Uma unidade de cada:
 
 | Dispositivo | Papel | O que o MCP dá |
 |-------------|-------|----------------|
-| Câmara | Sensor (no MVP, só para o veículo desconhecido) | Deteção de movimento e de som; nenhuma imagem |
+| Câmara | Sensor: sinais de vida (US09), presença ao pé da tomada (US14); o veículo desconhecido (US13) precisa de uma segunda câmara, na entrada | Deteção de movimento e de som; nenhuma imagem |
 | Sensor de temperatura | Sensor | Temperatura e humidade |
 | Sensor de abertura de porta | Sensor | Estado `alarm` com a porta aberta e `normal` com a porta fechada |
 | Detetor de fumo | Sensor (posto de parte) | Estado `normal` ou `alarm` |
