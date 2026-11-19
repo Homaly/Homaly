@@ -19,7 +19,7 @@ Uma casa que repara: aprende o que é habitual e avisa quando algo foge a isso.
 | Classe | Anomalias | Dispositivos |
 |--------|-----------|--------------|
 | Segurança | A porta abriu a uma hora em que nunca abre; a porta ficou aberta mais de cinco minutos; veículo desconhecido na entrada de veículos | Porta, câmara |
-| Bem-estar e rotina | A porta não abriu até à hora habitual | Porta |
+| Bem-estar e rotina | A casa não vê sinais de vida: nenhuma atividade até à hora habitual, ou a atividade parou com a pessoa em casa | Câmara, lâmpada, tomada, porta |
 | Saúde e conforto | Casa abaixo de 16 graus durante horas | Temperatura |
 | Eficiência energética | Luz acesa há demasiado tempo; porta aberta com a temperatura a cair; aparelho esquecido ligado na tomada | Lâmpada, porta, temperatura, tomada |
 

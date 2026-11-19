@@ -21,7 +21,7 @@ Esta pasta tem dois tipos de diagrama:
 | `us06-historico.txt` | US06: histórico de eventos e detalhe de uma anomalia |
 | `us07-porta-hora-anormal.txt` | US07: porta aberta a uma hora anormal ou com a casa vazia |
 | `us08-porta-esquecida-aberta.txt` | US08: porta aberta mais de cinco minutos, e a junção com a US12 |
-| `us09-porta-nao-abriu.txt` | US09: a porta não abriu até à hora habitual |
+| `us09-sem-sinais-de-vida.txt` | US09: a casa não vê sinais de vida (manhã sem atividade, ou a atividade parou com a pessoa em casa) e a resolução sozinha |
 | `us10-casa-fria.txt` | US10: abaixo de 16 °C durante duas horas, e a resolução sozinha |
 | `us11-luz-acesa.txt` | US11: luz acesa há demasiado tempo, com a pergunta e a ação |
 | `us12-porta-aberta-a-arrefecer.txt` | US12: porta aberta com a sala a arrefecer, e a junção com a US08 |
