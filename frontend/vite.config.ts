@@ -12,6 +12,9 @@ export default defineConfig({
       includeAssets: ['favicon.svg'],
       // A letra vem do Google: guardá-la para a app abrir sem rede com a mesma letra.
       workbox: {
+        // Navegar para /api/... (ligar o Google Calendar, página de alerta) tem de ir ao servidor,
+        // não ser respondido com o index.html da PWA.
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
