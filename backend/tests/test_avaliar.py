@@ -2,7 +2,7 @@ from datetime import datetime, time, timedelta
 
 from backend.formatos import Contexto, Desvio, Periodo, Rotina, Silencio
 from backend.ia import avaliar
-from backend.ia.avaliar import registar_us, us_da_anomalia
+from backend.ia.avaliar import SISTEMA, registar_us, us_da_anomalia
 from tests.conftest import AGORA, ModeloFixo
 
 CONTEXTO_VAZIO = Contexto([], [], [], False)
@@ -218,3 +218,7 @@ def test_acao_so_espacos_e_sem_acao():
 def test_registar_us():
     registar_us("x", "US09")
     assert us_da_anomalia("x") == "US09"
+
+
+def test_ficar_em_casa_nao_explica_a_falta_de_sinais_de_vida():
+    assert "ficar em casa" in SISTEMA and "sinais de vida" in SISTEMA

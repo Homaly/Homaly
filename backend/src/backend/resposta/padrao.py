@@ -25,7 +25,7 @@ TODOS_OS_DIAS = list(range(7))
 # O que se repete, dito como rotina ("Passo a contar com isso: a porta abre a esta hora").
 DESCRICAO_POR_US = {
     "US07": "a porta abre a esta hora",
-    "US09": "a porta só abre mais tarde",
+    "US09": "a casa acorda mais tarde",
     "US10": "a casa fica mais fria",
     "US11": "a luz fica acesa mais tempo",
     "US12": "a porta fica aberta com a sala a arrefecer",

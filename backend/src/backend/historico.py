@@ -21,7 +21,6 @@ from backend.ia.avaliar import us_da_anomalia
 DISPOSITIVO_POR_US = {
     "US07": "Porta da rua",
     "US08": "Porta da rua",
-    "US09": "Porta da rua",
     "US10": "Sala",
     "US11": "Luz da sala",
     "US12": "Porta da rua",
