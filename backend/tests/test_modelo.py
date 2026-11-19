@@ -60,6 +60,15 @@ def test_gemini_com_modelo_do_ambiente(monkeypatch):
     assert m.modelo == "gemini-outro"
 
 
+def test_openrouter_por_omissao(monkeypatch):
+    monkeypatch.setenv("IA_FORNECEDOR", "openrouter")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "chave-or")
+    monkeypatch.delenv("IA_MODELO", raising=False)
+    m = obter_modelo()
+    assert m.url == "https://openrouter.ai/api/v1/chat/completions"
+    assert m.modelo == "anthropic/claude-haiku-5.5"
+
+
 def test_fornecedor_sem_chave_falha(monkeypatch):
     monkeypatch.setenv("IA_FORNECEDOR", "groq")
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
