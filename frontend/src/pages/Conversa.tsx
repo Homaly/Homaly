@@ -22,8 +22,8 @@ const ERROS_DITADO: Record<ErroDitado, [string, ToastType]> = {
 /**
  * Sugestões por cima da caixa, para o que a casa percebe (férias, rotinas, o aparelho na tomada,
  * perguntas). As que acabam em "…" põem o começo da frase na caixa, para a pessoa a acabar; as
- * outras enviam logo o texto. A casa lê cada mensagem sozinha, por isso "Vamos de férias" sem
- * datas pode receber um "Não percebi bem".
+ * outras enviam logo o texto. A casa lembra-se das últimas 10 mensagens (memória curta do
+ * backend), por isso a "Vamos de férias" sem datas pode perguntar quando e perceber a resposta.
  */
 const SUGESTOES = [
   { rotulo: 'Vamos de férias', texto: 'Vamos de férias' },
