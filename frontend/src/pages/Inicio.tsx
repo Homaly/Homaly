@@ -9,9 +9,17 @@ const porUrgencia = (a: Anomalia, b: Anomalia) =>
   CLASSES[a.classe].urgencia - CLASSES[b.classe].urgencia ||
   new Date(b.detetadaEm).getTime() - new Date(a.detetadaEm).getTime();
 
-/** Título de grupo pequeno, como os das Definições: o título grande do ecrã é o "Homaly". */
-function TituloGrupo({ children }: { children: string }) {
-  return <h2 className="px-1 text-sm font-semibold text-on-surface-variant">{children}</h2>;
+/**
+ * Título de grupo pequeno, como os das Definições (o título grande do ecrã é o "Homaly"), com o
+ * número de avisos do grupo: "Urgente · 2".
+ */
+function TituloGrupo({ children, numero }: { children: string; numero: number }) {
+  return (
+    <h2 className="px-1 text-sm font-semibold text-on-surface-variant">
+      {children}
+      <span className="font-medium text-muted"> · {numero}</span>
+    </h2>
+  );
 }
 
 export default function Inicio() {
@@ -40,7 +48,7 @@ export default function Inicio() {
         <div className="space-y-6">
           {urgentes.length > 0 && (
             <section className="space-y-2">
-              <TituloGrupo>Urgente</TituloGrupo>
+              <TituloGrupo numero={urgentes.length}>Urgente</TituloGrupo>
               <div className="space-y-3">
                 {urgentes.map(a => (
                   <AnomaliaCard key={a.id} anomalia={a} />
@@ -50,7 +58,7 @@ export default function Inicio() {
           )}
           {outras.length > 0 && (
             <section className="space-y-2">
-              <TituloGrupo>{urgentes.length > 0 ? 'Outros avisos' : 'Avisos'}</TituloGrupo>
+              <TituloGrupo numero={outras.length}>{urgentes.length > 0 ? 'Outros avisos' : 'Avisos'}</TituloGrupo>
               <div className="divide-y divide-outline-variant rounded-2xl bg-surface-container px-4">
                 {outras.map(a => (
                   <AnomaliaLinha key={a.id} anomalia={a} />

@@ -15,7 +15,7 @@ Barra em baixo com quatro separadores:
 
 | Separador | Rota | Ecrã | História |
 |-----------|------|------|----------|
-| Início | `/` | Anomalias ativas em dois grupos: "Urgente" (segurança e bem-estar, as que chegam ao contacto externo), cada uma no seu cartão com o começo da explicação; "Outros avisos" (saúde e conforto, eficiência), em linhas num só cartão. Dentro do grupo, por classe e depois a mais recente primeiro. Sem avisos, "Está tudo normal" | US02 |
+| Início | `/` | Anomalias ativas em dois grupos: "Urgente" (segurança e bem-estar, as que chegam ao contacto externo), cada uma no seu cartão com o começo da explicação; "Outros avisos" (saúde e conforto, eficiência), em linhas num só cartão. Dentro do grupo, por classe e depois a mais recente primeiro. O título de cada grupo leva o número de avisos ("Urgente · 2"). Sem avisos, "Está tudo normal" | US02 |
 | Conversa | `/conversa` | Conversa por texto com a casa; o texto pode ser ditado | US01 |
 | Histórico | `/historico` | Eventos e anomalias, do mais recente para o mais antigo | US06 |
 | Definições | `/definicoes` | Contacto externo e tempo de espera, nome da casa, calendário e aparência (tema) | US04 |
@@ -145,7 +145,7 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 | `bg-accent-orange` + `text-on-accent-orange` | Número de avisos por responder, na barra de baixo |
 
 - **Cor de estado:** `text-accent-green` (correu bem), `text-accent-orange` (pede atenção), `text-danger` (erro, perigo ou destrutivo; rosa no escuro), `text-primary-ink` (ligação ou ação). Passam também sobre o fundo claro da mesma cor (`bg-danger/10`, `bg-accent-green/15`).
-- **As classes de anomalia não têm cor.** Distinguem-se pelo ícone e pelo nome; a cor fica para o estado.
+- **As classes de anomalia não têm cor.** Distinguem-se pelo ícone e pelo nome; a cor fica para o estado. No Início, os ícones dos avisos urgentes ficam a laranja (`bg-accent-orange/15` e `text-accent-orange`, "pede atenção"): a cor diz a urgência, não a classe, por isso segurança e bem-estar têm a mesma.
 - **Não usar `text-primary`:** o turquesa tem 1,6:1 sobre fundo claro. O contorno de foco é global; não usar `outline-none`.
 
 ## Peças base
@@ -154,7 +154,7 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 - **`Campo`** (`components/Campo.tsx`): 48 px, cantos de 12 px, letra de 16 px (o iOS não faz zoom). A caixa da conversa é em pílula, como os botões.
 - **`Icone`** (`components/Icone.tsx`): Lucide com traço de 1,75, escondido do leitor de ecrã. Quando o ícone é a única informação, juntar texto em `sr-only`. Com `ativo`, mostra a versão cheia: desenhada no mesmo ficheiro sobre os contornos do Lucide (que só tem ícones de traço), para os quatro ícones da barra de baixo; os pormenores (porta, ponteiros, furo) ficam recortados. No Histórico, o anel com a seta fica de traço e só o mostrador do relógio enche, porque encher o anel apagava a seta. Sem versão cheia, o traço passa a 2,25.
 - **Cartões:** `rounded-2xl bg-surface-container`, sem contorno. Listas (Histórico, avisos que não são urgentes) num só cartão, com divisórias que não chegam às bordas.
-- **Avisos no Início** (`components/AnomaliaCard.tsx`): ícone da classe num círculo à esquerda, título, e por baixo a classe e a hora numa linha discreta ("Segurança · há 9 h"). O título vem primeiro; a classe não passa à frente dele. Os urgentes têm título maior e duas linhas da explicação.
+- **Avisos no Início** (`components/AnomaliaCard.tsx`): ícone da classe num círculo à esquerda (laranja nos urgentes, neutro nos outros) e três níveis de texto. Em cima, um cabeçalho pequeno com a classe a negrito e a hora ("**Segurança** · avisou há 9 h"), como o de uma notificação no telemóvel. Depois, o título, forte. Por fim, a explicação, em texto de apoio (só nos urgentes, duas linhas). O cabeçalho vai em cima para não ficar colado à explicação, que também é cinzenta. O "avisou" diz que é a hora do aviso, porque o título pode trazer outro tempo ("Porta da rua aberta há 7 minutos").
 - **`Segmentado`** (`components/Segmentado.tsx`): escolha de uma opção entre poucas, lado a lado, com 48 px de altura (tema, tempo de espera). Por dentro são botões de rádio.
 - **`Grupo`** (`components/Grupo.tsx`): grupo das Definições, como nas definições do telemóvel: título pequeno, conteúdo num cartão e uma nota por baixo.
 - **Alvos de toque:** 48 px no mínimo. A seta de voltar é um círculo de contorno de 40 px dentro de 48 px de toque.
@@ -220,10 +220,11 @@ O `--mode development` faz a build ler `frontend/.env.development` e `frontend/.
 | Classes de anomalia sem cor | Uma cor por classe | As cores das classes repetiam as de estado: eficiência parecia "correu bem", segurança parecia erro |
 | Cores como papéis trocados pelo `.dark` | `dark:` em cada componente | Um só sítio por cor; o tema escuro não se esquece em nenhum componente |
 | Tema em Definições → Aparência, com Automático | Botão na barra de topo de todos os ecrãs | Muda-se uma vez; o botão ocupava o lugar de mais destaque e, depois de um toque, a app deixava de seguir o telemóvel sem forma de voltar |
+| Ícones dos urgentes a laranja e número em cada grupo | Uma cor por classe; número por classe | A cor de "pede atenção" reforça o grupo Urgente sem repetir as cores de estado; com dois ou três avisos, um número por classe era ruído, e o total já está na barra de baixo |
 | Início em dois grupos, Urgente e Outros avisos | Lista única só por hora; uma cor por classe | Um alerta de segurança não fica abaixo de uma luz acesa e pesa mais do que ela; a diferença vem do tamanho e do agrupamento, e as classes continuam sem cor |
 | Separador ativo com o ícone cheio | Pílula turquesa atrás do ícone; só traço mais grosso | É o padrão do iOS e do Android; a pílula fazia um brilho a competir com o número de avisos |
 | Calendário como uma linha de conta, com detalhe à parte | Tudo no ecrã das Definições (conta, lista, Atualizar, Remover) | É o padrão das definições do telemóvel e deixa as Definições curtas; o detalhe só interessa a quem o abre |
-| Hora curta nos avisos ("há 9 h") | `formatDistanceToNow` ("há aproximadamente 9 horas") | É um dado de apoio; a frase longa disputava o lugar ao título |
+| Hora curta nos avisos, com "avisou" ("avisou há 9 h") | `formatDistanceToNow` ("há aproximadamente 9 horas") | É um dado de apoio; a frase longa disputava o lugar ao título. Sem "avisou", confundia-se com o tempo do título |
 | Ações do detalhe presas ao fundo | A seguir ao texto | Ficam ao alcance do polegar, mesmo com explicações longas ou com imagem |
 | Tempo de espera em opções fixas | Campo numérico | Sem teclado e sem valores inválidos |
 | Definições em grupos com título pequeno | Formulário com títulos grandes | Mais curto e mais parecido com as definições do telemóvel |
