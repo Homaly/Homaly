@@ -56,7 +56,7 @@ interface Anomalia {
   detetadaEm: string        // ISO 8601
   estado: 'ativa' | 'resolvida'
   acaoProposta?: { descricao: string }
-  imagemUrl?: string
+  imagemUrl?: string         // US13: "/imagens/<id>.jpg" no backend (a PWA junta-lhe o API_URL), ou data: no mock
   resposta?: { texto: string; em: string }
   propostaSilencio?: PropostaSilencio  // US02: só se aplica depois de aceite
   resolucao?: { texto: string; em: string } // ex.: "a porta fechou às 14:12"
@@ -91,8 +91,10 @@ interface Definicoes { contacto: { nome: string; telemovel: string } | null; esp
 | `GET /eventos` | Histórico |
 | `GET /conversa`, `POST /conversa` `{texto}` | Conversa; o POST devolve a resposta da casa |
 | `GET /definicoes`, `PUT /definicoes` | Definições |
+| `GET /imagens/{nome}` | A imagem da câmara de uma anomalia (US13) |
+| `GET /veiculos`, `POST /veiculos` `{imagem, nome?}`, `DELETE /veiculos/{id}` | Os veículos que a casa conhece (US13); o POST recebe uma fotografia em base64. Ainda sem ecrã |
 
-**Proposta de silêncio (US02):** quando o responsável explica um alerta (`POST /anomalias/{id}/resposta`), a resposta pode trazer `propostaSilencio` com `estado: 'pendente'`. O ecrã de detalhe mostra o texto com os botões Sim e Não, que chamam `POST /anomalias/{id}/silencio`. O backend só deixa de avisar depois de `aceitar: true`.
+**Proposta de silêncio (US02):** quando o responsável explica um alerta (`POST /anomalias/{id}/resposta`), a resposta pode trazer `propostaSilencio` com `estado: 'pendente'`. O ecrã de detalhe mostra o texto com os botões Sim e Não, que chamam `POST /anomalias/{id}/silencio`. O backend só deixa de avisar depois de `aceitar: true`. Num aviso de veículo desconhecido (US13), a proposta é "Guardar este veículo como conhecido?", com os mesmos botões.
 
 **Página do alerta (US05):** saiu a 2026-11-20. A SMS ao contacto externo basta e não traz link.
 

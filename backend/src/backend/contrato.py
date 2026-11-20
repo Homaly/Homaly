@@ -145,3 +145,15 @@ class Definicoes(Modelo):
     def para_json(self) -> dict:
         """Como as outras, sem os campos a None, exceto `contacto`, que vai a null sem contacto."""
         return {**super().para_json(), "contacto": self.contacto.para_json() if self.contacto else None}
+
+
+class Veiculo(Modelo):
+    """US13: um veículo que a casa conhece (registado por fotografia ou pela resposta a um aviso)."""
+
+    id: str = Field(default_factory=novo_id)
+    descricao: str  # ex.: "Peugeot 206 azul"
+    tipo: str | None = None  # carro, carrinha, mota, camião, outro
+    cor: str | None = None
+    marca: str | None = None  # marca e modelo, se o modelo de visão os reconheceu
+    matricula: str | None = None  # como se lê, ex.: "35-19-TA"
+    criado_em: Instante = Field(default_factory=agora)

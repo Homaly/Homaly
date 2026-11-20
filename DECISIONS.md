@@ -143,5 +143,5 @@ O que cada dispositivo devolve, com os ids, está em `docs/mcp-dispositivos.md`.
 - Se as regras do hackathon permitem reaproveitar código escrito antes do evento.
 - O modelo de IA e quem o fornece: a equipa está a ver como fazer (créditos da organização ou plano gratuito de um fornecedor).
 - De quanto em quanto tempo o backend pergunta o estado dos sensores ao servidor MCP.
-- Como a casa reconhece um veículo (US13): a matrícula sozinha parece demasiado simples; a equipa vai discutir.
-- A imagem da câmara: o MCP só dá deteção de movimento e de som, sem imagem; a imagem vem do stream RTSP (`CAMERA_RTSP_URL`), que ainda não foi testado.
+- Como a casa reconhece um veículo (US13): a matrícula sozinha parece demasiado simples; a equipa vai discutir. Proposta implementada na branch `feat/us13-veiculo-camara` (2026-11-20): um modelo de visão lê a matrícula quando se vê e, quando não, compara o aspeto (tipo, cor, marca); a matrícula lida manda sempre. Testado no chat com o Haiku 5.5: três fotografias do mesmo carro deram a mesma matrícula.
+- A imagem e o movimento da câmara: o MCP não dá imagens e o `motionDetected` vem sempre vazio (2026-11-19); os mentores disseram para não nos limitarmos ao MCP. O stream RTSP (`CAMERA_RTSP_URL`) funciona (testado a 2026-11-19, a partir da VM e de um hotspot). Proposta na mesma branch: o movimento vê-se no próprio vídeo, com o `ffmpeg` (testado: em 90 s, 10 imagens, todas com movimento).

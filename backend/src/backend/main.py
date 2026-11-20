@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import acoes, anomalias, ciclo, contacto_externo, definicoes, dev, eventos, relogio, tempo_real
+from . import acoes, anomalias, camara, ciclo, contacto_externo, definicoes, dev, eventos, relogio, tempo_real, veiculos
 from .calendario import google as calendario_google
 from .calendario import router as calendario_router
 from .calendario import sincronizar as calendario_sincronizar
@@ -23,6 +23,9 @@ async def _vida(app: FastAPI):
     relogio.partilhado()
     # O ciclo das regras (Vila): só com CICLO=1, para os testes e a PWA não lerem o MCP.
     parar = ciclo.arrancar() if os.environ.get("CICLO") == "1" else None
+    # O detetor de movimento no vídeo da câmara (US13) só serve ao ciclo: arranca com ele, se
+    # houver CAMERA_RTSP_URL (DETETOR_VIDEO=0 desliga-o).
+    parar_detetor = camara.arrancar() if parar is not None else None
     # O contacto externo (US05) envia as SMS que o ciclo agenda; arranca com ele, ou com
     # HOMALY_DEV=1, para as anomalias de /dev/anomalias?contacto=true também chegarem a sair.
     com_contacto = parar is not None or os.environ.get("HOMALY_DEV") == "1"
@@ -38,6 +41,8 @@ async def _vida(app: FastAPI):
         parar_calendario.set()
     if parar is not None:
         parar.set()
+    if parar_detetor is not None:
+        parar_detetor()
     if parar_contacto is not None:
         parar_contacto()
 
@@ -56,6 +61,8 @@ app.include_router(resposta.router)
 app.include_router(acoes.router)
 app.include_router(definicoes.router)
 app.include_router(calendario_router.router)
+app.include_router(camara.router)  # as imagens das anomalias da US13
+app.include_router(veiculos.router)  # os veículos que a casa conhece (US13)
 
 if os.environ.get("HOMALY_DEV") == "1":
     app.include_router(dev.router)

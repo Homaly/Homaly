@@ -4,11 +4,15 @@ Fazem o papel do ciclo das regras enquanto ele não existe, e servem para ver o 
 Só existem com `HOMALY_DEV=1`, porque não pedem login.
 """
 
+import base64
+import binascii
 from datetime import timedelta
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Response
+from pydantic import BaseModel, Field
 
-from . import anomalias, avisos, eventos, tempo_real
+from . import anomalias, avisos, camara, eventos, tempo_real
 from .contrato import AcaoProposta, Anomalia, Evento, TextoEm
 from .dependencias import obter_agora as agora
 from .ia.avaliar import registar_us
@@ -32,6 +36,34 @@ def criar_anomalia(anomalia: Anomalia, us: str | None = None, contacto: bool = F
     anomalias.guardar(anomalia)
     tempo_real.enviar_anomalia(anomalia)
     return anomalia
+
+
+class FotoDaCamara(BaseModel):
+    imagem: Annotated[str, Field(min_length=1, max_length=15_000_000)]  # JPEG em base64 (ou data:)
+
+
+@router.post("/us13", status_code=204)
+def simular_veiculo(pedido: FotoDaCamara) -> Response:
+    """US13 sem câmara: a câmara passa a "ver" esta fotografia e conta-se um movimento.
+
+    Com o ciclo a correr (CICLO=1) e um modelo de visão, um veículo desconhecido na fotografia dá
+    o aviso ao fim de VEICULO_MINUTOS. A fotografia fica até `DELETE /dev/us13`.
+    """
+    texto = pedido.imagem.split(",", 1)[1] if pedido.imagem.startswith("data:") else pedido.imagem
+    try:
+        jpeg = base64.b64decode(texto, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status_code=422, detail="A imagem tem de vir em base64") from None
+    camara.definir_foto_fixa(camara.reduzir(jpeg))
+    camara.simular_movimento()
+    return Response(status_code=204)
+
+
+@router.delete("/us13", status_code=204)
+def parar_veiculo() -> Response:
+    """A câmara volta a ser a verdadeira."""
+    camara.definir_foto_fixa(None)
+    return Response(status_code=204)
 
 
 @router.post("/eventos", response_model=Evento, response_model_exclude_none=True)

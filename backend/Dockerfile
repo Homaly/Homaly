@@ -5,6 +5,9 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 WORKDIR /app
 ENV UV_LINK_MODE=copy
 
+# ffmpeg: as imagens e o detetor de movimento da camara (US13, backend/src/backend/camara.py).
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+
 # Dependencias primeiro, para a cache sobreviver a mudancas no codigo.
 COPY pyproject.toml uv.lock .python-version README.md ./
 RUN uv sync --frozen --no-install-project

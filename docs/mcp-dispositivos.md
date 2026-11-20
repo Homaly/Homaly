@@ -65,4 +65,4 @@ Cada dispositivo traz também `name` ("Contact sensor", "Camera", "Light"...) e 
 A equipa deu como verificados a porta (`alarm` = aberta, `normal` = fechada) e a lâmpada (ligada e a comunicar) a 2026-11-17.
 
 - **Temperatura:** de quanto em quanto tempo o sensor comunica. Define o intervalo útil do polling.
-- **Câmara:** o que aparece em `motionDetected` quando há movimento, e se o filtro de pessoas o limita a pessoas.
+- **Câmara:** `motionDetected` e `soundDetected` vêm **sempre `""`** (visto a 2026-11-19 entre as 22:52 e as 23:38, com a câmara a comunicar, o alarme armado em `AWAY` e a app da Altice a notificar o movimento no telemóvel, com um clip na nuvem). Nenhuma ferramenta do MCP dá eventos, clips ou imagens, e o histórico de alarmes só tem os arma/desarma. O movimento só se vê pelo vídeo: o stream RTSP (`CAMERA_RTSP_URL`) é um relay go2rtc da Altice (porta 8554, H.265 1920×1080); a VM de produção chega-lhe, a rede do local não (só funcionou no hotspot de um telemóvel). Sem cartão SD (`sdStorage` vazio, `sdFormatState` -20000).

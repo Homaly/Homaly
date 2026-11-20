@@ -66,6 +66,21 @@ export interface Calendario {
   itens: { tipo: 'ferias' | 'rotina' | 'compromisso'; texto: string }[];
 }
 
+/** US13: um veículo que a casa conhece (GET/POST /veiculos, DELETE /veiculos/{id}). */
+export interface Veiculo {
+  id: string;
+  /** Ex.: "Peugeot 206 azul", ou o nome dado ("o carro do meu irmão"). */
+  descricao: string;
+  tipo?: string;
+  cor?: string;
+  /** Marca e modelo, se o modelo de visão os reconheceu. */
+  marca?: string;
+  /** Como se lê, ex.: "35-19-TA". */
+  matricula?: string;
+  /** ISO 8601. */
+  criadoEm: string;
+}
+
 /** Mensagens que o servidor envia pelo WebSocket /ws. */
 export type MensagemWs =
   | { tipo: 'anomalia'; anomalia: Anomalia }

@@ -38,3 +38,23 @@ def test_o_exemplo_nunca_avisa_o_contacto():
     api.post("/dev/exemplo")
 
     assert envios.obter("exemplo-porta") is None
+
+
+def test_us13_simula_a_fotografia_e_um_movimento(monkeypatch):
+    import base64
+
+    from backend import camara
+
+    monkeypatch.setattr(camara, "reduzir", lambda jpeg: jpeg)
+    antes = camara.movimentos()
+    foto = b"\xff\xd8carro\xff\xd9"
+    assert api.post("/dev/us13", json={"imagem": base64.b64encode(foto).decode()}).status_code == 204
+    assert camara.capturar() == foto
+    assert camara.movimentos() == antes + 1
+    assert api.delete("/dev/us13").status_code == 204
+    monkeypatch.delenv("CAMERA_RTSP_URL", raising=False)
+    assert camara.capturar() is None
+
+
+def test_us13_imagem_invalida_da_422():
+    assert api.post("/dev/us13", json={"imagem": "não é base64!"}).status_code == 422

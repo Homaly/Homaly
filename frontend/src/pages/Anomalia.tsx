@@ -8,6 +8,7 @@ import { ClasseBadge } from '../components/AnomaliaCard';
 import { EstadoCarregar, EstadoErro } from '../components/Estados';
 import Botao from '../components/Botao';
 import Icone from '../components/Icone';
+import { API_URL } from '../api/enderecos';
 import { useAnomalia, useDecidirAcao, useDecidirSilencio, useResponderAnomalia } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
 import { useReservarFundo } from '../hooks/useReservarFundo';
@@ -91,7 +92,12 @@ export default function Anomalia() {
           </header>
 
           {a.imagemUrl && (
-            <img src={a.imagemUrl} alt="Imagem da câmara" className="w-full rounded-2xl" />
+            <img
+              // As imagens da câmara (US13) vêm do backend como "/imagens/<id>.jpg".
+              src={a.imagemUrl.startsWith('/') ? `${API_URL}${a.imagemUrl}` : a.imagemUrl}
+              alt="Imagem da câmara"
+              className="w-full rounded-2xl"
+            />
           )}
 
           <p className="leading-relaxed">{a.explicacao}</p>

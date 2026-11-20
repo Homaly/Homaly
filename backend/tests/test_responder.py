@@ -106,3 +106,50 @@ def test_recusar_silencio_antigo_nao_guarda_nada():
 def test_recusar_proposta_estragada_nao_rebenta():
     recusar({"tipo": "rotina", "descricao": "", "dias": [9]})
     assert rotinas_recusadas() == []
+
+
+# --- US13: guardar o carro como conhecido ---
+
+
+def _aviso_us13(imagem="/imagens/a.jpg") -> Anomalia:
+    return anomalia().model_copy(update={"imagem_url": imagem})
+
+
+def _visto():
+    from backend import veiculos
+    from backend.ia.visao import Observacao
+
+    veiculos.registar_visto("/imagens/a.jpg", Observacao(
+        veiculo=True, descricao="Um carro azul", tipo="carro", cor="azul", marca="Peugeot 206",
+        matricula="35-19-TA"))
+
+
+def test_us13_propoe_guardar_o_carro():
+    _visto()
+    d = _responder(_aviso_us13(), us="US13")
+    assert d.anomalia.estado == "resolvida"
+    assert d.proposta["tipo"] == "veiculo"
+    assert "Guardar este veículo como conhecido" in d.anomalia.proposta_silencio.texto
+    assert "Peugeot 206 azul" in d.anomalia.proposta_silencio.texto
+
+
+def test_us13_aceitar_guarda_o_carro():
+    from backend import veiculos
+
+    _visto()
+    aplicar(_responder(_aviso_us13(), us="US13").proposta)
+    (v,) = veiculos.listar()
+    assert v.matricula == "35-19-TA" and v.descricao == "Peugeot 206 azul"
+
+
+def test_us13_recusar_nao_guarda_nada():
+    from backend import veiculos
+
+    _visto()
+    recusar(_responder(_aviso_us13(), us="US13").proposta)
+    assert veiculos.listar() == []
+
+
+def test_us13_sem_o_que_se_viu_nao_propoe():
+    d = _responder(_aviso_us13("/imagens/outra.jpg"), us="US13")
+    assert d.proposta is None and d.anomalia.proposta_silencio is None

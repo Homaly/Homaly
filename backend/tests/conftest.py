@@ -16,10 +16,17 @@ class ModeloFixo:
         self.resposta = resposta
         self.chamadas: list[tuple[str, str]] = []
         self.historicos: list[list[dict]] = []  # o histórico de cada chamada, em paralelo a `chamadas`
+        self.imagens: list[bytes] = []  # as imagens de `completar_json_com_imagem`
 
     def completar_json(self, sistema: str, mensagem: str, historico=()) -> dict | None:
         self.chamadas.append((sistema, mensagem))
         self.historicos.append(list(historico))
+        return self.resposta
+
+    def completar_json_com_imagem(self, sistema: str, mensagem: str, jpeg: bytes) -> dict | None:
+        self.chamadas.append((sistema, mensagem))
+        self.historicos.append([])
+        self.imagens.append(jpeg)
         return self.resposta
 
 
