@@ -1,6 +1,5 @@
 # CI: em cada pull request e em cada push para main, corre os testes do backend e compila o frontend.
-# CD: so depois de a CI passar num push para main, publica na VM e confirma que o site responde.
-name: CI/CD
+name: CI
 
 on:
   pull_request:
@@ -41,53 +40,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      # Mesmas variaveis que a build de producao, para apanhar aqui o que la partiria.
+      # Sem mocks, como uma build que fala com um backend a serio.
       - run: npm run build
         env:
           VITE_USE_MOCKS: "false"
-          VITE_API_URL: https://homaly.duckdns.org/api
-          VITE_WS_URL: wss://homaly.duckdns.org/api/ws
-
-  deploy:
-    name: Publicar na VM
-    needs: [backend, frontend]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    # Um deploy de cada vez; um novo espera pelo que esta a correr.
-    concurrency:
-      group: deploy-vm
-      cancel-in-progress: false
-    env:
-      VM: ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Preparar SSH
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "${{ secrets.VM_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-
-      - name: Copiar o codigo para a VM
-        # O .env real e a base de dados vivem so na VM; nunca se copiam nem se apagam.
-        run: |
-          rsync -az --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
-            --exclude .git --exclude .github --exclude node_modules --exclude .venv \
-            --exclude __pycache__ --exclude 'frontend/dist' --exclude '.env' --exclude '.env.*' \
-            --exclude 'backend/homaly.db' --exclude .idea --exclude .claude \
-            ./ "$VM":homaly/
-
-      - name: Construir e arrancar
-        # A chave so pode isto: o filtro da VM (~/deploy-gate.sh) so aceita "deploy" e o rsync para ~/homaly.
-        run: ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$VM" deploy
-
-      - name: Verificar que o site responde
-        run: |
-          sleep 10
-          for url in https://homaly.duckdns.org/ https://homaly.duckdns.org/api/anomalias; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url")
-            echo "$url -> $code"
-            [ "$code" = 200 ] || { echo "Falhou: $url devolveu $code"; exit 1; }
-          done

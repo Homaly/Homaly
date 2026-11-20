@@ -68,7 +68,10 @@ def capturar() -> bytes | None:
 
 def reduzir(jpeg: bytes) -> bytes:
     """A imagem com no máximo 1024 px de largura; sem ffmpeg, a original."""
-    cmd = ["ffmpeg", "-nostdin", "-loglevel", "error", "-i", "pipe:0", "-vf", ESCALA,
+    # A imagem vem de fora (POST /veiculos): só se aceitam imagens e só o pipe, para uma playlist
+    # (HLS, concat...) não pôr o ffmpeg a abrir ficheiros locais ou outros endereços.
+    cmd = ["ffmpeg", "-nostdin", "-loglevel", "error", "-protocol_whitelist", "pipe", "-f", "image2pipe",
+           "-i", "pipe:0", "-vf", ESCALA,
            "-f", "image2", "-c:v", "mjpeg", "-q:v", "5", "pipe:1"]
     return _correr_ffmpeg(cmd, jpeg, "reduzir a imagem") or jpeg
 

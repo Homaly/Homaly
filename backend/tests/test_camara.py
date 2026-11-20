@@ -74,6 +74,25 @@ def test_reduzir_sem_ffmpeg_devolve_a_original(monkeypatch):
     assert camara.reduzir(JPEG_A) == JPEG_A
 
 
+def test_reduzir_so_le_imagens_do_pipe(monkeypatch):
+    # A fotografia vem de fora (POST /veiculos): o ffmpeg não pode adivinhar o formato, porque uma
+    # playlist (HLS, concat...) o faria abrir ficheiros locais ou outros endereços.
+    comandos = []
+
+    def correr(cmd, **kwargs):
+        comandos.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, stdout=JPEG_B, stderr=b"")
+
+    monkeypatch.setattr(subprocess, "run", correr)
+    assert camara.reduzir(JPEG_A) == JPEG_B
+    (cmd,) = comandos
+    entrada = cmd.index("-i")
+    assert cmd[entrada + 1] == "pipe:0"
+    antes = cmd[:entrada]
+    assert antes[antes.index("-f") + 1] == "image2pipe"
+    assert antes[antes.index("-protocol_whitelist") + 1] == "pipe"
+
+
 # --- guardar e servir ---
 
 
