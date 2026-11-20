@@ -10,19 +10,17 @@ Na hora de enviar volta-se a ver tudo, por isso nenhum outro módulo tem de lemb
   sozinha): não sai nada;
 - deixou de ser de segurança ou de bem-estar, ou já não há contacto (US04): não sai nada.
 
-Se o contacto recebeu o alerta, recebe também uma SMS quando a anomalia se resolve. As duas SMS
-trazem o mesmo link para a página do alerta (`pagina.py`), que vale 24 horas depois da última.
+Se o contacto recebeu o alerta, recebe também uma SMS quando a anomalia se resolve. As SMS não
+levam link nem há página do alerta (decisão da equipa, 2026-11-20): a mensagem basta.
 O textbee que falha tenta-se mais duas vezes, 30 s e 60 s depois. O envio reserva a linha
 (`a_enviar`) antes de falar com o textbee, para uma resposta ou resolução a meio não se perder.
 """
 
 import logging
-import os
 import secrets
 import threading
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from urllib.parse import urlsplit
 
 from backend import anomalias, definicoes
 from backend.contrato import Anomalia
@@ -135,7 +133,7 @@ def _enviar_alerta(envio: envios.Envio, agora: datetime) -> None:
         return
     assert anomalia is not None and defs.contacto is not None
     codigo = envio.codigo or secrets.token_urlsafe(16)
-    texto = mensagens.alerta(anomalia, defs.nome_casa, codigo)
+    texto = mensagens.alerta(anomalia, defs.nome_casa)
     # Reserva o envio: a partir daqui ninguém o cancela nem o adia a meio.
     if not envios.mudar(envio.anomalia_id, so_se_estado="pendente", estado="a_enviar", codigo=codigo):
         return
@@ -193,7 +191,7 @@ def _enviar_resolvido(envio: envios.Envio, agora: datetime) -> None:
         registo.warning("SMS de resolvido sem anomalia, número ou link (%s)", envio.anomalia_id[:8])
         envios.mudar(envio.anomalia_id, resolvido="falhou")
         return
-    texto = mensagens.resolvido(anomalia, definicoes.obter().nome_casa, envio.codigo, envio.resolvido_em or agora)
+    texto = mensagens.resolvido(anomalia, definicoes.obter().nome_casa, envio.resolvido_em or agora)
     tentativas = envio.tentativas_resolvido + 1
     try:
         sms.enviar(envio.telemovel, texto)
@@ -224,23 +222,8 @@ def recuperar() -> None:
         registo.warning("%d envio(s) ao contacto externo ficaram a meio; voltam a tentar", quantos)
 
 
-def avisar_se_link_local() -> None:
-    """Com o textbee ligado, um link para localhost não abre no telemóvel do contacto."""
-    if not os.environ.get("TEXTBEE_API_KEY", "").strip():
-        return
-    maquina = urlsplit(mensagens.url_publico()).hostname or ""
-    if maquina in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
-        registo.warning(
-            "As SMS vão sair com links para %s, que o telemóvel do contacto não abre. "
-            "Põe em HOMALY_URL_PUBLICO o IP do portátil na rede (ex.: http://192.168.1.20:8000) "
-            "ou um túnel público.",
-            mensagens.url_publico(),
-        )
-
-
 def arrancar(intervalo: float = INTERVALO_S, agora: Relogio | None = None) -> Callable[[], None]:
     """Uma thread que chama `verificar()` de `intervalo` em `intervalo` segundos; devolve `parar`."""
-    avisar_se_link_local()
     recuperar()
     parar = threading.Event()
 

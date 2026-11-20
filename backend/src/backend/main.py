@@ -10,7 +10,7 @@ from . import acoes, anomalias, ciclo, contacto_externo, definicoes, dev, evento
 from .calendario import google as calendario_google
 from .calendario import router as calendario_router
 from .calendario import sincronizar as calendario_sincronizar
-from .contacto_externo import pagina, sms
+from .contacto_externo import sms
 from .conversa import router as conversa
 from .dependencias import obter_agora, obter_modelo_dep
 from .dispositivos import simulacao
@@ -56,7 +56,6 @@ app.include_router(resposta.router)
 app.include_router(acoes.router)
 app.include_router(definicoes.router)
 app.include_router(calendario_router.router)
-app.include_router(pagina.router)  # a página do alerta, para o contacto externo (sem login)
 
 if os.environ.get("HOMALY_DEV") == "1":
     app.include_router(dev.router)
