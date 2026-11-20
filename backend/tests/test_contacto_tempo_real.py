@@ -1,7 +1,7 @@
 """US05 com o relógio acelerado da demo: os prazos do contacto externo contam em tempo real.
 
-O tempo de espera é o que o responsável tem para responder, as tentativas são as do textbee e as
-24 horas são as do contacto a abrir o link: nenhuma pessoa nem rede anda 60 vezes mais depressa.
+O tempo de espera é o que o responsável tem para responder e as tentativas são as do textbee:
+nenhuma pessoa nem rede anda 60 vezes mais depressa.
 O texto das SMS continua com as horas da anomalia (as simuladas).
 """
 
@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from backend import anomalias, contacto_externo, definicoes, relogio
-from backend.contacto_externo import envios, mensagens, pagina, sms
+from backend.contacto_externo import envios, mensagens, sms
 from backend.contrato import Anomalia, Contacto, Definicoes, TextoEm
 from backend.relogio import Relogio
 
@@ -58,10 +58,6 @@ def test_com_o_relogio_acelerado_a_sms_nao_sai_antes_de_o_responsavel_poder_resp
     assert envios.obter(a.id).estado == "pendente"
 
 
-def test_a_pagina_expira_24_horas_reais_depois_da_sms():
-    assert perto(pagina.agora(), datetime.now().astimezone())
-
-
 def test_a_sms_continua_com_a_hora_simulada_da_anomalia(acelerado):
     a = alerta()
     definicoes.guardar(Definicoes(contacto=Contacto(nome="Ana", telemovel="912345678"), espera_minutos=0))
@@ -83,6 +79,6 @@ def test_o_resolvido_pela_resposta_diz_a_hora_simulada_da_resposta():
     )
     real = datetime.now().astimezone()
 
-    texto = mensagens.resolvido(respondida, None, "codigo", real)
+    texto = mensagens.resolvido(respondida, None, real)
 
     assert "Resolvido às 08:57" in texto

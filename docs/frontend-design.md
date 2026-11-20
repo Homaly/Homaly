@@ -94,7 +94,7 @@ interface Definicoes { contacto: { nome: string; telemovel: string } | null; esp
 
 **Proposta de silêncio (US02):** quando o responsável explica um alerta (`POST /anomalias/{id}/resposta`), a resposta pode trazer `propostaSilencio` com `estado: 'pendente'`. O ecrã de detalhe mostra o texto com os botões Sim e Não, que chamam `POST /anomalias/{id}/silencio`. O backend só deixa de avisar depois de `aceitar: true`.
 
-**Página do alerta (US05):** não faz parte da PWA. É o backend que a serve, em `GET /a/{codigo}`, como uma página HTML simples, sem login, para o contacto externo abrir a partir da SMS. O `codigo` é aleatório e longo (por exemplo, `secrets.token_urlsafe(16)` em Python), criado quando a SMS é enviada e associado ao alerta; nunca é o id da anomalia. A página mostra o alerta e o estado atual, incluindo se já está resolvido e como. Funciona 24 horas depois do envio; depois mostra só que o alerta expirou.
+**Página do alerta (US05):** saiu a 2026-11-20. A SMS ao contacto externo basta e não traz link.
 
 **WebSocket `/ws`:** o servidor envia `{tipo: 'anomalia', anomalia}` quando uma anomalia aparece ou muda, e `{tipo: 'evento', evento}` quando há um evento novo. O cliente não envia nada por aqui.
 
