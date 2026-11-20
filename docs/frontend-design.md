@@ -116,7 +116,7 @@ O botão do microfone, dentro da caixa da Conversa, passa a voz a texto com a We
 
 ## Sugestões na Conversa
 
-Por cima da caixa, enquanto ela está vazia, há começos de frase para o que a casa percebe: "Vamos de férias", "Vem cá alguém", "Na tomada está…" e "O que aconteceu hoje?". Tocar põe o começo na caixa, com o cursor no fim, e a pessoa acaba a frase; nada é enviado sozinho, como no ditado. O espaço das sugestões fica reservado mesmo escondido, para a caixa não saltar ao escrever. As mensagens encostam-se ao fundo, junto à caixa.
+Por cima da caixa, enquanto ela está vazia, há sugestões para o que a casa percebe: "Vamos de férias", "Vem cá alguém", "Na tomada está…" e "O que aconteceu hoje?". As que acabam em "…" põem o começo da frase na caixa, com o cursor no fim, e a pessoa acaba-a; as outras enviam logo o texto. A casa lê cada mensagem sozinha, sem as anteriores, por isso "Vamos de férias" ou "Vem cá alguém" sem datas nem dias podem receber "Não percebi bem". O espaço das sugestões fica reservado mesmo escondido, para a caixa não saltar ao escrever. As mensagens encostam-se ao fundo, junto à caixa.
 
 ## Mocks
 
@@ -228,7 +228,7 @@ O `--mode development` faz a build ler `frontend/.env.development` e `frontend/.
 | Ações do detalhe presas ao fundo | A seguir ao texto | Ficam ao alcance do polegar, mesmo com explicações longas ou com imagem |
 | Tempo de espera em opções fixas | Campo numérico | Sem teclado e sem valores inválidos |
 | Definições em grupos com título pequeno | Formulário com títulos grandes | Mais curto e mais parecido com as definições do telemóvel |
-| Sugestões na Conversa põem o começo da frase na caixa | Enviar logo | A pessoa acaba e revê a frase, como no ditado |
+| Sugestões na Conversa enviam logo, menos as que acabam em "…" | Pôr sempre o começo na caixa; enviar só as frases completas | Pedido da equipa: um toque chega. As que acabam em "…" precisam de ser acabadas pela pessoa |
 
 ## Em aberto
 
