@@ -1,4 +1,8 @@
-"""US14 com a porta e as câmaras de dentro: saiu, está na divisão ou noutra (regras/presenca.py)."""
+"""US14 com a saída de casa e as câmaras de dentro: saiu, está na divisão ou noutra (regras/presenca.py).
+
+As câmaras e a tomada têm a divisão do inventário de teste (CASA, em conftest.py): `camara` é a do
+kit, sem id (na sala); as outras têm o id do inventário.
+"""
 
 from datetime import datetime, timedelta
 
@@ -13,9 +17,13 @@ DIA = datetime(2026, 11, 18)
 AQUECEDOR = Contexto([], [], [], False, aparelho_tomada="o aquecedor")
 
 
+# O nome usado nos testes -> o id da câmara no inventário de teste ("" = a do kit, na sala).
+CAMARAS = {"camara": "", "camara_cozinha": "cam-cozinha", "camara_quarto": "cam-quarto", "camara_entrada": "cam-rua"}
+
+
 @pytest.fixture(autouse=True)
-def limpo(monkeypatch):
-    for variavel in ("PRESENCA_MINUTOS", "TOMADA_DIVISAO", "CAMARA_DIVISAO"):
+def limpo(monkeypatch, casa):
+    for variavel in ("PRESENCA_MINUTOS", "SAIDA_MINUTOS"):
         monkeypatch.delenv(variavel, raising=False)
     # Os valores de uma demo; por omissão são 20 e 60 min (test_valores_por_omissao).
     monkeypatch.setenv("SAIU_MINUTOS", "5")
@@ -30,10 +38,12 @@ def em(hhmm: str) -> datetime:
     return DIA.replace(hour=h, minute=m)
 
 
-def passo(hhmm: str, watts: float = 1500, porta: str = "normal", contexto: Contexto = AQUECEDOR, **cameras):
+def passo(
+    hhmm: str, watts: float = 1500, porta: str = "normal", contexto: Contexto = AQUECEDOR, tomada: str = "", **cameras
+):
     agora = em(hhmm)
-    leituras = [Leitura("tomada", "instantPower", watts, agora), Leitura("porta", "sensorState", porta, agora)]
-    leituras += [Leitura(camara, "motionDetected", valor, agora) for camara, valor in cameras.items()]
+    leituras = [Leitura("tomada", "instantPower", watts, agora, tomada), Leitura("porta", "sensorState", porta, agora)]
+    leituras += [Leitura("camara", "motionDetected", valor, agora, CAMARAS[c]) for c, valor in cameras.items()]
     return us14.verificar(leituras, contexto, agora)
 
 
@@ -45,13 +55,15 @@ def test_saiu_e_deixou_o_aquecedor_a_gastar():
     r = Registo(us14, AQUECEDOR).correr("us14_saiu.csv")
 
     assert r.publicadas == [
-        (datetime(2026, 11, 18, 14, 16), "ativa", "eficiencia"),  # 5 min depois de a porta fechar
+        # Saiu às 14:15 (5 min sem movimento depois da porta), mas a câmara viu alguém na sala às
+        # 14:05 e isso conta como alguém a usar o aparelho durante PRESENCA_MINUTOS (10).
+        (datetime(2026, 11, 18, 14, 16), "ativa", "eficiencia"),
         (datetime(2026, 11, 18, 14, 30), "resolvida", "eficiencia"),
     ]
     resumo = r.avaliados[0][1].resumo
     assert resumo == (
-        "O aquecedor está a gastar desde as 14:05, e a porta fechou às 14:11 "
-        "sem movimento em casa desde então: parece que saíram."
+        "O aquecedor está a gastar desde as 14:05, e parece que saíram de casa às 14:10: "
+        "a porta da rua abriu e as câmaras não viram ninguém a seguir."
     )
     assert r.resolucoes == ["o aquecedor deixou de gastar às 14:30"]
 
@@ -122,11 +134,11 @@ def test_a_camara_da_entrada_nao_conta():
     assert not presenca.ha_cameras_dentro()
 
 
-def test_a_tomada_noutra_divisao(monkeypatch):
-    monkeypatch.setenv("TOMADA_DIVISAO", "quarto")
-    passo("10:00", watts=0, camara_quarto=True)
-    assert passo("10:05", camara=True, camara_quarto=True) == []
-    [desvio] = desvios(passo("10:20", camara=True, camara_quarto=False))
+def test_a_tomada_noutra_divisao():
+    # A divisão da tomada vem do inventário: tomada-quarto está no quarto.
+    passo("10:00", watts=0, tomada="tomada-quarto", camara_quarto=True)
+    assert passo("10:05", tomada="tomada-quarto", camara=True, camara_quarto=True) == []
+    [desvio] = desvios(passo("10:20", tomada="tomada-quarto", camara=True, camara_quarto=False))
     assert desvio.resumo == "O aquecedor está a gastar e não há ninguém no quarto desde as 10:05 (há movimento na sala)."
 
 
@@ -163,3 +175,90 @@ def test_movimento(valor, anterior, esperado):
 ])
 def test_precisa_de_alguem(aparelho, esperado):
     assert us14.precisa_de_alguem(aparelho) is esperado
+
+
+def test_saida_curta_nao_avisa(monkeypatch):
+    # Sai às 14:10 e volta às 14:20, antes dos SAIU_MINUTOS (15): a porta a abrir outra vez
+    # suspende a saída, e o movimento a seguir desfá-la. Como no histórico (o lixo, o café).
+    monkeypatch.setenv("SAIU_MINUTOS", "15")
+    monkeypatch.setenv("AUSENCIA_MINUTOS", "120")  # só a saída conta neste teste
+    passo("14:00", watts=0, camara=True)
+    passo("14:05", camara=True)
+    passo("14:10", porta="alarm", camara=False)
+    assert passo("14:15", camara=False) == []  # saiu
+    assert passo("14:20", porta="alarm", camara=False) == []  # voltou
+    assert passo("14:22", camara=True) == []
+    assert passo("14:40", camara=True) == []
+
+
+def test_saida_longa_avisa(monkeypatch):
+    monkeypatch.setenv("SAIU_MINUTOS", "15")
+    monkeypatch.setenv("AUSENCIA_MINUTOS", "120")
+    passo("14:00", watts=0, camara=True)
+    passo("14:05", camara=True)
+    passo("14:10", porta="alarm", camara=False)
+    assert passo("14:24", camara=False) == []
+
+    [desvio] = desvios(passo("14:25", camara=False))
+    assert "parece que saíram de casa às 14:10" in desvio.resumo
+
+
+def test_movimento_depois_da_saida_desfaz_a_saida():
+    passo("14:00", watts=0, camara=True)
+    passo("14:05", camara=True)
+    passo("14:10", porta="alarm", camara=False)
+    passo("14:15", camara=False)  # saiu (o aviso espera pelos 10 min da sala)
+
+    assert passo("14:16", camara=False, camara_cozinha=True) == []  # afinal está alguém em casa
+
+
+# Várias tomadas: cada uma com o seu estado, um aviso de cada vez, com o id da tomada
+
+
+def duas(hhmm: str, quarto: float = 1500, cozinha: float = 1500, **cameras):
+    agora = em(hhmm)
+    leituras = [
+        Leitura("tomada", "instantPower", quarto, agora, "tomada-quarto"),
+        Leitura("tomada", "instantPower", cozinha, agora, "tomada-cozinha"),
+        Leitura("porta", "sensorState", "normal", agora),
+    ]
+    leituras += [Leitura("camara", "motionDetected", valor, agora, CAMARAS[c]) for c, valor in cameras.items()]
+    return us14.verificar(leituras, AQUECEDOR, agora)
+
+
+def depois(hhmm: str, td: timedelta) -> str:
+    return f"{em(hhmm) + td:%H:%M}"
+
+
+def test_duas_tomadas_um_aviso_de_cada_vez():
+    limite = habitual.padrao().limite_tomada  # sem câmaras: o limite do histórico
+    duas("10:00", cozinha=0)
+    duas("10:30")
+
+    [quarto] = desvios(duas(depois("10:00", limite)))
+    assert quarto.dispositivo == "tomada-quarto"
+    assert quarto.resumo.startswith("A tomada do quarto está a gastar desde as 10:00")  # com várias, o nome do inventário
+    assert duas(depois("10:30", limite)) == [quarto]  # a da cozinha também já merece, mas espera
+
+    [resolucao] = duas(depois("10:31", limite), quarto=0)
+    assert resolucao == Resolucao("US14", f"a tomada do quarto deixou de gastar às {depois('10:31', limite)}", em(depois("10:31", limite)))
+    [cozinha] = desvios(duas(depois("10:32", limite), quarto=0))
+    assert cozinha.dispositivo == "tomada-cozinha"
+    assert cozinha.resumo.startswith("A tomada da máquina de lavar está a gastar desde as 10:30")
+
+
+def test_a_outra_tomada_a_parar_nao_resolve_o_aviso():
+    limite = habitual.padrao().limite_tomada
+    duas("10:00", cozinha=0)
+    duas("10:30")
+    [quarto] = desvios(duas(depois("10:00", limite)))
+    assert duas(depois("10:01", limite), cozinha=0) == [quarto]
+
+
+def test_com_varias_tomadas_o_nome_do_inventario_diz_se_pode_ficar_sozinho():
+    duas("09:55", quarto=0, cozinha=0, camara=False)
+    duas("10:00", camara=False)
+    [quarto] = desvios(duas("10:15", camara=False))  # o quarto: ninguém lá há AUSENCIA_MINUTOS (15)
+    assert quarto.dispositivo == "tomada-quarto"
+    duas("10:16", quarto=0, camara=False)
+    assert duas("10:45", quarto=0, camara=False) == []  # a máquina de lavar pode ficar sozinha

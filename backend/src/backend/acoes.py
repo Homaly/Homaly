@@ -7,7 +7,9 @@ pessoa lê); o comando é fixo por user story, em `ACOES`. Assim a IA nunca esco
 ou desliga. Uma anomalia cuja user story não esteja em `ACOES` não tem ação que a casa saiba fazer.
 
 - **Aceitar:** chama `dispositivos.executar` (que confirma lendo o estado de novo). Se correu bem,
-  a anomalia fica resolvida. Se falhou, nada muda e o pedido dá erro.
+  a anomalia fica resolvida. Se falhou, nada muda e o pedido dá erro. Quando a regra disse de que
+  dispositivo fala (`Desvio.dispositivo`, ex.: qual das lâmpadas), a casa muda esse; senão, o
+  dispositivo desse tipo (o kit tem um de cada).
 - **Recusar:** a casa não age e a anomalia fica resolvida. Na US11 e na US14, recusar quer dizer
   "ainda está a ser usado": a casa não volta a perguntar até ao fim do dia.
 
@@ -28,7 +30,7 @@ from backend.contrato import Anomalia, TextoEm
 from backend.contrato import Modelo as ModeloContrato
 from backend.dependencias import obter_agora
 from backend.formatos import Silencio
-from backend.ia.avaliar import us_da_anomalia
+from backend.ia.avaliar import dispositivo_da_anomalia, us_da_anomalia
 from backend.resposta.router import obter_publicar
 
 registo = logging.getLogger(__name__)
@@ -63,7 +65,7 @@ db.esquema(
     """
 )
 
-Executar = Callable[[str, str, str], bool]
+Executar = Callable[..., bool]  # (dispositivo, tipo, valor[, id do MCP]) -> confirmou
 
 
 def obter_executar() -> Executar:
@@ -79,12 +81,12 @@ def obter_executar() -> Executar:
     return executar
 
 
-def _executar_falso(dispositivo: str, tipo: str, valor: str) -> bool:
+def _executar_falso(dispositivo: str, tipo: str, valor: str, id: str = "") -> bool:
     registo.warning("executar falso: %s %s=%s (nada foi enviado ao MCP)", dispositivo, tipo, valor)
     return True
 
 
-def _sem_dispositivos(dispositivo: str, tipo: str, valor: str) -> bool:
+def _sem_dispositivos(dispositivo: str, tipo: str, valor: str, id: str = "") -> bool:
     registo.error("Ainda não há ligação aos dispositivos; %s %s=%s não foi feito", dispositivo, tipo, valor)
     return False
 
@@ -142,10 +144,16 @@ def decidir_acao(
 
     if acao is None:
         raise HTTPException(409, "A casa não sabe fazer esta ação")
+    id_dispositivo = dispositivo_da_anomalia(id)
     try:
-        feita = executar(acao.dispositivo, acao.tipo, acao.valor)
+        if id_dispositivo:
+            feita = executar(acao.dispositivo, acao.tipo, acao.valor, id_dispositivo)
+        else:
+            feita = executar(acao.dispositivo, acao.tipo, acao.valor)
     except Exception:
-        registo.exception("executar falhou: %s %s=%s", acao.dispositivo, acao.tipo, acao.valor)
+        registo.exception(
+            "executar falhou: %s %s %s=%s", acao.dispositivo, id_dispositivo, acao.tipo, acao.valor
+        )
         feita = False
     if not feita:
         registar(id, acao, "falhou", agora)

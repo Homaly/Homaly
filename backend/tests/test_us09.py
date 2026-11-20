@@ -271,3 +271,96 @@ def test_um_estado_estragado_nao_para_o_ciclo(dados, caplog):
     assert us09.verificar(porta_fechada(sexta(6)), SEM_FERIAS, sexta(6)) == []
     assert "estado_us09" in caplog.text
     assert us09._carregar().lida_em is not None  # a volta gravou um estado novo
+
+
+# A saída de casa (backend.saida): a porta da rua abre e as câmaras interiores não vêem ninguém.
+
+
+def _casa(t: datetime, porta: str = "normal", movimento: str = "", luz: str = "off") -> list[Desvio | Resolucao]:
+    leituras = [
+        Leitura("porta", "sensorState", porta, t),
+        Leitura("camara", "motionDetected", movimento, t),
+        Leitura("lampada", "power", luz, t),
+    ]
+    return us09.verificar(leituras, SEM_FERIAS, t)
+
+
+def _tarde(*voltas: tuple[datetime, dict]) -> list[list[Desvio | Resolucao]]:
+    return [_casa(t, **kw) for t, kw in voltas]
+
+
+def test_saiu_de_casa_o_silencio_nao_conta():
+    # O último sinal é a luz a apagar depois da porta, mas nenhuma câmara viu ninguém: saiu.
+    saidas = _tarde(
+        (sexta(18, 0), {"luz": "on"}),
+        (sexta(18, 30), {"movimento": "18:30", "luz": "on"}),
+        (sexta(19, 0), {"porta": "alarm", "movimento": "18:30", "luz": "on"}),
+        (sexta(19, 1), {"movimento": "18:30"}),  # a luz apaga
+        (sexta(19, 6), {"movimento": "18:30"}),  # cinco minutos sem movimento: saiu
+        (sexta(21, 0), {"movimento": "18:30"}),
+        (sexta(22, 30), {"movimento": "18:30"}),
+    )
+    assert saidas[-1] == []
+
+
+def test_sem_camaras_a_luz_depois_da_porta_conta_como_alguem_em_casa():
+    # Sem câmaras não há saída: como antes, o último sinal (a luz) não é a porta.
+    saidas = [
+        us09.verificar([Leitura("porta", "sensorState", p, t), Leitura("lampada", "power", luz, t)], SEM_FERIAS, t)
+        for t, p, luz in [
+            (sexta(18, 0), "normal", "on"), (sexta(19, 0), "alarm", "on"), (sexta(19, 1), "normal", "off"),
+            (sexta(21, 0), "normal", "off"), (sexta(22, 30), "normal", "off"),
+        ]
+    ]
+    [desvio] = saidas[-1]
+    assert desvio.resumo.startswith("O último sinal de vida foi a luz desligada às 19:01")
+
+
+def test_movimento_depois_da_porta_o_silencio_conta():
+    # Quem abriu a porta ficou (ou entrou): a câmara viu-o às 19:02.
+    saidas = _tarde(
+        (sexta(18, 0), {}),
+        (sexta(18, 30), {"movimento": "18:30"}),
+        (sexta(19, 0), {"porta": "alarm", "movimento": "18:30"}),
+        (sexta(19, 2), {"movimento": "19:02"}),
+        (sexta(21, 0), {"movimento": "19:02"}),
+        (sexta(22, 30), {"movimento": "19:02"}),
+    )
+    [desvio] = saidas[-1]
+    assert desvio.resumo.startswith("O último sinal de vida foi movimento na câmara às 19:02")
+
+
+def test_um_sinal_depois_da_saida_volta_a_vigiar():
+    saidas = _tarde(
+        (sexta(18, 0), {}),
+        (sexta(18, 30), {"movimento": "18:30"}),
+        (sexta(18, 40), {"porta": "alarm", "movimento": "18:30"}),
+        (sexta(18, 46), {"movimento": "18:30"}),  # saiu
+        (sexta(19, 0), {"movimento": "18:30", "luz": "on"}),  # voltou: a luz acende
+        (sexta(21, 0), {"movimento": "18:30", "luz": "on"}),
+        (sexta(22, 30), {"movimento": "18:30", "luz": "on"}),
+    )
+    [desvio] = saidas[-1]
+    assert desvio.resumo.startswith("O último sinal de vida foi a luz ligada às 19:00")
+
+
+def test_a_saida_sobrevive_a_um_reinicio():
+    _tarde(
+        (sexta(18, 0), {"luz": "on"}),
+        (sexta(18, 30), {"movimento": "18:30", "luz": "on"}),
+        (sexta(19, 0), {"porta": "alarm", "movimento": "18:30", "luz": "on"}),
+        (sexta(19, 1), {"movimento": "18:30"}),
+        (sexta(19, 6), {"movimento": "18:30"}),
+    )
+    assert us09._carregar().fora is not None
+    us09._detetor = sinais.Detetor()  # um processo novo: só o que está em SQLite sobrevive
+
+    assert _tarde((sexta(19, 7), {"movimento": "18:30"}), (sexta(22, 30), {"movimento": "18:30"}))[-1] == []
+
+
+def test_estado_guardado_antes_da_saida_de_casa_ainda_se_le():
+    import json
+
+    texto = us09._para_json(us09.Estado(lida_em=sexta(9)))
+    antigo = json.dumps({k: v for k, v in json.loads(texto).items() if k != "fora"})
+    assert us09._de_json(antigo).fora is None

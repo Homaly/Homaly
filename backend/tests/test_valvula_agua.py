@@ -34,7 +34,7 @@ def test_fechar_a_valvula_corta_o_caudal():
 
 def test_abrir_a_valvula_nao_inventa_caudal():
     assert dispositivos.executar("agua", "valvula", "aberta")
-    assert ("agua", "caudal") not in simulacao.listar()
+    assert ("agua", "caudal", "") not in simulacao.listar()
 
 
 def test_valor_desconhecido_da_valvula_e_recusado():
@@ -75,10 +75,11 @@ def test_aceitar_a_acao_fecha_a_agua_e_resolve():
     assert r.status_code == 200
     assert r.json()["estado"] == "resolvida"
     assert r.json()["resolucao"]["texto"] == "Feito: Fechar a água."
-    assert simulacao.listar()[("agua", "caudal")] == 0.0
+    assert simulacao.listar()[("agua", "caudal", "")] == 0.0
 
 
 def test_voltar_a_injetar_caudal_abre_a_valvula():
     dispositivos.executar("agua", "valvula", "fechada")
     simulacao.sobrepor("agua", "caudal", 6.0)
-    assert simulacao.listar()[("agua", "valvula")] == "aberta"
+    assert simulacao.listar()[("agua", "valvula", "")] == "aberta"
+

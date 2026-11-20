@@ -1,8 +1,9 @@
 """Do JSON do servidor MCP para as leituras da casa.
 
 `get_home_devices` devolve `{"devices": [{"id", "type", "capabilities": [{"type", "value"}]}]}`.
-Cada capability com um valor simples dá uma `Leitura`. O campo `name` das capabilities vem vazio,
-por isso procura-se sempre pelo `type`.
+Cada capability com um valor simples dá uma `Leitura`, com o id do dispositivo (a casa pode ter
+várias câmaras, várias janelas; a divisão e o papel de cada uma estão em backend.inventario). O
+campo `name` das capabilities vem vazio, por isso procura-se sempre pelo `type`.
 
 O MCP devolve o último valor de cada dispositivo mesmo que ele não comunique há horas (o kit
 desligado, sem rede). Cada dispositivo traz `lastCommunicationTime`, em milissegundos desde 1970:
@@ -38,7 +39,7 @@ def para_leituras(dados: dict, em: datetime, calados_antes_de: datetime | None =
     Com `calados_antes_de`, os dispositivos que não comunicam desde antes dessa hora não dão leituras.
     """
     return [
-        Leitura(nome(d.get("type", "")), c["type"], c["value"], em)
+        Leitura(nome(d.get("type", "")), c["type"], c["value"], em, str(d.get("id", "")))
         for d in dados.get("devices", [])
         if not _calado(d, calados_antes_de)
         for c in d.get("capabilities", [])
@@ -68,6 +69,23 @@ def _calado(dispositivo: dict, calados_antes_de: datetime | None) -> bool:
         return False
     quando = ultima_comunicacao(dispositivo)
     return quando is not None and quando < calados_antes_de
+
+
+def descricoes(dados: dict) -> list[dict[str, str]]:
+    """O que o MCP diz de cada dispositivo, para o inventário (backend.inventario.registar).
+
+    Todos, mesmo os calados: o inventário diz o que existe, não o que comunica.
+    """
+    return [
+        {
+            "id": str(d["id"]),
+            "tipo": nome(d.get("type", "")),
+            "nome": str(d.get("name") or "").strip(),
+            "divisao": str(d.get("roomName") or "").strip(),
+        }
+        for d in dados.get("devices", [])
+        if d.get("id")
+    ]
 
 
 def ids(dados: dict) -> dict[str, str]:

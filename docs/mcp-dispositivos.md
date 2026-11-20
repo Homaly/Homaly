@@ -40,7 +40,9 @@ São 18, não 16 como no guia. As duas a mais são `get_device_timers` e `post_t
 | Smoke sensor | `smokeSensor` | `a3cc7911-f2cb-4245-8c30-53e30b5a220b` | `sensorState` (`normal` / `alarm`), bateria, tamper |
 | Security hub | `gateway` | `2865e9a5-46ef-4c13-a760-2cdf27912680` | `alarmState`, Wi-Fi, rede móvel, bateria |
 
-Cada valor vem dentro de `capabilities`, como `{"type": "temperatureValue", "value": 23.1}`. O código deve procurar pelo `type`, porque o campo `name` vem vazio.
+Cada valor vem dentro de `capabilities`, como `{"type": "temperatureValue", "value": 23.1}`. O código deve procurar pelo `type`, porque o campo `name` das capabilities vem vazio.
+
+Cada dispositivo traz também `name` ("Contact sensor", "Camera", "Light"...) e `roomName` ("Hack 4" em todos). O inventário (`backend/src/backend/inventario.py`) usa-os para os dispositivos que não estão em `backend/dados/dispositivos.csv`, mas ignora os nomes de fábrica e as divisões desconhecidas como estas: no kit, ficam os valores por omissão.
 
 `get_home_devices` devolve todos os dispositivos com as `capabilities` numa só chamada (confirmado a 2026-11-17). Um ciclo de polling é, por isso, um único pedido.
 

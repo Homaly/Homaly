@@ -2,8 +2,12 @@
 
 Só a porta, a lâmpada e a tomada (ligado/desligado); a temperatura muda a toda a hora e não gera
 eventos. A primeira leitura serve de ponto de partida: depois de um reinício não há evento.
+
+Cada dispositivo compara-se com a sua leitura anterior (a casa pode ter várias janelas, várias
+lâmpadas), e o evento leva o nome que o inventário lhe dá ("Janela do quarto").
 """
 
+from backend import inventario
 from backend.contrato import Evento
 from backend.formatos import Leitura
 
@@ -15,20 +19,22 @@ VIGIADOS: dict[tuple[str, str], dict[object, str]] = {
     ("agua", "valvula"): {"fechada": "Fechou", "aberta": "Abriu"},
 }
 
-NOMES = {"porta": "Porta da rua", "lampada": "Luz da sala", "tomada": "Tomada", "agua": "Válvula da água"}
-
 
 class Observador:
     def __init__(self) -> None:
-        self._anteriores: dict[tuple[str, str], object] = {}
+        self._anteriores: dict[tuple[str, str], object] = {}  # (chave do dispositivo, tipo) -> valor
 
     def ver(self, leituras: list[Leitura]) -> list[Evento]:
         """Os eventos desta leitura em relação à anterior; guarda esta como a nova anterior."""
-        atuais = {(l.dispositivo, l.tipo): l for l in leituras if (l.dispositivo, l.tipo) in VIGIADOS}
+        atuais = {
+            (inventario.chave(l), l.tipo): l for l in leituras if (l.dispositivo, l.tipo) in VIGIADOS
+        }
         novos = [
-            Evento(dispositivo=NOMES[chave[0]], descricao=VIGIADOS[chave][l.valor], em=l.em)
+            Evento(dispositivo=inventario.de(l).nome, descricao=frases[l.valor], em=l.em)
             for chave, l in atuais.items()
-            if chave in self._anteriores and self._anteriores[chave] != l.valor and l.valor in VIGIADOS[chave]
+            if chave in self._anteriores
+            and self._anteriores[chave] != l.valor
+            and l.valor in (frases := VIGIADOS[(l.dispositivo, l.tipo)])
         ]
         self._anteriores = {**self._anteriores, **{chave: l.valor for chave, l in atuais.items()}}
         return novos

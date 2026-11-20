@@ -1,6 +1,7 @@
 """Do JSON do MCP para as leituras da casa (dispositivos.mapa)."""
 
 import json
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -19,8 +20,12 @@ def resposta_real(nome: str) -> dict:
     return json.loads(mensagem["result"]["content"][0]["text"])
 
 
+def sem_id(leituras: list[Leitura]) -> list[Leitura]:
+    return [replace(l, id="") for l in leituras]
+
+
 def test_le_os_dispositivos_da_casa_real():
-    leituras = mapa.para_leituras(resposta_real("mcp_get_home_devices.txt"), AGORA)
+    leituras = sem_id(mapa.para_leituras(resposta_real("mcp_get_home_devices.txt"), AGORA))
 
     assert Leitura("porta", "sensorState", "alarm", AGORA) in leituras
     assert Leitura("temperatura", "temperatureValue", 23.1, AGORA) in leituras
@@ -44,7 +49,20 @@ def test_ignora_valores_que_nao_sao_simples():
 def test_tipo_desconhecido_fica_com_o_nome_original():
     dados = {"devices": [{"id": "x", "type": "robot", "capabilities": [{"type": "power", "value": "on"}]}]}
 
-    assert mapa.para_leituras(dados, AGORA) == [Leitura("robot", "power", "on", AGORA)]
+    assert mapa.para_leituras(dados, AGORA) == [Leitura("robot", "power", "on", AGORA, "x")]
+
+
+def test_cada_leitura_leva_o_id_do_dispositivo():
+    # Com várias câmaras ou várias janelas, o id é o que as distingue.
+    dados = {"devices": [
+        {"id": "c1", "type": "camera", "capabilities": [{"type": "motionDetected", "value": ""}]},
+        {"id": "c2", "type": "camera", "capabilities": [{"type": "motionDetected", "value": "x"}]},
+    ]}
+
+    assert mapa.para_leituras(dados, AGORA) == [
+        Leitura("camara", "motionDetected", "", AGORA, "c1"),
+        Leitura("camara", "motionDetected", "x", AGORA, "c2"),
+    ]
 
 
 def test_dispositivo_sem_capabilities_nao_da_leituras():
@@ -57,7 +75,7 @@ DEPOIS_DA_LAMPADA = datetime(2026, 11, 16, 19, 0, tzinfo=UTC)
 
 
 def test_dispositivo_que_nao_comunica_desde_o_limite_nao_da_leituras():
-    leituras = mapa.para_leituras(resposta_real("mcp_get_home_devices.txt"), AGORA, DEPOIS_DA_LAMPADA)
+    leituras = sem_id(mapa.para_leituras(resposta_real("mcp_get_home_devices.txt"), AGORA, DEPOIS_DA_LAMPADA))
 
     assert Leitura("porta", "sensorState", "alarm", AGORA) in leituras
     assert not any(l.dispositivo == "lampada" for l in leituras)
@@ -72,7 +90,7 @@ def test_sem_limite_da_todas_as_leituras():
 def test_dispositivo_sem_hora_de_comunicacao_conta_como_recente():
     dados = {"devices": [{"id": "x", "type": "bulb", "capabilities": [{"type": "power", "value": "on"}]}]}
 
-    assert mapa.para_leituras(dados, AGORA, DEPOIS_DA_LAMPADA) == [Leitura("lampada", "power", "on", AGORA)]
+    assert mapa.para_leituras(dados, AGORA, DEPOIS_DA_LAMPADA) == [Leitura("lampada", "power", "on", AGORA, "x")]
 
 
 def test_em_silencio_diz_desde_quando():
