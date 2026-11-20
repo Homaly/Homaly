@@ -1,0 +1,13 @@
+id,nome,divisao
+937ac145-dc42-4dcf-9180-ad481ef33c82,Porta da rua,a sala
+2d1d79da-49cc-4e1a-93ad-5714e514f351,Sensor de temperatura da sala,a sala
+59dfc0f6-8813-4768-9877-f993b3e2dec3,Luz da sala,a sala
+30c07125-1175-47ae-a8be-96b1b20d4539,Tomada,a sala
+0915a1d0-544e-4427-b35c-46110d21a013,Câmara da sala,a sala
+a3cc7911-f2cb-4245-8c30-53e30b5a220b,Detetor de fumo,a sala
+2865e9a5-46ef-4c13-a760-2cdf27912680,Hub de segurança,a sala
+janela-quarto,Janela do quarto,o quarto
+temperatura-quarto,Sensor de temperatura do quarto,o quarto
+camara-quarto,Câmara do quarto,o quarto
+camara-cozinha,Câmara da cozinha,a cozinha
+camara-entrada,Câmara da entrada de veículos,a entrada

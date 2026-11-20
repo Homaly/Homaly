@@ -214,3 +214,110 @@ def test_configuracao_invalida_diz_qual(monkeypatch):
 
     with pytest.raises(ValueError, match="PORTA_MINUTOS"):
         ver(0, "alarm")
+
+
+# Várias aberturas e várias divisões (inventário CASA, em conftest.py)
+
+
+def casa_volta(m: float, **valores) -> list[Desvio | Resolucao]:
+    """Uma volta com o estado de cada sensor do inventário de teste: porta_rua="alarm", temp_quarto=18.0."""
+    em = minuto(m)
+    lidas = []
+    for nome, valor in valores.items():
+        chave = nome.replace("_", "-")
+        dispositivo = "temperatura" if chave.startswith("temp") else "porta"
+        tipo = "temperatureValue" if dispositivo == "temperatura" else "sensorState"
+        lidas.append(Leitura(dispositivo, tipo, valor, em, chave))
+    return porta.verificar(lidas, CONTEXTO, em)
+
+
+@pytest.mark.usefixtures("casa")
+def test_janela_aberta_com_o_quarto_a_arrefecer_mais_do_que_o_resto_da_casa():
+    casa_volta(0, janela_quarto="alarm", temp_quarto=20.0, temp_sala=21.0)
+
+    [desvio] = casa_volta(10, janela_quarto="alarm", temp_quarto=17.8, temp_sala=20.8)
+
+    assert desvio.us == "US12"
+    assert desvio.classe == "eficiencia"
+    assert desvio.resumo == (
+        "A janela do quarto está aberta desde as 15:00 e o quarto já desceu 2,2 °C "
+        "(de 20 °C para 17,8 °C). O resto da casa desceu só 0,2 °C."
+    )
+
+
+@pytest.mark.usefixtures("casa")
+def test_a_casa_toda_a_arrefecer_nao_e_da_janela():
+    casa_volta(0, janela_quarto="alarm", temp_quarto=20.0, temp_sala=21.0)
+
+    assert casa_volta(10, janela_quarto="alarm", temp_quarto=17.8, temp_sala=19.5) == []  # 2,2 contra 1,5
+
+
+@pytest.mark.usefixtures("casa")
+def test_a_referencia_e_a_media_das_outras_divisoes():
+    casa_volta(0, janela_quarto="alarm", temp_quarto=20.0, temp_sala=21.0, temp_cozinha=22.0)
+
+    # A sala desceu 0,4 e a cozinha 1,6: o resto da casa desceu 1 °C, o quarto 2,1.
+    [desvio] = casa_volta(10, janela_quarto="alarm", temp_quarto=17.9, temp_sala=20.6, temp_cozinha=20.4)
+    assert desvio.resumo.endswith("O resto da casa desceu só 1 °C.")
+
+
+@pytest.mark.usefixtures("casa")
+def test_janela_numa_divisao_sem_sensor_de_temperatura_nao_avisa():
+    casa_volta(0, janela_quarto="alarm", temp_sala=21.0)
+
+    assert casa_volta(30, janela_quarto="alarm", temp_sala=18.0) == []
+
+
+@pytest.mark.usefixtures("casa")
+def test_uma_janela_aberta_nunca_passa_a_seguranca():
+    casa_volta(0, janela_quarto="alarm", temp_quarto=20.0)
+
+    assert casa_volta(30, janela_quarto="alarm", temp_quarto=20.0) == []
+    [desvio] = casa_volta(40, janela_quarto="alarm", temp_quarto=17.5)
+    assert (desvio.us, desvio.classe) == ("US12", "eficiencia")
+    assert casa_volta(60, janela_quarto="alarm", temp_quarto=17.0) == [desvio]
+
+
+@pytest.mark.usefixtures("casa")
+def test_janela_fecha_resolve_com_o_nome_da_janela():
+    casa_volta(0, janela_quarto="alarm", temp_quarto=20.0)
+    casa_volta(10, janela_quarto="alarm", temp_quarto=17.5)
+
+    assert casa_volta(12, janela_quarto="normal", temp_quarto=17.5) == [
+        Resolucao("US12", "a janela do quarto fechou às 15:12", minuto(12))
+    ]
+
+
+@pytest.mark.usefixtures("casa")
+def test_cada_abertura_tem_o_seu_estado():
+    # A janela da sala abre às 15:00 e a do quarto às 15:05: cada uma conta desde a sua hora.
+    casa_volta(0, janela_sala="alarm", janela_quarto="normal", temp_sala=21.0, temp_quarto=20.0)
+    casa_volta(5, janela_sala="alarm", janela_quarto="alarm", temp_sala=20.0, temp_quarto=20.0)
+    casa_volta(6, janela_sala="normal", janela_quarto="alarm", temp_sala=20.0, temp_quarto=20.0)
+
+    # A sala desceu 1 °C e fechou; o quarto desce 2 °C desde as 15:05.
+    [desvio] = casa_volta(15, janela_sala="normal", janela_quarto="alarm", temp_sala=20.0, temp_quarto=18.0)
+    assert desvio.resumo.startswith("A janela do quarto está aberta desde as 15:05 e o quarto já desceu 2 °C")
+
+
+@pytest.mark.usefixtures("casa")
+def test_a_segunda_abertura_espera_que_a_primeira_feche():
+    # O ciclo só tem um aviso da US12 de cada vez.
+    casa_volta(0, janela_sala="alarm", janela_quarto="alarm", temp_sala=20.0, temp_quarto=20.0, temp_cozinha=20.0)
+    [sala] = casa_volta(10, janela_sala="alarm", janela_quarto="alarm", temp_sala=18.0, temp_quarto=18.0, temp_cozinha=20.0)
+    assert sala.resumo.startswith("A janela da sala")
+
+    assert casa_volta(11, janela_sala="alarm", janela_quarto="alarm", temp_sala=18.0, temp_quarto=18.0, temp_cozinha=20.0) == [sala]
+    [resolvida] = casa_volta(12, janela_sala="normal", janela_quarto="alarm", temp_sala=18.0, temp_quarto=18.0, temp_cozinha=20.0)
+    assert resolvida == Resolucao("US12", "a janela da sala fechou às 15:12", minuto(12))
+    [quarto] = casa_volta(13, janela_sala="normal", janela_quarto="alarm", temp_sala=18.0, temp_quarto=18.0, temp_cozinha=20.0)
+    assert quarto.resumo.startswith("A janela do quarto")
+
+
+@pytest.mark.usefixtures("casa")
+def test_porta_e_janela_abertas_ao_mesmo_tempo_dao_us08_e_us12():
+    casa_volta(0, porta_rua="alarm", janela_quarto="alarm", temp_quarto=20.0, temp_sala=21.0)
+
+    desvios = casa_volta(5, porta_rua="alarm", janela_quarto="alarm", temp_quarto=17.9, temp_sala=21.0)
+
+    assert {(d.us, d.classe) for d in desvios} == {("US08", "seguranca"), ("US12", "eficiencia")}

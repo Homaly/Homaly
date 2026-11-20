@@ -51,3 +51,27 @@ def test_comunica():
     assert comunica([Leitura("porta", "sensorState", "normal", T0)])
     assert not comunica([Leitura("temperatura", "temperatureValue", 20.0, T0)])
     assert not comunica([])
+
+
+# Vários dispositivos do mesmo tipo
+
+
+def test_duas_camaras_comparam_se_cada_uma_com_a_sua_leitura_anterior(casa):
+    # Antes, as duas partilhavam o valor anterior e davam um sinal falso em cada volta.
+    d = Detetor()
+    volta = lambda em: [  # noqa: E731
+        Leitura("camara", "motionDetected", "11:00", em, "cam-sala"),
+        Leitura("camara", "motionDetected", "", em, "cam-quarto"),
+    ]
+    d.ver(volta(T0))
+
+    assert d.ver(volta(T1)) == []
+    assert d.ver(volta(T2)) == []
+
+
+def test_a_camara_exterior_e_as_janelas_nao_dao_sinais_de_vida(casa):
+    d = Detetor()
+    d.ver([Leitura("camara", "motionDetected", "", T0, "cam-rua"), Leitura("porta", "sensorState", "normal", T0, "janela-quarto")])
+
+    assert d.ver([Leitura("camara", "motionDetected", "x", T1, "cam-rua"), Leitura("porta", "sensorState", "alarm", T1, "janela-quarto")]) == []
+    assert not comunica([Leitura("camara", "motionDetected", "", T1, "cam-rua")])

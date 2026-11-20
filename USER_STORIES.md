@@ -21,13 +21,13 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 | US06 | Ver o que aconteceu em casa | Transversal | Todos |
 | US07 | Porta aberta a uma hora anormal | Segurança | Porta |
 | US08 | Porta esquecida aberta | Segurança | Porta |
-| US09 | A casa não vê sinais de vida | Bem-estar e rotina | Câmara, lâmpada, tomada, porta |
+| US09 | A casa não vê sinais de vida | Bem-estar e rotina | Câmaras interiores, lâmpada, tomada, porta |
 | US10 | Casa fria durante horas | Saúde e conforto | Temperatura |
-| US11 | Luz acesa há demasiado tempo | Eficiência energética | Lâmpada, porta |
-| US12 | Porta aberta com a casa a arrefecer | Eficiência energética | Porta, temperatura |
+| US11 | Luz acesa há demasiado tempo | Eficiência energética | Lâmpada, porta, câmaras interiores |
+| US12 | Porta aberta com a casa a arrefecer | Eficiência energética | Porta, janelas, temperatura (várias divisões) |
 | US13 | Veículo desconhecido na entrada | Segurança | Câmara |
 | US14 | Aparelho esquecido ligado | Eficiência energética | Tomada, porta, câmaras de dentro |
-| US15 | Água a correr sem parar | Eficiência energética / Segurança | Contador de água (simulado) |
+| US15 | Água a correr sem parar | Eficiência energética / Segurança / Bem-estar | Contador de água (simulado), porta, câmaras interiores, sinais de vida |
 
 ## Histórias transversais
 
@@ -133,8 +133,9 @@ Um **sinal de vida** é qualquer coisa que mostre que alguém está a mexer na c
 - **Dado** que no histórico o primeiro sinal de vida do dia chega habitualmente antes das 9h, **quando** não há nenhum até à hora limite (a habitual mais a margem, por exemplo 10h30), **então** recebo uma notificação com a hora habitual e o último sinal visto ("o último sinal foi a luz desligada às 23:40 de ontem").
 
 *A atividade parou*
-- **Dado** que hoje já houve sinais de vida e o último não foi a porta (a pessoa deve estar em casa), **quando** passam três horas sem nenhum sinal, a uma hora em que o histórico mostra atividade, **então** recebo uma notificação com a hora e o tipo do último sinal ("o último movimento na sala foi às 14:20").
-- **Dado** que o último sinal foi a porta a abrir e fechar, **então** a casa não conta esse silêncio: a pessoa pode ter saído. Se ela voltar, a câmara vê-a entrar e a vigilância recomeça.
+- **Dado** que hoje já houve sinais de vida e a pessoa não saiu de casa, **quando** passam três horas sem nenhum sinal, a uma hora em que o histórico mostra atividade, **então** recebo uma notificação com a hora e o tipo do último sinal ("o último movimento na sala foi às 14:20").
+- **Dado** que a porta da rua abriu e, nos cinco minutos seguintes, nenhuma câmara interior viu movimento, **então** a casa assume que a pessoa saiu e não conta esse silêncio. Quando aparece outro sinal de vida (por exemplo, a câmara vê-a entrar), a vigilância recomeça.
+- **Dado** que nenhuma câmara interior comunica, **quando** o último sinal foi a porta a abrir, **então** a casa também não conta esse silêncio: não sabe se a pessoa saiu.
 - **Dado** que é uma hora em que o histórico não mostra atividade (a pessoa costuma estar a dormir), **então** o silêncio não conta.
 
 *Comum aos dois casos*
@@ -143,7 +144,7 @@ Um **sinal de vida** é qualquer coisa que mostre que alguém está a mexer na c
 - **Dado** que a casa devia estar vazia (férias ditas à casa), **então** a casa não avisa. Se a anomalia já estava ativa, resolve-se com esse motivo, e não "sozinha".
 - **Dado** que um dispositivo deixou de comunicar, **então** o silêncio dele não conta como falta de atividade. Se nenhum dispositivo que dá sinais de vida comunica, a casa não sabe o que se passa e não avisa por bem-estar.
 
-**Dispositivos:** câmara (só `motionDetected` e `soundDetected`, pelo servidor MCP, sem imagem), lâmpada, tomada e sensor de porta. A câmara tem de estar dentro de casa, na divisão onde a pessoa passa mais tempo. O formato de `motionDetected` quando há movimento ainda não foi confirmado (a 2026-11-19 vinha vazio), nem se `motionHumanoidFilter` o limita a pessoas. A margem da manhã e as três horas são valores a afinar com o histórico. Na demo, precisa de histórico simulado com a câmara e a lâmpada, além da porta e da tomada, e de relógio acelerado.
+**Dispositivos:** câmaras interiores (só `motionDetected` e `soundDetected`, pelo servidor MCP, sem imagem), lâmpada, tomada e sensor da porta da rua. As câmaras exteriores e as janelas não são sinais de vida; o papel de cada dispositivo vem do inventário (`backend/dados/dispositivos.csv`). Pelo menos uma câmara tem de estar dentro de casa, na divisão onde a pessoa passa mais tempo. O formato de `motionDetected` quando há movimento ainda não foi confirmado (a 2026-11-19 vinha vazio), nem se `motionHumanoidFilter` o limita a pessoas. A margem da manhã e as três horas são valores a afinar com o histórico. Na demo, precisa de histórico simulado com a câmara e a lâmpada, além da porta e da tomada, e de relógio acelerado.
 
 ### US10 — Casa fria durante horas (Saúde e conforto)
 
@@ -160,23 +161,28 @@ Um **sinal de vida** é qualquer coisa que mostre que alguém está a mexer na c
 **Como** responsável da casa, **quero** que a casa me pergunte quando a luz está acesa há muito mais tempo do que é costume, **para** não gastar energia sem dar por isso.
 
 **Critérios de aceitação**
-- **Dado** que a lâmpada está acesa há cinco horas e a porta abriu e fechou depois de ela ser acesa, **então** recebo "esta luz está acesa há cinco horas, ainda estão a usar?".
+- **Dado** que a lâmpada está acesa há cinco horas e a pessoa saiu de casa depois de ela ser acesa (a porta da rua abriu e nenhuma câmara interior viu movimento nos cinco minutos seguintes), **então** recebo "esta luz está acesa há cinco horas, ainda estão a usar?".
+- **Dado** que, depois da saída, a câmara da divisão da lâmpada vê movimento, **então** a casa não pergunta (alguém está a usar a luz); se já tinha perguntado, o aviso resolve-se ("houve movimento na sala às 19:20"). O movimento noutras divisões não conta.
+- **Dado** que nenhuma câmara interior comunica, **então** a casa não sabe se a pessoa saiu e basta que a porta da rua abra e feche depois de a luz acender.
 - **Dado** que aceito apagar, **então** a casa apaga a lâmpada (US03).
 - **Dado** que respondo que ainda estou a usar, **então** a casa não volta a perguntar nesse dia.
 
-**Dispositivos:** lâmpada, sensor de porta. Depende de o servidor MCP permitir ler o estado da lâmpada.
+**Dispositivos:** lâmpada, sensor da porta da rua, câmaras interiores (a da divisão da lâmpada, pelo inventário). Depende de o servidor MCP permitir ler o estado da lâmpada.
 
 ### US12 — Porta aberta com a casa a arrefecer (Eficiência energética)
 
-**Como** responsável da casa, **quero** ser avisado quando a porta está aberta e a temperatura está a cair, **para** não deixar fugir o calor.
+**Como** responsável da casa, **quero** ser avisado quando a porta ou uma janela está aberta e a temperatura dessa divisão está a cair, **para** não deixar fugir o calor.
 
 **Critérios de aceitação**
-- **Dado** que a porta está aberta, **quando** a temperatura desce dois graus desde que abriu, **então** recebo uma notificação com a descida.
-- **Dado** que a porta fecha, **então** a anomalia fica resolvida.
+- **Dado** que a porta ou uma janela está aberta, **quando** a temperatura da sua divisão desce dois graus desde que abriu, **então** recebo uma notificação com a descida.
+- **Dado** que há sensores de temperatura noutras divisões, **quando** a casa toda arrefece ao mesmo tempo (a divisão da abertura não desce pelo menos 1 °C mais do que as outras), **então** a casa não avisa: o frio não vem da abertura.
+- **Dado** que há várias aberturas, **então** cada porta ou janela conta desde a hora a que ela abriu. Se outra já tem um aviso, a segunda espera que a primeira feche.
+- **Dado** que uma janela fica aberta muito tempo, **então** o aviso não passa a segurança: a US08 é só a porta da rua.
+- **Dado** que a porta ou a janela fecha, **então** a anomalia fica resolvida ("a janela do quarto fechou às 14:12").
 - **Dado** que já recebi o aviso de porta esquecida aberta (US08) por esta mesma abertura, **então** não recebo uma segunda notificação: o aviso existente é atualizado com "e a sala já desceu 2 °C".
 - **Dado** que este aviso chegou primeiro, **quando** a porta continua aberta ao fim de cinco minutos, **então** o mesmo aviso passa a ser de segurança (ver US08).
 
-**Dispositivos:** sensor de porta, sensor de temperatura. A casa não sabe se o aquecimento está ligado; só vê a temperatura a descer.
+**Dispositivos:** sensores de contacto (a porta da rua e as janelas) e sensores de temperatura, cada um numa divisão (pelo inventário). Uma abertura numa divisão sem sensor de temperatura não chega a este aviso. A casa não sabe se o aquecimento está ligado; só vê a temperatura a descer. O kit tem um sensor de cada; na demo, a janela e o sensor do quarto entram pelas leituras injetadas.
 
 ### US13 — Veículo desconhecido na entrada (Segurança)
 
@@ -195,11 +201,12 @@ Um **sinal de vida** é qualquer coisa que mostre que alguém está a mexer na c
 
 **Como** responsável da casa, **quero** que a casa me pergunte quando o aparelho ligado à tomada fica a gastar sem ninguém a usá-lo, **para** o desligar à distância e não gastar energia nem correr riscos.
 
-A casa junta a tomada, a porta e o movimento das câmaras de dentro de casa para saber se alguém saiu, se está ao pé do aparelho ou noutra divisão.
+A casa junta a tomada, a saída de casa e o movimento das câmaras de dentro de casa para saber se alguém saiu, se está ao pé do aparelho ou noutra divisão.
 
 **Critérios de aceitação**
 - **Dado** que há movimento na divisão da tomada, **então** a casa não avisa: alguém está a usar o aparelho. Se já tinha avisado, a anomalia resolve-se ("voltou a haver alguém na sala às 14:32").
-- **Dado** que o aquecedor está a gastar, **quando** a porta abre e fecha depois de ele ligar e não há movimento em casa durante 20 minutos, **então** recebo "o aquecedor está a gastar desde as 14:05, e a porta fechou às 14:11 sem movimento em casa desde então: parece que saíram", com a ação de desligar a tomada.
+- **Dado** que o aquecedor está a gastar, **quando** saímos de casa depois de ele ligar (a porta da rua abre e nenhuma câmara interior vê movimento nos cinco minutos seguintes) e passam 20 minutos sem voltarmos, **então** recebo "o aquecedor está a gastar desde as 14:05, e parece que saíram de casa às 14:10", com a ação de desligar a tomada.
+- **Dado** que saímos só um bocado (por exemplo, levar o lixo) e voltamos antes dos 20 minutos, **então** a casa não avisa: a porta a abrir outra vez suspende a saída, e o movimento a seguir desfá-la.
 - **Dado** que há alguém em casa mas não na divisão da tomada há uma hora, **quando** o aparelho precisa de alguém por perto (um aquecedor, um ferro, a televisão), **então** recebo "o aquecedor está a gastar e não há ninguém na sala desde as 14:05 (há movimento na cozinha)", com a ação de desligar a tomada.
 - **Dado** que o aparelho pode ficar a trabalhar sozinho (a máquina de lavar, o frigorífico), ou que a casa não tem câmaras dentro de casa, **quando** está a gastar há muito mais tempo do que é costume (três vezes o período mais longo do histórico), **então** recebo o aviso, com o consumo atual e a ação de desligar a tomada.
 - **Dado** que aceito desligar, **então** a casa desliga a tomada e confirma (US03).
@@ -207,7 +214,7 @@ A casa junta a tomada, a porta e o movimento das câmaras de dentro de casa para
 - **Dado** que a casa devia estar vazia (férias ditas à casa), **quando** a tomada está a gastar, **então** o aviso é de segurança, é imediato e segue as regras do contacto externo (US05).
 - **Dado** que o aparelho deixa de gastar, **então** a anomalia resolve-se sozinha.
 
-**Dispositivos:** tomada inteligente, que mede a potência e se liga e desliga pelo servidor MCP; sensor de porta; câmaras de dentro de casa (só `motionDetected`). "A gastar" quer dizer potência acima de um limite baixo (por exemplo, 10 W), a afinar. A casa sabe que aparelho está na tomada porque o responsável lho diz na conversa ("na tomada está o aquecedor", US01); se não souber, diz "o aparelho na tomada" e trata-o como um que precisa de alguém por perto. A câmara do kit está na sala; as outras divisões têm a sua (`camara_<divisão>`; na demo, injetadas por `/dev/leituras`). Os tempos (10 minutos de movimento recente, 20 para "saíram", uma hora sem ninguém na divisão) vêm do histórico, onde há até 47 minutos sem movimento com o aparelho em uso; na demo, baixam-se no `.env`. O tempo habitual vem do histórico; na demo, do dataset simulado.
+**Dispositivos:** tomada inteligente, que mede a potência e se liga e desliga pelo servidor MCP; sensor de porta; câmaras de dentro de casa (só `motionDetected`). "A gastar" quer dizer potência acima de um limite baixo (por exemplo, 10 W), a afinar. A casa sabe que aparelho está na tomada porque o responsável lho diz na conversa ("na tomada está o aquecedor", US01); se não souber, diz "o aparelho na tomada" e trata-o como um que precisa de alguém por perto. A divisão da tomada e a de cada câmara vêm do inventário (`backend/dados/dispositivos.csv`): a câmara do kit está na sala, e as câmaras exteriores não contam; na demo, as outras câmaras entram por `/dev/leituras` com o id do inventário. Os tempos (10 minutos de movimento recente, 20 minutos fora de casa, uma hora sem ninguém na divisão) vêm do histórico, onde há quem saia 20 minutos com o aparelho ligado, onde há até 47 minutos sem movimento com o aparelho em uso; na demo, baixam-se no `.env`. O tempo habitual vem do histórico; na demo, do dataset simulado.
 
 ### US15 — Água a correr sem parar (Eficiência energética e Segurança)
 
@@ -218,6 +225,10 @@ A casa junta a tomada, a porta e o movimento das câmaras de dentro de casa para
 - **Dado** que corre só um fio de água sem parar há uma hora (por exemplo, de madrugada), **então** recebo "corre um fio de água sem parar; pode ser um autoclismo ou uma torneira a pingar", com a ação de fechar a água.
 - **Dado** que corre muita água (12 litros por minuto ou mais) durante cinco minutos, **então** o aviso é de segurança, é imediato ("pode ser um cano rebentado") e segue as regras do contacto externo (US05).
 - **Dado** que a casa devia estar vazia (férias ditas à casa), **quando** a água corre, **então** o aviso é de segurança e imediato.
+- **Dado** que a água está a correr, **quando** saímos de casa (a porta da rua abre e nenhuma câmara interior vê movimento nos cinco minutos seguintes), **então** recebo logo "a água está a correr desde as 18:00 e parece que saíram de casa às 18:10", sem esperar pela hora.
+- **Dado** que a água corre há meia hora com um caudal de torneira ou de chuveiro, **quando** desde que começou não houve nenhum sinal de vida em casa (US09), **então** recebo um aviso de bem-estar: pode ter acontecido alguma coisa a quem está no banho. Se a casa não está a ler nenhum dispositivo que dê sinais de vida, não avisa por isto.
+- **Dado** que corre um fio de água sem nenhum sinal de vida desde que começou, **então** o aviso diz também que ninguém mexeu na casa desde então.
+- **Dado** que a casa já avisou, **então** o aviso não desce de classe enquanto a água corre (segurança acima de bem-estar, bem-estar acima de eficiência).
 - **Dado** que aceito fechar a água, **então** a casa fecha a válvula e confirma (US03).
 - **Dado** que a água pára, **então** a anomalia resolve-se sozinha e diz quantos litros correram.
 
@@ -225,6 +236,6 @@ A casa junta a tomada, a porta e o movimento das câmaras de dentro de casa para
 
 ## Limites conhecidos
 
-- **Um sensor de porta não distingue entrar de sair.** A casa não sabe ao certo se há alguém lá dentro; só sabe que a porta abriu e fechou. Por isso a US11 pergunta em vez de afirmar que a pessoa saiu.
+- **Um sensor de porta não distingue entrar de sair.** A casa usa as câmaras interiores para saber se a pessoa saiu (nenhum movimento nos cinco minutos depois de a porta abrir), mas continua a ser uma suposição: a câmara pode não cobrir onde a pessoa está. Por isso a US11 pergunta em vez de afirmar que a pessoa saiu. O formato de `motionDetected` ainda não foi confirmado; se a câmara nunca der movimento, a casa conclui sempre que a pessoa saiu.
 - **As anomalias de rotina precisam de histórico.** Na demo, esse histórico vem do dataset simulado.
 - **Fora do MVP:** as restantes anomalias que dependem da câmara, a classe Estado da própria casa, a classe Sono e noite, o fumo e as automatizações.

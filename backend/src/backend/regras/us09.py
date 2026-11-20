@@ -1,17 +1,20 @@
 """US09: a casa não vê sinais de vida (Bem-estar e rotina).
 
 Um sinal de vida é uma mudança que só acontece com alguém em casa (backend.sinais): movimento
-ou som na câmara, a luz ligada, desligada ou com o brilho mudado, a tomada a começar a gastar,
-a porta a abrir. Uma mudança que a própria casa mandou fazer (US03, dispositivos.comandado_ha_pouco)
+ou som numa câmara interior, a luz ligada, desligada ou com o brilho mudado, a tomada a começar a
+gastar, a porta da rua a abrir. As câmaras exteriores e as janelas não contam. Uma mudança que a própria casa mandou fazer (US03, dispositivos.comandado_ha_pouco)
 não é um sinal: a casa apagar a luz não resolve o aviso.
 
 Dois casos, com o habitual calculado do histórico (backend.habitual):
 - Manhã sem atividade: ainda não houve nenhum sinal hoje à hora limite (o primeiro sinal habitual
   desse tipo de dia mais MARGEM_US09). Só se a casa está a ver desde antes da hora habitual: se o
   ciclo arrancou depois, ou houve um buraco nas leituras, não sabe o que se passou de manhã.
-- A atividade parou: hoje já houve sinais, o último não foi a porta (quem abre a porta pode ter
-  saído) e passaram US09_HORAS (3) sem nenhum, contando só o tempo nas horas em que o histórico
-  mostra atividade (dormir não conta), a uma dessas horas.
+- A atividade parou: hoje já houve sinais, a pessoa não saiu e passaram US09_HORAS (3) sem
+  nenhum, contando só o tempo nas horas em que o histórico mostra atividade (dormir não conta), a
+  uma dessas horas. A pessoa saiu (backend.saida) quando a porta da rua abre e, nos SAIDA_MINUTOS
+  seguintes, nenhuma câmara interior vê movimento; o silêncio volta a contar com o próximo sinal
+  de vida. Sem câmaras interiores, a casa não sabe se saiu: se o último sinal foi a porta, o
+  silêncio não conta (quem abre a porta pode ter saído).
 
 O que não conta: um buraco nas leituras de mais de US09_LACUNA_MINUTOS (30) recomeça a
 vigilância (o que aconteceu nele não se sabe). Um dispositivo calado não dá sinais nem os tira;
@@ -40,7 +43,7 @@ import logging
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
-from backend import db, dispositivos, habitual, sinais
+from backend import db, dispositivos, habitual, saida, sinais
 from backend.formatos import Contexto, Desvio, Leitura, Resolucao
 from backend.regras import casa_vazia, ferias_agora
 from backend.sinais import Sinal
@@ -73,6 +76,7 @@ class Estado:
     vigia_desde: datetime | None = None  # desde quando a casa lê sem buracos
     lida_em: datetime | None = None  # a última volta com dispositivos que dão sinais
     pendente: Desvio | None = None  # o desvio em curso, até haver um sinal
+    fora: datetime | None = None  # a pessoa saiu (a hora a que a porta abriu), até ao próximo sinal
 
 
 def tem_pendente() -> bool:
@@ -85,12 +89,14 @@ def _comandado(dispositivo: str, tipo: str) -> bool:
 
 
 _detetor = sinais.Detetor(comandado=_comandado)
+_vigia = saida.Vigia()
 
 
 def reiniciar() -> None:
     """Esquece o que a regra lembra (para os testes e para correr um CSV de raiz)."""
-    global _detetor
+    global _detetor, _vigia
     _detetor = sinais.Detetor(comandado=_comandado)
+    _vigia = saida.Vigia()
     _apagar()
 
 
@@ -113,6 +119,11 @@ def verificar(leituras: list[Leitura], contexto: Contexto, agora: datetime) -> l
     estado = replace(estado, lida_em=momento)
 
     vistos = _detetor.ver(leituras)
+    visto = _vigia.ver(leituras, momento)
+    if visto.saiu is not None:
+        estado = replace(estado, fora=visto.saiu)
+    elif vistos:
+        estado = replace(estado, fora=None)  # um sinal depois da saída: voltou alguém
     if vistos:
         # A hora é a do ciclo (o relógio da demo pode estar acelerado), não a da leitura.
         # Com a porta entre os sinais da volta, o último é a porta (quem a abriu pode ter saído),
@@ -169,8 +180,10 @@ def _manha_sem_atividade(estado: Estado, agora: datetime) -> Desvio | None:
 def _atividade_parou(estado: Estado, agora: datetime) -> Desvio | None:
     h = habitual.padrao()
     ultimo = _local(estado.ultimo, agora)
-    if ultimo is None or ultimo.em.date() != agora.date() or ultimo.dispositivo == "porta":
-        return None  # sem sinais hoje, ou quem abriu a porta pode ter saído
+    if ultimo is None or ultimo.em.date() != agora.date():
+        return None  # sem sinais hoje
+    if estado.fora is not None or ultimo.dispositivo == "porta":
+        return None  # saiu, ou (sem câmaras) quem abriu a porta pode ter saído
     if not h.com_atividade(agora) or estado.vigia_desde is None:
         return None
     horas = horas_sem_sinais()
@@ -208,6 +221,7 @@ def _para_json(estado: Estado) -> str:
             "vigia_desde": _iso(estado.vigia_desde),
             "lida_em": _iso(estado.lida_em),
             "pendente": {"classe": p.classe, "resumo": p.resumo, "habitual": p.habitual} if p else None,
+            "fora": _iso(estado.fora),
         },
         ensure_ascii=False,
     )
@@ -221,6 +235,7 @@ def _de_json(texto: str) -> Estado:
         vigia_desde=_data(d["vigia_desde"]),
         lida_em=_data(d["lida_em"]),
         pendente=Desvio(us="US09", classe=p["classe"], resumo=p["resumo"], habitual=p["habitual"]) if p else None,
+        fora=_data(d.get("fora")),  # não existia antes da saída de casa
     )
 
 

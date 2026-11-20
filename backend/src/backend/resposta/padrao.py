@@ -28,7 +28,7 @@ DESCRICAO_POR_US = {
     "US09": "a casa fica mais tempo sem sinais de vida",
     "US10": "a casa fica mais fria",
     "US11": "a luz fica acesa mais tempo",
-    "US12": "a porta fica aberta com a sala a arrefecer",
+    "US12": "a porta ou uma janela fica aberta com a casa a arrefecer",
     "US14": "o aparelho da tomada fica ligado mais tempo",
 }
 DESCRICAO_GERAL = "isto acontece"

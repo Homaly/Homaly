@@ -2,7 +2,7 @@
 
 from datetime import datetime, time
 
-from backend.formatos import Contexto, Periodo, Rotina
+from backend.formatos import Contexto, Leitura, Periodo, Rotina
 from backend.regras import us07
 from tests.regras_casa import Registo
 
@@ -59,3 +59,13 @@ def test_rotina_sem_hora_deixa_a_decisao_para_a_ia():
     contexto = Contexto(ferias=[], rotinas=[jardineiro], silencios=[], casa_vazia=False)
     assert not explicado_por_rotina(contexto, datetime(2026, 11, 18, 3, 10))
     assert not explicado_por_rotina(contexto, datetime(2026, 11, 18, 10, 15))
+
+
+def test_uma_janela_a_abrir_de_madrugada_nao_e_a_porta(casa):
+    us07.reiniciar()
+    madrugada = datetime(2026, 11, 17, 3, 0)
+    contexto = Contexto(ferias=[], rotinas=[], silencios=[], casa_vazia=False)
+    us07.verificar([Leitura("porta", "sensorState", "normal", madrugada, "janela-quarto")], contexto, madrugada)
+
+    janela = [Leitura("porta", "sensorState", "alarm", madrugada, "janela-quarto")]
+    assert us07.verificar(janela, contexto, madrugada) == []

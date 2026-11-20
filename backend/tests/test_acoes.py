@@ -18,10 +18,10 @@ class Executor:
 
     def __init__(self, resultado: bool | Exception = True):
         self.resultado = resultado
-        self.chamadas: list[tuple[str, str, str]] = []
+        self.chamadas: list[tuple[str, ...]] = []
 
-    def __call__(self, dispositivo: str, tipo: str, valor: str) -> bool:
-        self.chamadas.append((dispositivo, tipo, valor))
+    def __call__(self, dispositivo: str, tipo: str, valor: str, *id: str) -> bool:
+        self.chamadas.append((dispositivo, tipo, valor, *id))
         if isinstance(self.resultado, Exception):
             raise self.resultado
         return self.resultado
@@ -97,6 +97,15 @@ def test_aceitar_na_us14_desliga_a_tomada(cliente):
     a = _anomalia(us="US14", acao="Desligar o aquecedor")
     assert _decidir(cliente, a, True).status_code == 200
     assert executor.chamadas == [("tomada", "power", "off")]
+
+
+def test_aceitar_muda_o_dispositivo_de_que_a_anomalia_fala(cliente):
+    # Com várias lâmpadas, a regra diz qual (Desvio.dispositivo): a casa apaga essa.
+    executor = _com(Executor(True))
+    a = _anomalia()
+    registar_us(a.id, "US11", "luz-quarto")
+    assert _decidir(cliente, a, True).status_code == 200
+    assert executor.chamadas == [("lampada", "power", "off", "luz-quarto")]
 
 
 @pytest.mark.parametrize("resultado", [False, RuntimeError("MCP em baixo")])

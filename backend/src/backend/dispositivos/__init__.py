@@ -5,8 +5,8 @@
   Um dispositivo que não comunica há mais de SENSOR_SILENCIO_MINUTOS (60) não dá leituras: o MCP
   repetiria o último valor (ex.: a porta "aberta" desde ontem com o kit desligado). As regras tratam
   "sem leitura" como "nada mudou". `em_silencio()` diz quais estão calados e desde quando.
-- `executar(dispositivo, tipo, valor)`: liga/desliga a lâmpada ou a tomada, ou muda o brilho da
-  lâmpada, e confirma lendo o dispositivo de novo. Lembra o comando durante COMANDO_SEGUNDOS:
+- `executar(dispositivo, tipo, valor, id="")`: liga/desliga a lâmpada ou a tomada (a do `id`, ou a
+  desse tipo), ou muda o brilho da lâmpada, e confirma lendo o dispositivo de novo. Lembra o comando durante COMANDO_SEGUNDOS:
   `comandado_ha_pouco(dispositivo, tipo)` deixa as regras ignorar o que a própria casa mudou.
 - `alarme()`: o estado do alarme (`DISARMED`, `STAY` ou `AWAY`), para a casa vazia (US07, US14).
 
@@ -20,7 +20,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Protocol
 
-from backend import contrato, eventos
+from backend import contrato, eventos, inventario
 from backend.formatos import Leitura
 
 from . import mapa, mudancas, simulacao
@@ -122,11 +122,25 @@ def ler(agora: datetime | None = None) -> list[Leitura]:
     with _trinco:
         dados = _obter_cliente().chamar("get_home_devices")
         _ids = mapa.ids(dados)
+        inventario.registar(mapa.descricoes(dados))  # o nome e a divisão dos que não estão no CSV
         _atualizar_calados(mapa.em_silencio(dados, limite) if limite else {})
         leituras = simulacao.aplicar(mapa.para_leituras(dados, em, limite), em)
         _registar_eventos(leituras)
         _ultimas = leituras
+    _classificar_novos()  # fora do trinco: a IA pode demorar
     return leituras
+
+
+def _classificar_novos() -> None:
+    """A IA vê os dispositivos que o MCP trouxe e o inventário ainda não conhece (backend.inventario)."""
+    if not inventario.por_classificar():
+        return
+    from backend.dependencias import obter_modelo_dep  # aqui dentro: só quando há o que classificar
+
+    try:
+        inventario.classificar(obter_modelo_dep())
+    except Exception:  # noqa: BLE001 — a IA nunca pára a leitura da casa; ficam as regras
+        registo.exception("A IA não conseguiu classificar os dispositivos novos")
 
 
 def _atualizar_calados(calados: dict[str, datetime]) -> None:
@@ -147,15 +161,19 @@ def _registar_eventos(leituras: list[Leitura]) -> None:
             registo.exception("Não foi possível registar o evento %s", evento)
 
 
-def executar(dispositivo: str, tipo: str, valor: str | int) -> bool:
-    """Muda o dispositivo e devolve True se, ao lê-lo de novo, tem o valor pedido."""
+def executar(dispositivo: str, tipo: str, valor: str | int, id: str = "") -> bool:
+    """Muda o dispositivo e devolve True se, ao lê-lo de novo, tem o valor pedido.
+
+    `id` é o id do MCP de um dispositivo em concreto (uma de várias lâmpadas); sem ele, é o
+    dispositivo desse tipo que o MCP devolve (o kit tem um de cada).
+    """
     if simulacao.simulado(dispositivo, tipo):  # a válvula da água (US15): o kit não a tem
         return simulacao.executar(dispositivo, tipo, str(valor))
     _validar(dispositivo, tipo, valor)
     with _trinco:
         _comandos[(dispositivo, tipo)] = time.monotonic()
     cliente = _obter_cliente()
-    id_dispositivo = _id(dispositivo)
+    id_dispositivo = id or _id(dispositivo)
     cliente.chamar("update_device_capabilities", {"deviceId": id_dispositivo, "body": {"type": tipo, "value": valor}})
     for tentativa in range(TENTATIVAS):
         if tentativa:

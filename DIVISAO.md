@@ -19,6 +19,7 @@ class Leitura:          # o que a ligação ao MCP produz (e o dataset, no mesmo
     tipo: str           # o type da capability: "sensorState", "temperatureValue", ...
     valor: str | float | bool
     em: datetime        # hora da leitura (do polling), não da mudança
+    id: str = ""        # o id do dispositivo no MCP (vários do mesmo tipo); o nome e a divisão em dados/dispositivos.csv (o papel deduz-se deles)
 
 @dataclass
 class Periodo:          # férias ditas à casa
@@ -67,7 +68,7 @@ contacto_externo.resolvida(anomalia)     # resolvida, pelo responsável ou sozin
                                          # se já houve SMS, envia a de resolvido
 ```
 
-- **Dataset:** ficheiros CSV com as colunas de `Leitura` (`dispositivo,tipo,valor,em`). Cada dono escreve os casos das suas histórias em `dados/usNN.csv`; Vila escreve o histórico de várias semanas em `dados/historico.csv`.
+- **Dataset:** ficheiros CSV com as colunas de `Leitura` (`dispositivo,tipo,valor,em` e, opcional, `id`). Cada dono escreve os casos das suas histórias em `dados/usNN.csv`; Vila escreve o histórico de várias semanas em `dados/historico.csv`.
 - **Base de dados:** um só ficheiro SQLite. Cada pessoa cria as suas tabelas com `CREATE TABLE IF NOT EXISTS` no seu módulo, por isso ninguém espera por um esquema.
 - **Pedidos da API:** cada pessoa escreve os seus num router FastAPI no seu módulo. O contrato entre a PWA e o backend já está fixado em `docs/frontend-design.md` e `frontend/src/types/contract.ts`.
 - **A explicação tem sempre recurso:** se `ia.avaliar()` ainda não existir, ou o modelo falhar na demo, a anomalia mostra o `resumo` do desvio.

@@ -2,30 +2,25 @@
 
 Não tem `verificar()`, por isso o ciclo não o corre como regra: é a US14 que o alimenta.
 
-Há uma câmara por sítio. A do kit (`camara`) está dentro de casa, na divisão CAMARA_DIVISAO
-(`sala` por omissão), como a US09 já a usa para os sinais de vida. As outras chamam-se
-`camara_<divisão>` (ex.: `camara_cozinha`); na demo entram por `/dev/leituras`. A da entrada de
-veículos (`camara_entrada`, US13) está lá fora e não diz se há alguém dentro de casa.
+A divisão de cada câmara vem do inventário (backend.inventario, `dados/dispositivos.csv`), pelo
+id do dispositivo; uma câmara sem id, ou fora do inventário, é a do kit, na sala. Só contam as
+câmaras interiores: uma exterior (a da entrada de veículos, US13) não diz se há alguém dentro de
+casa. Na demo, as câmaras que o kit não tem entram por `/dev/leituras` com o seu id.
 
-Movimento é `motionDetected` com true/on/1. Outro valor não vazio (por exemplo a hora do último
-movimento) conta quando muda em relação ao anterior, como em `sinais.py`: o formato do MCP ainda
-não foi confirmado (a 2026-11-19 vinha vazio).
+O movimento é o de backend.sinais (`sinais.movimento`), a mesma noção para todas as regras.
 """
 
 from __future__ import annotations
 
-import os
 from datetime import datetime
 
+from backend import inventario
 from backend.formatos import Leitura
+from backend.sinais import movimento
 
-CAMARA_DO_KIT = "camara"
-LA_FORA = {"entrada"}  # divisões cujas câmaras estão fora de casa
+__all__ = ["ha_cameras_dentro", "movimento", "onde_desde", "reiniciar", "ultimo_movimento", "ver"]
 
-_VERDADE = {"true", "on", "1", "yes", "sim"}
-_FALSO = {"", "false", "off", "0", "no", "nao", "não", "none"}
-
-_ultimo: dict[str, datetime] = {}  # divisão -> último movimento
+_ultimo: dict[str, datetime] = {}  # divisão ("a sala") -> último movimento
 _anteriores: dict[str, object] = {}  # câmara -> último valor de motionDetected
 _dentro: set[str] = set()  # as câmaras de dentro que já deram leituras
 
@@ -36,45 +31,15 @@ def reiniciar() -> None:
     _dentro.clear()
 
 
-def divisao_da_camara(dispositivo: str) -> str | None:
-    """A divisão de uma câmara de dentro, ou None se não é câmara ou se está lá fora."""
-    if dispositivo == CAMARA_DO_KIT:
-        divisao = os.environ.get("CAMARA_DIVISAO", "").strip().lower() or "sala"
-    elif dispositivo.startswith(CAMARA_DO_KIT + "_"):
-        divisao = dispositivo.removeprefix(CAMARA_DO_KIT + "_").strip().lower()
-    else:
-        return None
-    return None if not divisao or divisao in LA_FORA else divisao
-
-
-def movimento(valor: object, anterior: object) -> bool:
-    if isinstance(valor, bool):
-        return valor
-    if isinstance(valor, (int, float)):
-        return valor != 0
-    if valor is None:
-        return False
-    texto = str(valor).strip().lower()
-    if texto in _VERDADE:
-        return True
-    if texto in _FALSO:
-        return False
-    return valor != anterior  # uma hora, por exemplo: só conta quando muda
-
-
 def ver(leituras: list[Leitura], agora: datetime) -> None:
     """Junta o movimento desta volta ao que se sabe de cada divisão."""
-    for l in leituras:
-        if l.tipo != "motionDetected":
-            continue
-        divisao = divisao_da_camara(l.dispositivo)
-        if divisao is None:
-            continue
-        _dentro.add(l.dispositivo)
-        anterior = _anteriores.get(l.dispositivo)
-        _anteriores[l.dispositivo] = l.valor
+    for l in inventario.com_papel(leituras, "camara", "motionDetected", inventario.INTERIOR):
+        camara = inventario.de(l)
+        _dentro.add(camara.chave)
+        anterior = _anteriores.get(camara.chave)
+        _anteriores[camara.chave] = l.valor
         if movimento(l.valor, anterior):
-            _ultimo[divisao] = agora
+            _ultimo[camara.divisao] = agora
 
 
 def ha_cameras_dentro() -> bool:
@@ -85,7 +50,7 @@ def ha_cameras_dentro() -> bool:
 def ultimo_movimento(divisao: str | None = None) -> datetime | None:
     """O último movimento numa divisão, ou em qualquer divisão de dentro (divisao=None)."""
     if divisao is not None:
-        return _ultimo.get(divisao.lower())
+        return _ultimo.get(divisao)
     return max(_ultimo.values(), default=None)
 
 

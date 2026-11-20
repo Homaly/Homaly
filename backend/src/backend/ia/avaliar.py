@@ -22,6 +22,10 @@ db.esquema(
     CREATE TABLE IF NOT EXISTS anomalia_us (
         anomalia_id TEXT PRIMARY KEY,
         us          TEXT NOT NULL  -- a user story cuja regra gerou a anomalia
+    );
+    CREATE TABLE IF NOT EXISTS anomalia_dispositivo (
+        anomalia_id TEXT PRIMARY KEY,
+        dispositivo TEXT NOT NULL  -- o id do MCP do dispositivo de que a anomalia fala (Desvio.dispositivo)
     )
     """
 )
@@ -103,7 +107,7 @@ def avaliar(
         detetada_em=agora,
         acao_proposta=AcaoProposta(descricao=acao) if acao else None,
     )
-    registar_us(anomalia.id, desvio.us)
+    registar_us(anomalia.id, desvio.us, desvio.dispositivo)
     return anomalia
 
 
@@ -139,13 +143,28 @@ def _acao_possivel(us: str, acao: str | None) -> str | None:
     return acao or conhecida.descricao
 
 
-def registar_us(anomalia_id: str, us: str) -> None:
-    """Regista a user story cuja regra gerou a anomalia (a US02 precisa dela para silenciar)."""
+def registar_us(anomalia_id: str, us: str, dispositivo: str = "") -> None:
+    """Regista a user story cuja regra gerou a anomalia (a US02 precisa dela para silenciar) e,
+    se a regra o disse, o id do dispositivo de que fala (a US03 age sobre esse)."""
     with db.ligar() as con:
         con.execute(
             "INSERT OR REPLACE INTO anomalia_us (anomalia_id, us) VALUES (?, ?)",
             (anomalia_id, us),
         )
+        if dispositivo:
+            con.execute(
+                "INSERT OR REPLACE INTO anomalia_dispositivo (anomalia_id, dispositivo) VALUES (?, ?)",
+                (anomalia_id, dispositivo),
+            )
+
+
+def dispositivo_da_anomalia(anomalia_id: str) -> str:
+    """O id do MCP do dispositivo de que a anomalia fala, ou "" se a regra não o disse."""
+    with db.ligar() as con:
+        linha = con.execute(
+            "SELECT dispositivo FROM anomalia_dispositivo WHERE anomalia_id = ?", (anomalia_id,)
+        ).fetchone()
+    return linha["dispositivo"] if linha else ""
 
 
 def us_da_anomalia(anomalia_id: str) -> str | None:

@@ -12,16 +12,17 @@ database "Base de\ndados" as DB
 end
 participant "Modelo de IA\n(por decidir)" as LLM
 participant "Servidor MCP\nAltice" as MCP
-participant "Lâmpada (sala)\ne sensor de porta" as Kit
+participant "Lâmpada (sala), porta da rua\ne câmaras interiores" as Kit
 
 loop a cada ciclo de leitura
 Disp->MCP: get_home_devices
-MCP-->Disp: lâmpada (power) e porta (sensorState)
-Disp->Motor: estado da lâmpada e da porta
+MCP-->Disp: lâmpada (power), porta (sensorState), câmaras (motionDetected)
+Disp->Motor: estado da lâmpada, da porta e das câmaras
 end
-note over Motor: Lâmpada acesa desde as HH:MM;\ndepois disso, a porta abriu e fechou
+note over Motor: Lâmpada acesa desde as HH:MM;\ndepois disso, a porta da rua abriu e nenhuma câmara\ninterior viu movimento nos cinco minutos seguintes:\na pessoa saiu (sem câmaras: a porta abriu e fechou)
+note over Motor: Movimento na câmara da divisão da luz\ndepois da saída: alguém a usa, não pergunta\n(se já tinha perguntado, o aviso resolve-se)
 
-opt acesa há cinco horas (muito mais do que é costume) e a porta abriu e fechou depois
+opt acesa há cinco horas (muito mais do que é costume) e a pessoa saiu depois
 Motor->IA: eficiência energética: luz acesa há cinco horas
 IA->LLM: desvio + contexto
 LLM-->IA: decisão e pergunta
@@ -30,7 +31,7 @@ IA->Avisos: avisar
 Avisos->API: anomalia nova
 API->>App: WS {tipo: 'anomalia', anomalia}
 App-->R: "esta luz está acesa há cinco horas, ainda estão a usar?"\ncom o botão para apagar
-note right of App: Um só sensor de porta não distingue entrar de sair:\na casa pergunta em vez de afirmar que a pessoa saiu
+note right of App: A saída é uma suposição (as câmaras podem não ver tudo):\na casa pergunta em vez de afirmar que a pessoa saiu
 note over Avisos: Eficiência energética: o contacto externo não recebe nada
 alt aceita apagar
 R->App: toca em "Aceitar"

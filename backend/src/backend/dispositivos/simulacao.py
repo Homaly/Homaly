@@ -5,6 +5,10 @@ Servem para mostrar ao vivo o que não se consegue provocar na sala, como a temp
 
 Os pedidos `/dev/leituras` só existem com `HOMALY_DEV=1` (ver `main.py`), porque não pedem login.
 
+Uma leitura injetada com `id` muda só esse dispositivo, ou cria-o se o kit não o tem (ex.: uma
+janela ou um segundo sensor de temperatura noutra divisão, com o `id` que está no inventário,
+`dados/dispositivos.csv`). Sem `id`, muda todos os dispositivos desse tipo (o kit tem um de cada).
+
 Também guarda os dispositivos que o kit não tem e a casa comanda na demo: a válvula da água
 (US15). Fechá-la põe o caudal a zero até alguém injetar outro (ou limpar as leituras).
 """
@@ -13,7 +17,7 @@ import threading
 from dataclasses import replace
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
 from backend.formatos import Leitura
@@ -21,26 +25,27 @@ from backend.formatos import Leitura
 Valor = str | float | bool
 
 _trinco = threading.Lock()
-_sobrepostas: dict[tuple[str, str], Valor] = {}
+_sobrepostas: dict[tuple[str, str, str], Valor] = {}  # (dispositivo, tipo, id) -> valor; id "" = todos
 
 
-def sobrepor(dispositivo: str, tipo: str, valor: Valor) -> None:
+def sobrepor(dispositivo: str, tipo: str, valor: Valor, id: str = "") -> None:
     global _sobrepostas
-    novas = {(dispositivo, tipo): valor}
+    novas = {(dispositivo, tipo, id): valor}
     a_correr = (dispositivo, tipo) == ("agua", "caudal") and isinstance(valor, (int, float)) and valor > 0
     with _trinco:
-        if a_correr and _sobrepostas.get(("agua", "valvula")) == "fechada":
-            novas[("agua", "valvula")] = "aberta"  # a água voltou a correr: a válvula foi aberta
+        if a_correr and _sobrepostas.get(("agua", "valvula", "")) == "fechada":
+            novas[("agua", "valvula", "")] = "aberta"  # a água voltou a correr: a válvula foi aberta
         _sobrepostas = {**_sobrepostas, **novas}
 
 
-def remover(dispositivo: str, tipo: str) -> bool:
+def remover(dispositivo: str, tipo: str, id: str = "") -> bool:
     """Remove uma leitura injetada; False se não existia."""
     global _sobrepostas
+    chave = (dispositivo, tipo, id)
     with _trinco:
-        if (dispositivo, tipo) not in _sobrepostas:
+        if chave not in _sobrepostas:
             return False
-        _sobrepostas = {k: v for k, v in _sobrepostas.items() if k != (dispositivo, tipo)}
+        _sobrepostas = {k: v for k, v in _sobrepostas.items() if k != chave}
         return True
 
 
@@ -68,22 +73,34 @@ def limpar() -> None:
         _sobrepostas = {}
 
 
-def listar() -> dict[tuple[str, str], Valor]:
+def listar() -> dict[tuple[str, str, str], Valor]:
     with _trinco:
         return dict(_sobrepostas)
 
 
 def aplicar(leituras: list[Leitura], em: datetime) -> list[Leitura]:
-    """As leituras com as injetadas por cima; as que não existiam são acrescentadas."""
+    """As leituras com as injetadas por cima; as que não existiam são acrescentadas.
+
+    A injetada com o id do dispositivo ganha à injetada sem id (que vale para todos desse tipo).
+    """
     sobrepostas = listar()
     if not sobrepostas:
         return leituras
-    resultado = [
-        replace(l, valor=sobrepostas[(l.dispositivo, l.tipo)]) if (l.dispositivo, l.tipo) in sobrepostas else l
-        for l in leituras
+
+    def por_cima(l: Leitura) -> Leitura:
+        for chave in ((l.dispositivo, l.tipo, l.id), (l.dispositivo, l.tipo, "")):
+            if chave in sobrepostas:
+                return replace(l, valor=sobrepostas[chave])
+        return l
+
+    resultado = [por_cima(l) for l in leituras]
+    com_id = {(l.dispositivo, l.tipo, l.id) for l in leituras}
+    sem_id = {(l.dispositivo, l.tipo) for l in leituras}
+    novas = [
+        Leitura(d, t, v, em, i)
+        for (d, t, i), v in sobrepostas.items()
+        if (i and (d, t, i) not in com_id) or (not i and (d, t) not in sem_id)
     ]
-    existentes = {(l.dispositivo, l.tipo) for l in leituras}
-    novas = [Leitura(d, t, v, em) for (d, t), v in sobrepostas.items() if (d, t) not in existentes]
     return resultado + novas
 
 
@@ -91,6 +108,7 @@ class LeituraInjetada(BaseModel):
     dispositivo: str = Field(min_length=1, max_length=40)  # "temperatura", "porta", ...
     tipo: str = Field(min_length=1, max_length=60)  # "temperatureValue", "sensorState", ...
     valor: bool | float | str  # bool primeiro, para "true" não virar 1.0
+    id: str = Field(default="", max_length=60)  # um só dispositivo (ver dados/dispositivos.csv); "" = todos
 
 
 router = APIRouter(prefix="/dev/leituras", tags=["dev"])
@@ -98,12 +116,12 @@ router = APIRouter(prefix="/dev/leituras", tags=["dev"])
 
 @router.get("")
 def pedir_lista() -> list[LeituraInjetada]:
-    return [LeituraInjetada(dispositivo=d, tipo=t, valor=v) for (d, t), v in listar().items()]
+    return [LeituraInjetada(dispositivo=d, tipo=t, valor=v, id=i) for (d, t, i), v in listar().items()]
 
 
 @router.post("")
 def pedir_sobrepor(leitura: LeituraInjetada) -> LeituraInjetada:
-    sobrepor(leitura.dispositivo, leitura.tipo, leitura.valor)
+    sobrepor(leitura.dispositivo, leitura.tipo, leitura.valor, leitura.id)
     return leitura
 
 
@@ -114,7 +132,7 @@ def pedir_limpar() -> Response:
 
 
 @router.delete("/{dispositivo}/{tipo}", status_code=204)
-def pedir_remover(dispositivo: str, tipo: str) -> Response:
-    if not remover(dispositivo, tipo):
+def pedir_remover(dispositivo: str, tipo: str, id: str = Query(default="", max_length=60)) -> Response:
+    if not remover(dispositivo, tipo, id):
         raise HTTPException(404, "Essa leitura não está injetada")
     return Response(status_code=204)

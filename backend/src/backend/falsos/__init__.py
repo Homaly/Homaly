@@ -19,7 +19,8 @@ def _log(texto: str) -> None:
     print(f"[falso] {texto}")
 
 
-# dispositivos.ler(): as leituras de um CSV (colunas dispositivo,tipo,valor,em).
+# dispositivos.ler(): as leituras de um CSV (colunas dispositivo,tipo,valor,em e, opcional, id: o id do
+# dispositivo no inventário, dados/dispositivos.csv, para casas com várias janelas ou câmaras).
 def _valor(texto: str) -> str | float | bool:
     if texto.lower() in ("true", "false"):
         return texto.lower() == "true"
@@ -33,7 +34,7 @@ def ler_csv(caminho: str) -> Iterator[tuple[datetime, list[Leitura]]]:
     """Um lote por hora 'em', pela ordem do ficheiro: cada lote faz de um polling."""
     with open(caminho, newline="", encoding="utf-8") as f:
         leituras = [
-            Leitura(l["dispositivo"], l["tipo"], _valor(l["valor"]), datetime.fromisoformat(l["em"]))
+            Leitura(l["dispositivo"], l["tipo"], _valor(l["valor"]), datetime.fromisoformat(l["em"]), l.get("id") or "")
             for l in csv.DictReader(f)
         ]
     for em, lote in groupby(leituras, key=lambda l: l.em):

@@ -2,6 +2,7 @@
 
 import copy
 import json
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 
@@ -9,7 +10,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from backend import dispositivos, eventos
+from backend import dispositivos, eventos, inventario
 from backend.dispositivos import simulacao
 from backend.dispositivos.mcp import ErroDispositivos
 from backend.formatos import Leitura
@@ -93,8 +94,12 @@ def falso(monkeypatch):
 # ler()
 
 
+def sem_id(leituras: list[Leitura]) -> list[Leitura]:
+    return [replace(l, id="") for l in leituras]
+
+
 def test_ler_faz_um_so_pedido_e_devolve_leituras(falso):
-    leituras = dispositivos.ler(AGORA)
+    leituras = sem_id(dispositivos.ler(AGORA))
 
     assert falso.chamadas == [("get_home_devices", {})]
     assert Leitura("porta", "sensorState", "alarm", AGORA) in leituras
@@ -172,7 +177,7 @@ def test_dispositivo_calado_ha_mais_de_uma_hora_nao_da_leituras(falso):
 def test_dispositivo_calado_ha_menos_de_uma_hora_conta(falso):
     falso.casa = comunicou_em(falso.casa, AGORA - timedelta(minutes=50), "bulb")
 
-    assert any(l.dispositivo == "lampada" for l in dispositivos.ler(AGORA))
+    assert any(l.dispositivo == "lampada" for l in sem_id(dispositivos.ler(AGORA)))
 
 
 def test_em_silencio_diz_que_dispositivos_estao_calados_e_desde_quando(falso):
@@ -195,14 +200,14 @@ def test_limite_do_silencio_configuravel(falso, monkeypatch):
     monkeypatch.setenv("SENSOR_SILENCIO_MINUTOS", "10")
     falso.casa = comunicou_em(falso.casa, AGORA - timedelta(minutes=15), "bulb")
 
-    assert not any(l.dispositivo == "lampada" for l in dispositivos.ler(AGORA))
+    assert not any(l.dispositivo == "lampada" for l in sem_id(dispositivos.ler(AGORA)))
 
 
 def test_limite_zero_desliga_o_filtro(falso, monkeypatch):
     monkeypatch.setenv("SENSOR_SILENCIO_MINUTOS", "0")
     falso.casa = comunicou_em(falso.casa, AGORA - timedelta(days=13), "bulb")
 
-    assert any(l.dispositivo == "lampada" for l in dispositivos.ler(AGORA))
+    assert any(l.dispositivo == "lampada" for l in sem_id(dispositivos.ler(AGORA)))
 
 
 def test_limite_invalido_diz_qual(falso, monkeypatch):
@@ -217,7 +222,7 @@ def test_leitura_injetada_aparece_mesmo_com_o_sensor_calado(falso):
     falso.casa = comunicou_em(falso.casa, AGORA - timedelta(hours=8), "temperatureSensor")
     simulacao.sobrepor("temperatura", "temperatureValue", 15.0)
 
-    assert Leitura("temperatura", "temperatureValue", 15.0, AGORA) in dispositivos.ler(AGORA)
+    assert Leitura("temperatura", "temperatureValue", 15.0, AGORA) in sem_id(dispositivos.ler(AGORA))
 
 
 def test_sensor_calado_nao_gera_eventos(falso):
@@ -244,7 +249,7 @@ def test_executar_encontra_um_dispositivo_calado(falso):
 def test_leitura_injetada_sobrepoe_a_real(falso):
     simulacao.sobrepor("temperatura", "temperatureValue", 15.0)
 
-    leituras = dispositivos.ler(AGORA)
+    leituras = sem_id(dispositivos.ler(AGORA))
 
     assert Leitura("temperatura", "temperatureValue", 15.0, AGORA) in leituras
     assert Leitura("temperatura", "temperatureValue", 23.1, AGORA) not in leituras
@@ -253,14 +258,32 @@ def test_leitura_injetada_sobrepoe_a_real(falso):
 def test_leitura_injetada_que_nao_existe_e_acrescentada(falso):
     simulacao.sobrepor("porta", "novo", "x")
 
-    assert Leitura("porta", "novo", "x", AGORA) in dispositivos.ler(AGORA)
+    assert Leitura("porta", "novo", "x", AGORA) in sem_id(dispositivos.ler(AGORA))
+
+
+def test_leitura_injetada_com_id_muda_so_esse_dispositivo(falso):
+    real = next(l for l in dispositivos.ler(AGORA) if l.tipo == "temperatureValue")
+    simulacao.sobrepor("temperatura", "temperatureValue", 15.0, real.id)
+
+    assert Leitura("temperatura", "temperatureValue", 15.0, AGORA, real.id) in dispositivos.ler(AGORA)
+
+
+def test_leitura_injetada_com_id_novo_acrescenta_um_dispositivo(falso):
+    # Ex.: um segundo sensor de temperatura, no quarto, que o kit não tem.
+    simulacao.sobrepor("temperatura", "temperatureValue", 19.0, "temperatura-quarto")
+
+    temperaturas = [l for l in dispositivos.ler(AGORA) if l.tipo == "temperatureValue"]
+
+    assert len(temperaturas) == 2
+    assert Leitura("temperatura", "temperatureValue", 19.0, AGORA, "temperatura-quarto") in temperaturas
+    assert any(l.valor == 23.1 for l in temperaturas)
 
 
 def test_remover_leitura_injetada_volta_a_real(falso):
     simulacao.sobrepor("temperatura", "temperatureValue", 15.0)
     simulacao.remover("temperatura", "temperatureValue")
 
-    assert Leitura("temperatura", "temperatureValue", 23.1, AGORA) in dispositivos.ler(AGORA)
+    assert Leitura("temperatura", "temperatureValue", 23.1, AGORA) in sem_id(dispositivos.ler(AGORA))
 
 
 def test_porta_injetada_gera_evento(falso):
@@ -279,11 +302,17 @@ def test_pedidos_dev_das_leituras():
 
     r = api.post("/dev/leituras", json={"dispositivo": "temperatura", "tipo": "temperatureValue", "valor": 15})
     assert r.status_code == 200
-    assert api.get("/dev/leituras").json() == [{"dispositivo": "temperatura", "tipo": "temperatureValue", "valor": 15}]
+    assert api.get("/dev/leituras").json() == [
+        {"dispositivo": "temperatura", "tipo": "temperatureValue", "valor": 15, "id": ""}
+    ]
 
     assert api.delete("/dev/leituras/temperatura/temperatureValue").status_code == 204
     assert api.get("/dev/leituras").json() == []
     assert api.delete("/dev/leituras/temperatura/temperatureValue").status_code == 404
+
+    api.post("/dev/leituras", json={"dispositivo": "porta", "tipo": "sensorState", "valor": "alarm", "id": "janela-quarto"})
+    assert api.delete("/dev/leituras/porta/sensorState").status_code == 404  # só a da janela existe
+    assert api.delete("/dev/leituras/porta/sensorState?id=janela-quarto").status_code == 204
 
     api.post("/dev/leituras", json={"dispositivo": "porta", "tipo": "sensorState", "valor": "alarm"})
     assert api.delete("/dev/leituras").status_code == 204
@@ -299,6 +328,47 @@ def test_pedido_dev_recusa_dispositivo_vazio():
     assert r.status_code == 422
 
 
+def test_ler_regista_os_dispositivos_que_nao_estao_no_inventario(falso):
+    # Uma janela que o kit não tem, com o nome e a divisão que o MCP lhe dá.
+    casa = copy.deepcopy(falso.casa)
+    janela = copy.deepcopy(next(d for d in casa["devices"] if d["type"] == "contactSensor"))
+    janela.update(id="janela-nova", name="Janela da cozinha", roomName="Cozinha")
+    casa["devices"].append(janela)
+    falso.casa = casa
+
+    leituras = dispositivos.ler(AGORA)
+
+    [lida] = [l for l in leituras if l.id == "janela-nova" and l.tipo == "sensorState"]
+    assert inventario.de(lida) == inventario.Dispositivo("janela-nova", "Janela da cozinha", "a cozinha", "janela")
+    assert inventario.origem("janela-nova") == "mcp"
+
+
+def test_ler_pede_a_ia_os_dispositivos_novos(falso, monkeypatch):
+    from backend import dependencias
+
+    class IA:
+        chamadas = 0
+
+        def completar_json(self, sistema, mensagem):
+            IA.chamadas += 1
+            return {"dispositivos": [{"id": "janela-nova", "nome": "Janela da cozinha", "divisao": "a cozinha", "papel": "janela"}]}
+
+    monkeypatch.setattr(dependencias, "obter_modelo_dep", lambda: IA())
+    casa = copy.deepcopy(falso.casa)
+    janela = copy.deepcopy(next(d for d in casa["devices"] if d["type"] == "contactSensor"))
+    janela.update(id="janela-nova", name="Kitchen window", roomName="Kitchen")
+    casa["devices"].append(janela)
+    falso.casa = casa
+
+    dispositivos.ler(AGORA)
+    dispositivos.ler(AGORA)
+
+    assert IA.chamadas == 1  # só os novos, uma vez
+    assert inventario.origem("janela-nova") == "ia"
+    lida = Leitura("porta", "sensorState", "alarm", AGORA, "janela-nova")
+    assert inventario.de(lida) == inventario.Dispositivo("janela-nova", "Janela da cozinha", "a cozinha", "janela")
+
+
 # executar()
 
 
@@ -307,6 +377,15 @@ def test_apagar_a_lampada_e_confirmar(falso):
 
     assert dispositivos.executar("lampada", "power", "off") is True
     assert ("update_device_capabilities", {"deviceId": LAMPADA, "body": {"type": "power", "value": "off"}}) in falso.chamadas
+
+
+def test_apagar_uma_lampada_em_concreto_pelo_id(falso):
+    # Com várias lâmpadas, a ação leva o id da que está no aviso (Desvio.dispositivo).
+    falso.detalhes["luz-quarto"] = [detalhes("power", "off")]
+
+    assert dispositivos.executar("lampada", "power", "off", "luz-quarto") is True
+    assert ("update_device_capabilities", {"deviceId": "luz-quarto", "body": {"type": "power", "value": "off"}}) in falso.chamadas
+    assert ("get_home_devices", {}) not in falso.chamadas  # não precisa de procurar o id pelo tipo
 
 
 def test_desligar_a_tomada(falso):

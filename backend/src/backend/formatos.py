@@ -17,6 +17,9 @@ class Leitura:
     tipo: str  # o type da capability: "sensorState", "temperatureValue", ...
     valor: str | float | bool
     em: datetime  # hora da leitura (do polling), não da mudança
+    # O id do dispositivo no MCP. Vazio nos CSV e nas leituras injetadas sem id: é "o" dispositivo
+    # desse tipo. A divisão e o papel de cada um estão no inventário (backend.inventario).
+    id: str = ""
 
 
 @dataclass
@@ -76,6 +79,9 @@ class Desvio:
     resumo: str  # os factos, em português simples
     habitual: str | None
     imediato: bool = False  # casa vazia: alerta já, a IA não decide
+    # O id do MCP do dispositivo de que o desvio fala (ex.: a lâmpada da US11), quando a regra o
+    # sabe: a ação da US03 muda esse dispositivo, e não "o" dispositivo desse tipo. "" sem id.
+    dispositivo: str = ""
 
 
 @dataclass(frozen=True)

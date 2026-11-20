@@ -12,13 +12,14 @@ database "Base de\ndados" as DB
 end
 participant "Modelo de IA\n(por decidir)" as LLM
 participant "Servidor MCP\nAltice" as MCP
-participant "Porta da rua e sensor\nde temperatura (sala)" as Kit
+participant "Porta da rua, janelas e sensores\nde temperatura (várias divisões)" as Kit
 
-Kit->MCP: a porta abre
+note over Motor: Cada porta ou janela tem o seu estado;\na divisão de cada uma vem do inventário\n(dados/dispositivos.csv)
+Kit->MCP: a porta (ou uma janela) abre
 Disp->MCP: get_home_devices (ciclo de leitura)
-MCP-->Disp: porta: alarm; temperatura T0
-Disp->Motor: a porta abriu; temperatura T0
-Motor->DB: guardar T0, a temperatura no momento em que a porta abriu
+MCP-->Disp: abertura: alarm; temperatura de cada divisão
+Disp->Motor: a abertura abriu; T0 da sua divisão e R0 das outras
+Motor->DB: guardar T0 e R0, no momento em que abriu
 
 loop a cada ciclo de leitura, enquanto a porta está aberta
 Disp->MCP: get_home_devices
@@ -26,7 +27,7 @@ MCP-->Disp: porta e temperatura
 Disp->Motor: leituras atuais
 end
 
-opt a temperatura desceu dois graus desde que a porta abriu
+opt a divisão desceu dois graus desde que abriu, e pelo menos 1 °C mais do que as outras divisões\n(sem sensores noutras divisões, não há comparação; se a casa toda arrefece, não avisa)
 Motor->DB: já há aviso desta abertura?
 DB-->Motor: resposta
 alt já há o aviso de porta esquecida aberta (US08)

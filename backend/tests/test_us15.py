@@ -109,3 +109,90 @@ def test_limites_vem_do_ambiente(monkeypatch):
     contexto = Contexto([], [], [], False)
     us15.verificar(_ler(5, 9), contexto, datetime(2026, 11, 18, 9))
     assert us15.verificar(_ler(5, 9, 2), contexto, datetime(2026, 11, 18, 9, 2))[0].classe == "eficiencia"
+
+
+# Com o resto da casa: a saída de casa e os sinais de vida
+
+
+def _casa(caudal: float, h: int, m: int = 0, porta: str = "normal", movimento: str = "", luz: str = "off"):
+    em = datetime(2026, 11, 18, h, m)
+    leituras = [
+        Leitura("agua", "caudal", caudal, em),
+        Leitura("porta", "sensorState", porta, em),
+        Leitura("camara", "motionDetected", movimento, em),
+        Leitura("lampada", "power", luz, em),
+    ]
+    return us15.verificar(leituras, Contexto([], [], [], False), em)
+
+
+@pytest.fixture
+def limpo(monkeypatch):
+    for variavel in ("SAIDA_MINUTOS", "AGUA_SINAIS_MINUTOS", "AGUA_MINUTOS"):
+        monkeypatch.delenv(variavel, raising=False)
+    us15.reiniciar()
+
+
+@pytest.mark.usefixtures("limpo")
+def test_sairam_com_a_agua_a_correr():
+    _casa(6, 18, 0, movimento="")
+    _casa(6, 18, 5, movimento="18:05")
+    _casa(6, 18, 10, porta="alarm", movimento="18:05")
+    assert _casa(6, 18, 12, movimento="18:05") == []
+
+    [desvio] = _casa(6, 18, 15, movimento="18:05")  # cinco minutos sem movimento: saíram
+    assert desvio.classe == "eficiencia"
+    assert not desvio.imediato
+    assert desvio.resumo == (
+        "A água está a correr desde as 18:00 e parece que saíram de casa às 18:10: a porta da rua abriu "
+        "e as câmaras não viram ninguém a seguir. Uma torneira pode ter ficado aberta."
+    )
+    assert _casa(6, 19, 30, movimento="18:05") == [desvio]  # a hora a correr não muda o aviso
+
+
+@pytest.mark.usefixtures("limpo")
+def test_a_porta_aberta_antes_da_agua_correr_nao_conta():
+    _casa(0, 17, 50)
+    _casa(0, 17, 55, porta="alarm")
+    _casa(6, 17, 58, movimento="17:58")  # a água começa com alguém em casa
+
+    assert _casa(6, 18, 5, movimento="17:58") == []
+
+
+@pytest.mark.usefixtures("limpo")
+def test_agua_a_correr_sem_sinais_de_vida_e_de_bem_estar():
+    _casa(8, 7, 0)
+    assert _casa(8, 7, 29) == []
+
+    [desvio] = _casa(8, 7, 30)
+    assert desvio.classe == "bem_estar"
+    assert desvio.resumo == (
+        "A água está a correr desde as 07:00 e, desde então, não houve nenhum sinal de vida em casa. "
+        "Pode ter acontecido alguma coisa a quem está no banho."
+    )
+    # Passa a hora: o aviso não desce para eficiência.
+    assert _casa(8, 8, 5) == [desvio]
+
+
+@pytest.mark.usefixtures("limpo")
+def test_um_sinal_de_vida_com_a_agua_a_correr_nao_e_bem_estar():
+    _casa(8, 7, 0)
+    _casa(8, 7, 10, luz="on")
+
+    assert _casa(8, 7, 30, luz="on") == []
+
+
+@pytest.mark.usefixtures("limpo")
+def test_um_fio_de_agua_sem_sinais_nao_e_bem_estar_e_diz_que_ninguem_mexeu():
+    _casa(0.5, 2, 0)
+    assert _casa(0.5, 2, 40) == []
+
+    [desvio] = _casa(0.5, 3, 0)
+    assert desvio.classe == "eficiencia"
+    assert desvio.resumo.endswith("Pode ser um autoclismo ou uma torneira a pingar. Ninguém mexeu na casa desde então.")
+
+
+@pytest.mark.usefixtures("limpo")
+def test_sem_dispositivos_que_dao_sinais_de_vida_nao_ha_bem_estar():
+    us15.verificar(_ler(8, 7), Contexto([], [], [], False), datetime(2026, 11, 18, 7))
+
+    assert us15.verificar(_ler(8, 7, 40), Contexto([], [], [], False), datetime(2026, 11, 18, 7, 40)) == []

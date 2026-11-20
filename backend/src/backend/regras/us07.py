@@ -1,7 +1,7 @@
 """US07: a porta abriu a uma hora anormal, ou com a casa vazia (Segurança).
 
-Só conta a passagem da porta de fechada (normal) a aberta (alarm), por isso cada
-abertura é uma ocorrência. A anomalia só se resolve com a resposta do responsável
+Só conta a passagem da porta da rua de fechada (normal) a aberta (alarm), por isso cada
+abertura é uma ocorrência. As janelas (backend.inventario) não contam. A anomalia só se resolve com a resposta do responsável
 (SO_COM_RESPOSTA, no ciclo).
 
 - Casa vazia (férias ditas à casa): qualquer abertura é imediata, mesmo à hora de uma
@@ -15,27 +15,23 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from backend import habitual
+from backend import habitual, inventario
 from backend.formatos import Contexto, Desvio, Leitura
 from backend.regras import casa_vazia, com_a_casa_vazia, explicado_por_rotina
 
-_anterior: str | None = None  # o último estado visto da porta
+_anteriores: dict[str, object] = {}  # o último estado visto de cada porta da rua
 
 
 def reiniciar() -> None:
-    global _anterior
-    _anterior = None
+    _anteriores.clear()
 
 
 def verificar(leituras: list[Leitura], contexto: Contexto, agora: datetime) -> list[Desvio]:
-    global _anterior
-    estado = next(
-        (l.valor for l in leituras if l.dispositivo == "porta" and l.tipo == "sensorState"), None
-    )
-    if estado is None:
-        return []
-    abriu = estado == "alarm" and _anterior == "normal"
-    _anterior = estado
+    abriu = False
+    for l in inventario.com_papel(leituras, "porta", "sensorState", inventario.PORTA_DA_RUA):
+        chave = inventario.chave(l)
+        abriu = abriu or (l.valor == "alarm" and _anteriores.get(chave) == "normal")
+        _anteriores[chave] = l.valor
     if not abriu:
         return []
 

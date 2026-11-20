@@ -12,9 +12,9 @@ database "Base de\ndados" as DB
 end
 participant "Modelo de IA\n(por decidir)" as LLM
 participant "Servidor MCP\nAltice" as MCP
-participant "Câmara, lâmpada,\ntomada e porta" as Sens
+participant "Câmaras interiores, lâmpada,\ntomada e porta da rua" as Sens
 
-note over Motor,DB: Sinal de vida: movimento ou som na câmara, a lâmpada mexida,\na tomada a começar a gastar ou a porta a abrir.\nNa demo, o histórico vem do dataset simulado e o relógio é acelerado.
+note over Motor,DB: Sinal de vida: movimento ou som numa câmara interior, a lâmpada mexida,\na tomada a começar a gastar ou a porta da rua a abrir (as câmaras exteriores e as janelas não contam).\nNa demo, o histórico vem do dataset simulado e o relógio é acelerado.
 
 loop a cada ciclo de leitura
 Disp->MCP: get_home_devices
@@ -32,10 +32,10 @@ Motor->IA: bem-estar e rotina: nenhum sinal de vida esta manhã, e o último vis
 else a atividade parou
 Motor->DB: há atividade habitual a esta hora?
 DB-->Motor: sim (histórico)
-Motor->Motor: três horas sem sinais, e o último não foi a porta (a pessoa deve estar em casa)
+Motor->Motor: três horas sem sinais, e a pessoa não saiu (a pessoa deve estar em casa)
 Motor->IA: bem-estar e rotina: a atividade parou, com a hora e o tipo do último sinal
 end
-note over Motor: Não há desvio se o último sinal foi a porta (a pessoa pode ter saído),\nse é uma hora sem atividade habitual (a dormir),\nse a casa devia estar vazia (férias) ou se nenhum dispositivo comunica
+note over Motor: Não há desvio se a pessoa saiu (a porta da rua abriu e nenhuma câmara interior\nviu movimento nos cinco minutos seguintes; sem câmaras, se o último sinal foi a porta),\nse é uma hora sem atividade habitual (a dormir),\nse a casa devia estar vazia (férias) ou se nenhum dispositivo comunica
 
 IA->DB: histórico e o que foi dito na conversa
 DB-->IA: contexto
@@ -61,4 +61,4 @@ Avisos->API: a anomalia mudou
 API->>App: WS {tipo: 'anomalia', anomalia} (estado: resolvida)
 ref over Avisos: SMS de resolvido, se o contacto externo já tinha sido avisado (US05)
 end
-note over MCP,Sens: A câmara tem de estar dentro de casa.\nO formato de motionDetected com movimento ainda não foi confirmado.
+note over MCP,Sens: Pelo menos uma câmara tem de estar dentro de casa.\nO formato de motionDetected com movimento ainda não foi confirmado.
