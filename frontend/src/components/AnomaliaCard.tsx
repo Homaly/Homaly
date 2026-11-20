@@ -4,12 +4,15 @@ import { pt } from 'date-fns/locale';
 import type { Anomalia, Classe } from '../types/contract';
 import Icone, { type NomeIcone } from './Icone';
 
-/** As classes distinguem-se pelo ícone e pelo nome, não pela cor: a cor fica para o estado (erro, atenção, resolvido). */
-export const CLASSES: Record<Classe, { nome: string; icon: NomeIcone }> = {
-  seguranca: { nome: 'Segurança', icon: 'shield' },
-  bem_estar: { nome: 'Bem-estar e rotina', icon: 'favorite' },
-  saude_conforto: { nome: 'Saúde e conforto', icon: 'thermostat' },
-  eficiencia: { nome: 'Eficiência energética', icon: 'bolt' },
+/**
+ * As classes distinguem-se pelo ícone e pelo nome, não pela cor: a cor fica para o estado (erro, atenção, resolvido).
+ * `urgencia` ordena o Início (1 primeiro): segurança e bem-estar são as que chegam ao contacto externo.
+ */
+export const CLASSES: Record<Classe, { nome: string; icon: NomeIcone; urgencia: number }> = {
+  seguranca: { nome: 'Segurança', icon: 'shield', urgencia: 1 },
+  bem_estar: { nome: 'Bem-estar e rotina', icon: 'favorite', urgencia: 2 },
+  saude_conforto: { nome: 'Saúde e conforto', icon: 'thermostat', urgencia: 3 },
+  eficiencia: { nome: 'Eficiência energética', icon: 'bolt', urgencia: 4 },
 };
 
 export function ClasseBadge({ classe }: { classe: Classe }) {

@@ -3,7 +3,8 @@ import { useRealtimeLigado } from '../context/RealtimeContext';
 import Topbar from './Topbar';
 
 type LayoutProps = {
-  title: string;
+  /** Sem título, a barra de topo fica só com a seta (ver Topbar). */
+  title?: string;
   showBack?: boolean;
   children: ReactNode;
 };
@@ -19,7 +20,8 @@ export default function Layout({ title, showBack, children }: LayoutProps) {
           Sem ligação em tempo real. A tentar novamente…
         </div>
       )}
-      <main className="flex-1 px-5 pt-2 pb-24">{children}</main>
+      {/* Coluna flex: deixa a Conversa encostar as mensagens à caixa de texto, em baixo. */}
+      <main className="flex flex-1 flex-col px-5 pt-2 pb-24">{children}</main>
     </div>
   );
 }

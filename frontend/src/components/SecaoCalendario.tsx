@@ -5,6 +5,7 @@ import { useCalendario, useSincronizarCalendario } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
 import type { Calendario } from '../types/contract';
 import Botao from './Botao';
+import Grupo from './Grupo';
 import Icone from './Icone';
 
 const ligar = () => window.location.assign(api.urlLigarCalendario());
@@ -41,14 +42,14 @@ function Ligado({ calendario }: { calendario: Calendario }) {
           <p role="alert" className="text-sm text-danger">
             {calendario.erro}
           </p>
-          <Botao largo onClick={ligar}>
+          <Botao largo variante="contorno" onClick={ligar}>
             <Icone nome="calendar" className="size-5" />
             Ligar outra vez
           </Botao>
         </div>
       )}
-      <div className="rounded-2xl bg-surface-container p-4 space-y-2">
-        <h3 className="font-semibold">O que a casa sabe pelo calendário</h3>
+      <div className="space-y-2 border-t border-outline-variant pt-4">
+        <h3 className="text-sm font-semibold">O que a casa sabe pelo calendário</h3>
         {calendario.itens.length === 0 ? (
           <p className="text-sm text-muted">Nada por agora: não há férias, rotinas nem compromissos à vista.</p>
         ) : (
@@ -89,8 +90,9 @@ function PorLigar({ configurado }: { configurado: boolean }) {
   if (!configurado) {
     return <p className="text-sm text-muted">A ligação ao Google Calendar ainda não está configurada nesta casa.</p>;
   }
+  // Contorno, não turquesa: o botão principal das Definições é o Guardar.
   return (
-    <Botao largo onClick={ligar}>
+    <Botao largo variante="contorno" onClick={ligar}>
       <Icone nome="calendar" className="size-5" />
       Ligar ao Google Calendar
     </Botao>
@@ -103,13 +105,9 @@ export default function SecaoCalendario() {
   const { data, isPending, isError } = useCalendario();
 
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="text-xl font-semibold">Calendário</h2>
-        <p className="text-sm text-muted">A casa fica a saber das suas férias e rotinas sem ter de as dizer.</p>
-      </div>
+    <Grupo titulo="Calendário" nota="A casa fica a saber das suas férias e rotinas sem ter de as dizer.">
       {isPending ? (
-        <div className="h-12 motion-safe:animate-pulse rounded-full bg-surface-container" aria-label="A carregar" />
+        <div className="h-12 motion-safe:animate-pulse rounded-full bg-surface-tonal" aria-label="A carregar" />
       ) : isError ? (
         <p className="text-sm text-danger">Não foi possível saber se o calendário está ligado.</p>
       ) : data.ligado ? (
@@ -117,6 +115,6 @@ export default function SecaoCalendario() {
       ) : (
         <PorLigar configurado={data.configurado} />
       )}
-    </section>
+    </Grupo>
   );
 }

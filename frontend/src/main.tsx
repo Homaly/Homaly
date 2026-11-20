@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
+import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { RealtimeProvider } from './context/RealtimeContext';
 import './index.css';
@@ -18,11 +19,13 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <RealtimeProvider>
-          <App />
-        </RealtimeProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <RealtimeProvider>
+            <App />
+          </RealtimeProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>
 );

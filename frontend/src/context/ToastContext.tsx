@@ -41,10 +41,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
+      {/* Por cima da barra de baixo (64 px) ou do que a página fixou no fundo (useReservarFundo). */}
       <div
         role="status"
         aria-live="polite"
-        className="fixed bottom-20 inset-x-0 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none"
+        className="fixed bottom-[calc(var(--fundo-ocupado,4rem)+1rem)] inset-x-0 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none"
       >
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />

@@ -1,7 +1,13 @@
 import Layout from '../components/Layout';
-import AnomaliaCard from '../components/AnomaliaCard';
+import AnomaliaCard, { CLASSES } from '../components/AnomaliaCard';
 import { EstadoCarregar, EstadoErro, EstadoVazio } from '../components/Estados';
 import { useAnomaliasAtivas } from '../api/hooks';
+import type { Anomalia } from '../types/contract';
+
+/** Mais urgentes primeiro; na mesma classe, a mais recente primeiro. */
+const porUrgencia = (a: Anomalia, b: Anomalia) =>
+  CLASSES[a.classe].urgencia - CLASSES[b.classe].urgencia ||
+  new Date(b.detetadaEm).getTime() - new Date(a.detetadaEm).getTime();
 
 export default function Inicio() {
   const { data, isPending, isError, refetch } = useAnomaliasAtivas();
@@ -24,7 +30,8 @@ export default function Inicio() {
           <h2 className="text-xl font-semibold">
             {data.length === 1 ? '1 coisa por responder' : `${data.length} coisas por responder`}
           </h2>
-          {data.map(a => (
+          {/* Por urgência e não só por hora: um alerta de segurança não fica abaixo de uma luz acesa. */}
+          {[...data].sort(porUrgencia).map(a => (
             <AnomaliaCard key={a.id} anomalia={a} />
           ))}
         </section>
