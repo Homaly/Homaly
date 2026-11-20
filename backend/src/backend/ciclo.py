@@ -49,16 +49,17 @@ registo = logging.getLogger(__name__)
 Regra = Callable[[list[Leitura], Contexto, datetime], list[Desvio | Resolucao]]
 
 # Histórias cuja anomalia só se resolve com a resposta do responsável.
-SO_COM_RESPOSTA = {"US07"}
+SO_COM_RESPOSTA = {"US07", "US13"}
 
 # Histórias que não se reconstroem depois de um reinício: a US07 só dispara num momento (a
-# abertura) e não volta a ver o mesmo desvio, por isso não duplica. Reconstruí-la engolia o
+# abertura) e não volta a ver o mesmo desvio, por isso não duplica; a US13 também (o veículo
+# visto ao fim de dois minutos). Reconstruí-la engolia o
 # desvio seguinte (a madrugada da noite seguinte). A US09 guarda o estado em SQLite: depois de um
 # reinício volta a ver o mesmo desvio e fecha-o com o sinal seguinte, por isso reconstrói-se, mas só
 # se a regra tiver um desvio pendente (`us09.tem_pendente`, ver `real`): sem ele (tabela nova,
 # estado descartado ou estragado) a regra nunca a daria por acabada e a anomalia reconstruída
 # ficava para sempre, engolindo o próximo desvio. Essa anomalia órfã fica ativa, para o responsável.
-NAO_RECONSTRUIR = {"US07"}
+NAO_RECONSTRUIR = {"US07", "US13"}
 
 
 @dataclass
@@ -168,6 +169,8 @@ class Ciclo:
             self.registar_historico(desvio, "a IA decidiu não avisar", agora)
             return
         anomalia.detetada_em = agora
+        if desvio.imagem is not None:
+            anomalia.imagem_url = desvio.imagem  # a imagem da câmara (US13)
         self.ocorrencias[desvio.us] = Ocorrencia(desvio, "ativa", anomalia)
         self.publicar(anomalia, imediato=desvio.imediato)
 

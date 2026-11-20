@@ -3,8 +3,12 @@
 `IA_FORNECEDOR` escolhe o modelo. `falso` (ou por definir) não usa nenhum: a casa fica com o resumo
 do desvio. `groq`, `gemini` e `openrouter` usam a API no formato da OpenAI, com a chave em `GROQ_API_KEY`,
 `GEMINI_API_KEY` ou `OPENROUTER_API_KEY`; `IA_MODELO` troca o modelo por omissão do fornecedor.
+
+`completar_json_com_imagem` manda também uma imagem JPEG (US13). Só o OpenRouter (Haiku) e o Gemini
+veem imagens; com o Groq (`gpt-oss`) o pedido falha e devolve `None`, como qualquer outra falha.
 """
 
+import base64
 import json
 import logging
 import os
@@ -16,6 +20,7 @@ import httpx
 registo = logging.getLogger(__name__)
 
 TIMEOUT_S = 10  # o ciclo não pode ficar à espera; se falhar, fica o resumo do desvio
+TIMEOUT_IMAGEM_S = 20  # corre fora do ciclo (backend.regras.us13), e uma imagem demora mais
 
 # fornecedor: (endpoint, variável da chave, modelo por omissão)
 FORNECEDORES = {
@@ -48,11 +53,18 @@ class Modelo(Protocol):
         """
         ...
 
+    def completar_json_com_imagem(self, sistema: str, mensagem: str, jpeg: bytes) -> dict | None:
+        """Como `completar_json`, com uma imagem JPEG junto da mensagem."""
+        ...
+
 
 class ModeloFalso:
     def completar_json(
         self, sistema: str, mensagem: str, historico: Sequence[dict[str, str]] = ()
     ) -> dict | None:
+        return None
+
+    def completar_json_com_imagem(self, sistema: str, mensagem: str, jpeg: bytes) -> dict | None:
         return None
 
 
@@ -68,14 +80,32 @@ class ModeloOpenAI:
     def completar_json(
         self, sistema: str, mensagem: str, historico: Sequence[dict[str, str]] = ()
     ) -> dict | None:
+        mensagens = [
+            {"role": "system", "content": sistema},
+            *historico,
+            {"role": "user", "content": mensagem},
+        ]
+        return self._pedir(mensagens, TIMEOUT_S, json.loads)
+
+    def completar_json_com_imagem(self, sistema: str, mensagem: str, jpeg: bytes) -> dict | None:
+        imagem = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()
+        mensagens = [
+            {"role": "system", "content": sistema},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": mensagem},
+                    {"type": "image_url", "image_url": {"url": imagem}},
+                ],
+            },
+        ]
+        return self._pedir(mensagens, TIMEOUT_IMAGEM_S, _objeto_no_texto)
+
+    def _pedir(self, mensagens: list[dict], timeout: float, ler) -> dict | None:
         corpo = {
             "model": self.modelo,
             "response_format": {"type": "json_object"},
-            "messages": [
-                {"role": "system", "content": sistema},
-                *historico,
-                {"role": "user", "content": mensagem},
-            ],
+            "messages": mensagens,
         }
         cabecalhos = {
             "Authorization": f"Bearer {self._chave}",
@@ -84,13 +114,22 @@ class ModeloOpenAI:
         }
         try:
             pedir = self._cliente.post if self._cliente else httpx.post
-            resposta = pedir(self.url, json=corpo, headers=cabecalhos, timeout=TIMEOUT_S)
+            resposta = pedir(self.url, json=corpo, headers=cabecalhos, timeout=timeout)
             resposta.raise_for_status()
-            dados = json.loads(resposta.json()["choices"][0]["message"]["content"])
+            dados = ler(resposta.json()["choices"][0]["message"]["content"])
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as erro:
             registo.warning("O modelo %s falhou: %s", self.modelo, erro)
             return None
         return dados if isinstance(dados, dict) else None
+
+
+def _objeto_no_texto(texto: str):
+    """O objeto JSON da resposta, mesmo dentro de um bloco ```json``` (há modelos de visão que
+    o põem, apesar do modo JSON)."""
+    inicio, fim = texto.find("{"), texto.rfind("}")
+    if inicio == -1 or fim < inicio:
+        raise ValueError("a resposta não tem um objeto JSON")
+    return json.loads(texto[inicio : fim + 1])
 
 
 def obter_modelo() -> Modelo:

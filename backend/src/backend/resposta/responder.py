@@ -4,13 +4,17 @@ A anomalia fica sempre resolvida com a resposta (na PWA, um toque em "Está tudo
 não ensina nada à casa: é a casa que repara quando o aviso começa a ser habitual
 (`padrao.rotina_repetida`) e propõe passar a contar com isso. A rotina só se guarda depois de a
 pessoa a aceitar (`aplicar`); se a recusar, a casa não a volta a propor.
+
+US13: num aviso de veículo desconhecido, a casa propõe logo guardar o veículo como conhecido
+("Guardar este veículo como conhecido?"), com o que o modelo de visão viu na imagem do aviso.
 """
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from backend import veiculos
 from backend.contexto import repositorio
-from backend.contrato import Anomalia, PropostaSilencio, TextoEm
+from backend.contrato import Anomalia, PropostaSilencio, TextoEm, Veiculo
 from backend.conversa.interpretar import DIAS_DA_SEMANA, ler_rotina
 from backend.formatos import Rotina, Silencio
 from backend.resposta.padrao import rotina_repetida
@@ -46,6 +50,8 @@ def responder(
             "resolucao": TextoEm(texto=f"Resolvida com a resposta «{texto}»", em=agora),
         }
     )
+    if us == "US13":
+        return _propor_veiculo(resolvida, agora)
     rotina = rotina_repetida(us, anomalia.detetada_em, anteriores, rotinas, recusadas)
     if rotina is None:
         return Decisao(resolvida, None)
@@ -63,9 +69,23 @@ def responder(
     return Decisao(resolvida.model_copy(update={"proposta_silencio": pendente}), proposta)
 
 
+def _propor_veiculo(resolvida: Anomalia, agora: datetime) -> Decisao:
+    obs = veiculos.visto(resolvida.imagem_url)
+    if obs is None or not obs.veiculo:
+        return Decisao(resolvida, None)
+    veiculo = obs.como_veiculo()
+    frase = f"Guardar este veículo como conhecido ({veiculo.descricao})? Não volto a avisar por ele."
+    pendente = PropostaSilencio(texto=frase, ate=agora + SEM_FIM, estado="pendente")
+    proposta = {"tipo": "veiculo", "veiculo": veiculo.model_dump(mode="json")}
+    return Decisao(resolvida.model_copy(update={"proposta_silencio": pendente}), proposta)
+
+
 def aplicar(proposta: dict) -> None:
-    """Guarda no contexto a rotina que a pessoa aceitou (ou um silêncio, das propostas antigas)."""
-    if proposta["tipo"] == "silencio":
+    """Guarda no contexto a rotina que a pessoa aceitou (ou um silêncio, das propostas antigas),
+    ou o veículo que passa a ser conhecido (US13)."""
+    if proposta["tipo"] == "veiculo":
+        veiculos.guardar(Veiculo.model_validate(proposta["veiculo"]))
+    elif proposta["tipo"] == "silencio":
         repositorio.guardar_silencio(
             Silencio(proposta["us"], datetime.fromisoformat(proposta["ate"]), proposta["motivo"])
         )

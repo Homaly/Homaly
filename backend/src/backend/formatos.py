@@ -82,6 +82,9 @@ class Desvio:
     # O id do MCP do dispositivo de que o desvio fala (ex.: a lâmpada da US11), quando a regra o
     # sabe: a ação da US03 muda esse dispositivo, e não "o" dispositivo desse tipo. "" sem id.
     dispositivo: str = ""
+    # A imagem que mostra o desvio ("/imagens/<id>.jpg", backend.camara), quando há uma (US13): o
+    # ciclo põe-na na `imagemUrl` da anomalia.
+    imagem: str | None = None
 
 
 @dataclass(frozen=True)

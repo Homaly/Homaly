@@ -193,7 +193,7 @@ Um **sinal de vida** é qualquer coisa que mostre que alguém está a mexer na c
 - **Dado** que avisei antes que vinha alguém de carro (US01), **então** a casa não avisa.
 - **Dado** que não respondo dentro do tempo de espera da casa, **então** o contacto externo é avisado (US05).
 
-**Dispositivos:** câmara, apontada à entrada de veículos. A imagem vem do stream RTSP da câmara, fora do servidor MCP. Os dois minutos são um valor a afinar, para não avisar por quem só faz inversão de marcha. Falta decidir como a casa reconhece um veículo: pela matrícula ou pelo aspeto (tipo e cor), conforme a qualidade da imagem.
+**Dispositivos:** câmara, apontada à entrada de veículos. A imagem vem do stream RTSP da câmara, fora do servidor MCP. Os dois minutos são um valor a afinar, para não avisar por quem só faz inversão de marcha. Proposta (branch `feat/us13-veiculo-camara`): o movimento vê-se no vídeo, com o `ffmpeg`, porque o `motionDetected` do MCP vem sempre vazio; o modelo de visão lê a matrícula quando se vê e, senão, compara o aspeto. Na PWA, "é o carro do meu irmão" é o botão "Guardar este veículo como conhecido?" depois do "Está tudo bem"; também se regista um carro por fotografia (`POST /veiculos`, ainda sem ecrã).
 
 ### US14 — Aparelho esquecido ligado (Eficiência energética)
 

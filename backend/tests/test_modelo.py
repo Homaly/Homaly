@@ -135,3 +135,47 @@ def test_timeout_da_none():
     cliente, _ = _cliente(rebenta)
     m = ModeloOpenAI("https://exemplo", "k", "m", cliente=cliente)
     assert m.completar_json("s", "m") is None
+
+
+def test_com_imagem_envia_a_imagem_em_base64():
+    cliente, pedidos = _cliente(_com_conteudo('{"veiculo": true}'))
+    m = ModeloOpenAI("https://exemplo/v1/chat/completions", "segredo", "m1", cliente=cliente)
+
+    assert m.completar_json_com_imagem("o sistema", "o que vês?", b"\xff\xd8jpeg") == {"veiculo": True}
+
+    corpo = json.loads(pedidos[0].content)
+    assert corpo["response_format"] == {"type": "json_object"}
+    assert corpo["messages"] == [
+        {"role": "system", "content": "o sistema"},
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "o que vês?"},
+                {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9hqcGVn"}},
+            ],
+        },
+    ]
+
+
+def test_com_imagem_aceita_json_dentro_de_um_bloco_de_codigo():
+    cliente, _ = _cliente(_com_conteudo('```json\n{"veiculo": false}\n```'))
+    m = ModeloOpenAI("https://exemplo", "k", "m", cliente=cliente)
+    assert m.completar_json_com_imagem("s", "m", b"x") == {"veiculo": False}
+
+
+@pytest.mark.parametrize("conteudo", ["sem json nenhum", "[1, 2]"])
+def test_com_imagem_resposta_sem_objeto_da_none(conteudo):
+    cliente, _ = _cliente(_com_conteudo(conteudo))
+    m = ModeloOpenAI("https://exemplo", "k", "m", cliente=cliente)
+    assert m.completar_json_com_imagem("s", "m", b"x") is None
+
+
+def test_com_imagem_erro_http_da_none():
+    cliente, _ = _cliente(lambda _: httpx.Response(400, json={"error": "sem visão"}))
+    m = ModeloOpenAI("https://exemplo", "k", "m", cliente=cliente)
+    assert m.completar_json_com_imagem("s", "m", b"x") is None
+
+
+def test_falso_com_imagem_da_none(monkeypatch):
+    monkeypatch.delenv("IA_FORNECEDOR", raising=False)
+    assert obter_modelo().completar_json_com_imagem("s", "m", b"x") is None
