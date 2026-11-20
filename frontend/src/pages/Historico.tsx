@@ -63,7 +63,8 @@ export default function Historico() {
       ) : data.length === 0 ? (
         <EstadoVazio icon="history" texto="Ainda não há eventos" descricao="Os eventos dos dispositivos aparecem aqui." />
       ) : (
-        <div className="space-y-6">
+        // Os dias entram em cascata (ver .cascata em index.css).
+        <div className="cascata space-y-6">
           {agruparPorDia(data).map(([dia, eventos]) => (
             <section key={dia}>
               <h2 className="mb-3 text-xl font-semibold first-letter:uppercase">

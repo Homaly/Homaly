@@ -163,7 +163,20 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 - **Barra de baixo:** o separador ativo tem o ícone cheio e a letra a negrito, na cor do texto principal; os outros ficam de traço, em `text-muted`. O Início mostra o número de avisos por responder.
 - **Ações presas ao fundo** (detalhe da anomalia) e caixa da Conversa: avisam os toasts por `useReservarFundo`, que os põe por cima delas em vez de as taparem.
 - **Estados vazios:** ícone num círculo, título e uma frase, como na app.
-- **Movimento:** as animações param com "reduzir movimento".
+- **Movimento:** ver a secção "Movimento". As animações param com "reduzir movimento".
+
+## Movimento
+
+Segue os padrões do Material 3 e do iOS. As curvas estão em `src/index.css` (`--ease-emphasized`, `--ease-emphasized-decelerate`, `--ease-emphasized-accelerate`). O que entra desacelera (chega depressa e assenta devagar) e o que sai acelera. Os ecrãs demoram 300 ms; os elementos pequenos, entre 150 e 250 ms.
+
+- **Entre separadores da barra de baixo:** "fade through". O ecrã novo aparece e cresce de 96% para 100% (`ecra-separador`).
+- **Mais fundo na hierarquia** (cartão → aviso, Definições → Calendário → Remover): o ecrã entra pela direita, 32 px, a aparecer (`ecra-frente`). **Ao subir**, entra pela esquerda (`ecra-tras`). É o "shared axis X" do Material e o push do iOS. Decide-se pela profundidade do caminho e não pelo histórico, por isso "Voltar ao início" também entra pela esquerda (`hooks/useTransicaoDeEcra.ts`).
+- Só se anima o ecrã que entra; o que sai desaparece logo. A barra de baixo fica parada.
+- **Listas que chegam** (Início, Histórico): os elementos entram em cascata, a subir 8 px, com 40 ms entre cada um (`.cascata`).
+- **Barras presas ao fundo** (ações do aviso, caixa da Conversa): vão por portal para o `body` e só aparecem (`animate-aparecer`). Dentro do ecrã animado, o `transform` da animação prendia-as ao ecrã em vez do fundo da janela. Regra: nada com `fixed` dentro do `Layout`.
+- **Com "reduzir movimento":** os ecrãs só aparecem, sem deslizar nem crescer, e as listas não fazem cascata.
+
+**Animação de arranque** (`index.html` e `src/lib/arranque.ts`). Mostra a casa do logótipo e a linha do eletrocardiograma, que se desenha da esquerda para a direita. A casa aparece em 300 ms e a linha desenha-se em 650 ms, ao todo cerca de 1 s, como pedem as regras do ecrã de arranque do Android. Está no `index.html` para aparecer antes de o JavaScript carregar. Fica até a app desenhar o primeiro ecrã, mas nunca antes de a linha acabar, e sai a desvanecer em 250 ms. Usa as cores do tema: a casa na cor do texto e a linha no turquesa da marca (`#00e0c6`) nos dois temas. No claro, este turquesa tem pouco contraste (1,6:1), mas aqui é decorativo e é a cor da marca. Com "reduzir movimento", aparece já desenhada e sai logo. Só aparece ao abrir ou recarregar a app, não ao mudar de ecrã. O vídeo do logótipo (`assets/marca/*.mp4`) não se usa: as cores não condizem com a app e dura 7 s.
 
 ## Definições e tema
 
@@ -220,6 +233,8 @@ O `--mode development` faz a build ler `frontend/.env.development` e `frontend/.
 | Classes de anomalia sem cor | Uma cor por classe | As cores das classes repetiam as de estado: eficiência parecia "correu bem", segurança parecia erro |
 | Cores como papéis trocados pelo `.dark` | `dark:` em cada componente | Um só sítio por cor; o tema escuro não se esquece em nenhum componente |
 | Tema em Definições → Aparência, com Automático | Botão na barra de topo de todos os ecrãs | Muda-se uma vez; o botão ocupava o lugar de mais destaque e, depois de um toque, a app deixava de seguir o telemóvel sem forma de voltar |
+| Transições: "fade through" entre separadores e eixo X na hierarquia, só no ecrã que entra | View Transitions (React Router `viewTransition`); sem transições | Padrões do Material 3 e do iOS; funciona em qualquer browser e com o `BrowserRouter` atual; a View Transitions API ainda não existe em todos os browsers |
+| Animação de arranque em SVG (casa e linha), no `index.html` | O vídeo do logótipo; um ecrã de arranque em React | O vídeo dura 7 s e tem outras cores; no `index.html` aparece antes de o JavaScript carregar, que é quando a app está mesmo a carregar |
 | Ícones dos urgentes a laranja e número em cada grupo | Uma cor por classe; número por classe | A cor de "pede atenção" reforça o grupo Urgente sem repetir as cores de estado; com dois ou três avisos, um número por classe era ruído, e o total já está na barra de baixo |
 | Início em dois grupos, Urgente e Outros avisos | Lista única só por hora; uma cor por classe | Um alerta de segurança não fica abaixo de uma luz acesa e pesa mais do que ela; a diferença vem do tamanho e do agrupamento, e as classes continuam sem cor |
 | Separador ativo com o ícone cheio | Pílula turquesa atrás do ícone; só traço mais grosso | É o padrão do iOS e do Android; a pílula fazia um brilho a competir com o número de avisos |

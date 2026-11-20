@@ -45,11 +45,12 @@ export default function Inicio() {
       ) : (
         // A hierarquia vem do tamanho e do agrupamento, não da cor: os urgentes (os que chegam ao
         // contacto externo) têm cartão próprio; os outros ficam em linhas, num só cartão.
-        <div className="space-y-6">
+        // Entram em cascata (ver .cascata em index.css): os grupos e, dentro do Urgente, os cartões.
+        <div className="cascata space-y-6">
           {urgentes.length > 0 && (
             <section className="space-y-2">
               <TituloGrupo numero={urgentes.length}>Urgente</TituloGrupo>
-              <div className="space-y-3">
+              <div className="cascata space-y-3">
                 {urgentes.map(a => (
                   <AnomaliaCard key={a.id} anomalia={a} />
                 ))}
