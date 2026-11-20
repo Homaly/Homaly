@@ -11,13 +11,13 @@ const porUrgencia = (a: Anomalia, b: Anomalia) =>
 
 /**
  * Título de grupo pequeno, como os das Definições (o título grande do ecrã é o "Homaly"), com o
- * número de avisos do grupo: "Urgente · 2".
+ * número de avisos do grupo: "Urgente (2)".
  */
 function TituloGrupo({ children, numero }: { children: string; numero: number }) {
   return (
     <h2 className="px-1 text-sm font-semibold text-on-surface-variant">
       {children}
-      <span className="font-medium text-muted"> · {numero}</span>
+      <span className="font-medium text-muted"> ({numero})</span>
     </h2>
   );
 }
@@ -45,11 +45,12 @@ export default function Inicio() {
       ) : (
         // A hierarquia vem do tamanho e do agrupamento, não da cor: os urgentes (os que chegam ao
         // contacto externo) têm cartão próprio; os outros ficam em linhas, num só cartão.
-        <div className="space-y-6">
+        // Entram em cascata (ver .cascata em index.css): os grupos e, dentro do Urgente, os cartões.
+        <div className="cascata space-y-6">
           {urgentes.length > 0 && (
             <section className="space-y-2">
               <TituloGrupo numero={urgentes.length}>Urgente</TituloGrupo>
-              <div className="space-y-3">
+              <div className="cascata space-y-3">
                 {urgentes.map(a => (
                   <AnomaliaCard key={a.id} anomalia={a} />
                 ))}
