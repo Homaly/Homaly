@@ -11,13 +11,13 @@ const porUrgencia = (a: Anomalia, b: Anomalia) =>
 
 /**
  * Título de grupo pequeno, como os das Definições (o título grande do ecrã é o "Homaly"), com o
- * número de avisos do grupo: "Urgente · 2".
+ * número de avisos do grupo: "Urgente (2)".
  */
 function TituloGrupo({ children, numero }: { children: string; numero: number }) {
   return (
     <h2 className="px-1 text-sm font-semibold text-on-surface-variant">
       {children}
-      <span className="font-medium text-muted"> · {numero}</span>
+      <span className="font-medium text-muted"> ({numero})</span>
     </h2>
   );
 }

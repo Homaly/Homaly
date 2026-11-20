@@ -15,7 +15,7 @@ Barra em baixo com quatro separadores:
 
 | Separador | Rota | Ecrã | História |
 |-----------|------|------|----------|
-| Início | `/` | Anomalias ativas em dois grupos: "Urgente" (segurança e bem-estar, as que chegam ao contacto externo), cada uma no seu cartão com o começo da explicação; "Outros avisos" (saúde e conforto, eficiência), em linhas num só cartão. Dentro do grupo, por classe e depois a mais recente primeiro. O título de cada grupo leva o número de avisos ("Urgente · 2"). Sem avisos, "Está tudo normal" | US02 |
+| Início | `/` | Anomalias ativas em dois grupos: "Urgente" (segurança e bem-estar, as que chegam ao contacto externo), cada uma no seu cartão com o começo da explicação; "Outros avisos" (saúde e conforto, eficiência), em linhas num só cartão. Dentro do grupo, por classe e depois a mais recente primeiro. O título de cada grupo leva o número de avisos ("Urgente (2)"). Sem avisos, "Está tudo normal" | US02 |
 | Conversa | `/conversa` | Conversa por texto com a casa; o texto pode ser ditado | US01 |
 | Histórico | `/historico` | Eventos e anomalias, do mais recente para o mais antigo | US06 |
 | Definições | `/definicoes` | Contacto externo e tempo de espera, nome da casa, calendário e aparência (tema) | US04 |
