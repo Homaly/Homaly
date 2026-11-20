@@ -16,6 +16,9 @@ const queryClient = new QueryClient({
   },
 });
 
+// O browser não repõe o deslocamento ao voltar atrás: quem decide é a app (cada ecrã abre no topo, ver Layout).
+window.history.scrollRestoration = 'manual';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

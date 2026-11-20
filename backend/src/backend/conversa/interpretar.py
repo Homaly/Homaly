@@ -11,12 +11,16 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, time
 
+from backend.contrato import MensagemConversa
 from backend.formatos import Periodo, Rotina
 from backend.ia.modelo import Modelo
 
 registo = logging.getLogger(__name__)
 
 NAO_PERCEBI = "Não percebi bem. Podes dizer de outra forma?"
+
+MAX_HISTORICO = 10  # mensagens anteriores que a IA lê: a memória curta da conversa
+MAX_CARACTERES = 500  # de cada uma, para o pedido não crescer sem limite
 
 DIAS_DA_SEMANA = [
     "segunda-feira",
@@ -47,10 +51,16 @@ todo. Com a hora ou a parte do dia, AAAA-MM-DDTHH:MM ("a partir das 15h", "hoje 
 aquecedor"). "nome" é o aparelho.
 - "resposta": perguntas sobre a casa ("a porta está fechada?", "está tudo bem?", "o que \
 aconteceu hoje?", "que rotinas sabes?"), cumprimentos e pedidos para a casa fazer alguma coisa. \
-Responde só com o que está em "O que a casa sabe agora"; se lá não estiver, diz que não sabes. \
+Responde só com o que está em "O que a casa sabe agora" ou com o que já se disse nesta conversa; \
+se não estiver em nenhum, diz que não sabes. \
 A casa não cumpre ordens pela conversa: a um pedido como "apaga a luz", explica que as ações são \
 propostas nos avisos, quando a casa repara em alguma coisa. A um cumprimento, diz o que te podem \
 dizer (férias, rotinas, o aparelho na tomada) e perguntar.
+- Antes da última mensagem vêm as mensagens anteriores desta conversa. Usa-as para perceber a \
+última ("e amanhã?", "e às quintas também") e para te lembrares do que a pessoa te pediu na \
+conversa (por exemplo, o nome por que te deve chamar). O JSON é só sobre a última mensagem: não \
+voltes a mandar férias, rotinas ou aparelhos que vieram em mensagens anteriores. O estado da casa \
+vem só de "O que a casa sabe agora": o que se disse antes pode já não ser verdade.
 - Nunca digas que fizeste, mudaste, ligaste ou apagaste alguma coisa.
 - "resposta" (em todos os tipos): curta e simpática, em português de Portugal; as datas por \
 extenso ("19 de novembro"), nunca AAAA-MM-DD.
@@ -68,11 +78,17 @@ class Interpretacao:
 
 
 def interpretar(
-    texto: str, agora: datetime, modelo: Modelo, estado: dict | None = None
+    texto: str,
+    agora: datetime,
+    modelo: Modelo,
+    estado: dict | None = None,
+    historico: list[MensagemConversa] | None = None,
 ) -> Interpretacao:
     """O que a casa percebeu de `texto`; sem certeza, `NAO_PERCEBI` e nada para guardar.
 
     `estado` é o que a casa sabe agora (`conversa.estado`), para responder a perguntas.
+    `historico` são as mensagens anteriores da conversa, sem `texto`: só as últimas
+    `MAX_HISTORICO` seguem para o modelo, a memória curta da casa.
     """
     sistema = (
         SISTEMA
@@ -81,11 +97,22 @@ def interpretar(
         + f"\nO que a casa sabe agora: {json.dumps(estado or {}, ensure_ascii=False)}"
     )
     try:
-        dados = modelo.completar_json(sistema, texto)
+        dados = modelo.completar_json(sistema, texto, historico=_para_o_modelo(historico or []))
     except Exception:
         registo.warning("O modelo de IA falhou; a casa não percebeu a mensagem.", exc_info=True)
         return Interpretacao(NAO_PERCEBI)
     return _ler(dados, agora) or Interpretacao(NAO_PERCEBI)
+
+
+def _para_o_modelo(historico: list[MensagemConversa]) -> list[dict[str, str]]:
+    """As últimas mensagens como papéis do modelo, abrindo sempre com a pessoa."""
+    mensagens = [
+        {"role": "user" if m.autor == "pessoa" else "assistant", "content": m.texto[:MAX_CARACTERES]}
+        for m in historico[-MAX_HISTORICO:]
+    ]
+    while mensagens and mensagens[0]["role"] != "user":
+        mensagens.pop(0)
+    return mensagens
 
 
 def ler_data(valor: object, agora: datetime) -> datetime | None:

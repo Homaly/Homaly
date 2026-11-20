@@ -15,9 +15,9 @@ Barra em baixo com quatro separadores:
 
 | Separador | Rota | Ecrã | História |
 |-----------|------|------|----------|
-| Início | `/` | Anomalias ativas em dois grupos: "Urgente" (segurança e bem-estar, as que chegam ao contacto externo), cada uma no seu cartão com o começo da explicação; "Outros avisos" (saúde e conforto, eficiência), em linhas num só cartão. Dentro do grupo, por classe e depois a mais recente primeiro. O título de cada grupo leva o número de avisos ("Urgente · 2"). Sem avisos, "Está tudo normal" | US02 |
+| Início | `/` | Anomalias ativas em dois grupos: "Urgente" (segurança e bem-estar, as que chegam ao contacto externo), cada uma no seu cartão com o começo da explicação; "Outros avisos" (saúde e conforto, eficiência), em linhas num só cartão. Dentro do grupo, por classe e depois a mais recente primeiro. O título de cada grupo leva o número de avisos ("Urgente (2)"). Sem avisos, "Está tudo normal" | US02 |
 | Conversa | `/conversa` | Conversa por texto com a casa; o texto pode ser ditado | US01 |
-| Histórico | `/historico` | Eventos e anomalias, do mais recente para o mais antigo | US06 |
+| Histórico | `/historico` | Eventos e anomalias, do mais recente para o mais antigo, agrupados por dia. Cada dia abre e fecha no cabeçalho ("Hoje (6)"); ao abrir o ecrã, só o "Hoje" está aberto | US06 |
 | Definições | `/definicoes` | Contacto externo e tempo de espera, nome da casa, calendário e aparência (tema) | US04 |
 
 O detalhe da anomalia (`/anomalias/:id`) abre a partir do Início ou do Histórico, com a seta de voltar e sem a barra de baixo. A barra de topo fica só com a seta: o título do ecrã é o da anomalia. Mostra a explicação, deixa responder, aceitar ou recusar a ação proposta e a proposta de silêncio, e mostra a imagem quando a há (US02, US03, US13). Os botões ficam presos ao fundo do ecrã, ao alcance do polegar; depois de responder ou de aceitar a ação, passam a "Voltar ao início".
@@ -94,7 +94,7 @@ interface Definicoes { contacto: { nome: string; telemovel: string } | null; esp
 
 **Proposta de silêncio (US02):** quando o responsável explica um alerta (`POST /anomalias/{id}/resposta`), a resposta pode trazer `propostaSilencio` com `estado: 'pendente'`. O ecrã de detalhe mostra o texto com os botões Sim e Não, que chamam `POST /anomalias/{id}/silencio`. O backend só deixa de avisar depois de `aceitar: true`.
 
-**Página do alerta (US05):** não faz parte da PWA. É o backend que a serve, em `GET /a/{codigo}`, como uma página HTML simples, sem login, para o contacto externo abrir a partir da SMS. O `codigo` é aleatório e longo (por exemplo, `secrets.token_urlsafe(16)` em Python), criado quando a SMS é enviada e associado ao alerta; nunca é o id da anomalia. A página mostra o alerta e o estado atual, incluindo se já está resolvido e como. Funciona 24 horas depois do envio; depois mostra só que o alerta expirou.
+**Página do alerta (US05):** saiu a 2026-11-20. A SMS ao contacto externo basta e não traz link.
 
 **WebSocket `/ws`:** o servidor envia `{tipo: 'anomalia', anomalia}` quando uma anomalia aparece ou muda, e `{tipo: 'evento', evento}` quando há um evento novo. O cliente não envia nada por aqui.
 
@@ -116,7 +116,7 @@ O botão do microfone, dentro da caixa da Conversa, passa a voz a texto com a We
 
 ## Sugestões na Conversa
 
-Por cima da caixa, enquanto ela está vazia, há sugestões para o que a casa percebe: "Vamos de férias", "Vem cá alguém", "Na tomada está…" e "O que aconteceu hoje?". As que acabam em "…" põem o começo da frase na caixa, com o cursor no fim, e a pessoa acaba-a; as outras enviam logo o texto. A casa lê cada mensagem sozinha, sem as anteriores, por isso "Vamos de férias" ou "Vem cá alguém" sem datas nem dias podem receber "Não percebi bem". O espaço das sugestões fica reservado mesmo escondido, para a caixa não saltar ao escrever. As mensagens encostam-se ao fundo, junto à caixa.
+Por cima da caixa, enquanto ela está vazia, há sugestões para o que a casa percebe: "Vamos de férias", "Vem cá alguém", "Na tomada está…" e "O que aconteceu hoje?". As que acabam em "…" põem o começo da frase na caixa, com o cursor no fim, e a pessoa acaba-a; as outras enviam logo o texto. A casa lembra-se das últimas 10 mensagens (memória curta do backend, `MAX_HISTORICO`). Por isso, a "Vamos de férias" ou "Vem cá alguém" sem datas nem dias pode perguntar o que falta e perceber a resposta seguinte. O espaço das sugestões fica reservado mesmo escondido, para a caixa não saltar ao escrever. As mensagens encostam-se ao fundo, junto à caixa.
 
 ## Mocks
 
@@ -158,12 +158,26 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 - **`Segmentado`** (`components/Segmentado.tsx`): escolha de uma opção entre poucas, lado a lado, com 48 px de altura (tema, tempo de espera). Por dentro são botões de rádio.
 - **`Grupo`** (`components/Grupo.tsx`): grupo das Definições, como nas definições do telemóvel: título pequeno, conteúdo num cartão e uma nota por baixo.
 - **Alvos de toque:** 48 px no mínimo. A seta de voltar é um círculo de contorno de 40 px dentro de 48 px de toque.
-- **Títulos de secção:** `text-xl font-semibold` no Histórico (os dias). No Início e nas Definições, os grupos têm título pequeno (`text-sm font-semibold text-on-surface-variant`), para não competir com o título do ecrã.
+- **Títulos de secção:** `text-xl font-semibold` no Histórico (os dias). Aí, o título é um botão que abre e fecha o dia, com o número de eventos e uma seta que roda. A lista abre a deslizar e, fechada, fica `inert`. No Início e nas Definições, os grupos têm título pequeno (`text-sm font-semibold text-on-surface-variant`), para não competir com o título do ecrã.
 - **`Linha`** (`components/Linha.tsx`): linha de lista das definições, com ícone num círculo, título, uma linha de apoio e, à direita, uma seta (`Seta`, abre outro ecrã) ou uma ação curta em `text-primary-ink`. Vai dentro de um `Grupo` com `lista`, que separa as linhas com divisórias. A ação destrutiva fica num grupo só dela, no fim, em `text-danger` e sem seta.
 - **Barra de baixo:** o separador ativo tem o ícone cheio e a letra a negrito, na cor do texto principal; os outros ficam de traço, em `text-muted`. O Início mostra o número de avisos por responder.
 - **Ações presas ao fundo** (detalhe da anomalia) e caixa da Conversa: avisam os toasts por `useReservarFundo`, que os põe por cima delas em vez de as taparem.
 - **Estados vazios:** ícone num círculo, título e uma frase, como na app.
-- **Movimento:** as animações param com "reduzir movimento".
+- **Movimento:** ver a secção "Movimento". As animações param com "reduzir movimento".
+
+## Movimento
+
+Segue os padrões do Material 3 e do iOS. As curvas estão em `src/index.css` (`--ease-emphasized`, `--ease-emphasized-decelerate`, `--ease-emphasized-accelerate`). O que entra desacelera (chega depressa e assenta devagar) e o que sai acelera. Os ecrãs demoram 300 ms; os elementos pequenos, entre 150 e 250 ms.
+
+- **Entre separadores da barra de baixo:** "fade through". O ecrã novo aparece e cresce de 96% para 100% (`ecra-separador`).
+- **Mais fundo na hierarquia** (cartão → aviso, Definições → Calendário → Remover): o ecrã entra pela direita, 32 px, a aparecer (`ecra-frente`). **Ao subir**, entra pela esquerda (`ecra-tras`). É o "shared axis X" do Material e o push do iOS. Decide-se pela profundidade do caminho e não pelo histórico, por isso "Voltar ao início" também entra pela esquerda (`hooks/useTransicaoDeEcra.ts`).
+- Só se anima o ecrã que entra; o que sai desaparece logo. A barra de baixo fica parada.
+- **Cada ecrã abre no topo** (`Layout`, com `history.scrollRestoration = 'manual'`). O deslocamento é da janela e passava de um ecrã para o outro: descer na Conversa abria o Histórico no fundo. Ao voltar atrás também se começa no topo.
+- **Listas que chegam** (Início, Histórico): os elementos entram em cascata, a subir 8 px, com 40 ms entre cada um (`.cascata`).
+- **Barras presas ao fundo** (ações do aviso, caixa da Conversa): vão por portal para o `body` e só aparecem (`animate-aparecer`). Dentro do ecrã animado, o `transform` da animação prendia-as ao ecrã em vez do fundo da janela. Regra: nada com `fixed` dentro do `Layout`.
+- **Com "reduzir movimento":** os ecrãs só aparecem, sem deslizar nem crescer, e as listas não fazem cascata.
+
+**Animação de arranque** (`index.html` e `src/lib/arranque.ts`). Mostra a casa do logótipo e a linha do eletrocardiograma, que se desenha da esquerda para a direita. A casa aparece em 300 ms e a linha desenha-se em 650 ms, ao todo cerca de 1 s, como pedem as regras do ecrã de arranque do Android. Está no `index.html` para aparecer antes de o JavaScript carregar. Fica até a app desenhar o primeiro ecrã, mas nunca antes de a linha acabar, e sai a desvanecer em 250 ms. Usa as cores do tema: a casa na cor do texto e a linha no turquesa da marca (`#00e0c6`) nos dois temas. No claro, este turquesa tem pouco contraste (1,6:1), mas aqui é decorativo e é a cor da marca. Com "reduzir movimento", aparece já desenhada e sai logo. Só aparece ao abrir ou recarregar a app, não ao mudar de ecrã. O vídeo do logótipo (`assets/marca/*.mp4`) não se usa: as cores não condizem com a app e dura 7 s.
 
 ## Definições e tema
 
@@ -220,6 +234,9 @@ O `--mode development` faz a build ler `frontend/.env.development` e `frontend/.
 | Classes de anomalia sem cor | Uma cor por classe | As cores das classes repetiam as de estado: eficiência parecia "correu bem", segurança parecia erro |
 | Cores como papéis trocados pelo `.dark` | `dark:` em cada componente | Um só sítio por cor; o tema escuro não se esquece em nenhum componente |
 | Tema em Definições → Aparência, com Automático | Botão na barra de topo de todos os ecrãs | Muda-se uma vez; o botão ocupava o lugar de mais destaque e, depois de um toque, a app deixava de seguir o telemóvel sem forma de voltar |
+| Dias do Histórico recolhíveis, só o "Hoje" aberto | Todos abertos | Com vários dias, a lista ficava longa; o que interessa quase sempre é o dia de hoje |
+| Transições: "fade through" entre separadores e eixo X na hierarquia, só no ecrã que entra | View Transitions (React Router `viewTransition`); sem transições | Padrões do Material 3 e do iOS; funciona em qualquer browser e com o `BrowserRouter` atual; a View Transitions API ainda não existe em todos os browsers |
+| Animação de arranque em SVG (casa e linha), no `index.html` | O vídeo do logótipo; um ecrã de arranque em React | O vídeo dura 7 s e tem outras cores; no `index.html` aparece antes de o JavaScript carregar, que é quando a app está mesmo a carregar |
 | Ícones dos urgentes a laranja e número em cada grupo | Uma cor por classe; número por classe | A cor de "pede atenção" reforça o grupo Urgente sem repetir as cores de estado; com dois ou três avisos, um número por classe era ruído, e o total já está na barra de baixo |
 | Início em dois grupos, Urgente e Outros avisos | Lista única só por hora; uma cor por classe | Um alerta de segurança não fica abaixo de uma luz acesa e pesa mais do que ela; a diferença vem do tamanho e do agrupamento, e as classes continuam sem cor |
 | Separador ativo com o ícone cheio | Pílula turquesa atrás do ícone; só traço mais grosso | É o padrão do iOS e do Android; a pílula fazia um brilho a competir com o número de avisos |

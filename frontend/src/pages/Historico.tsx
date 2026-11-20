@@ -1,3 +1,4 @@
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format, isToday, isYesterday } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -5,6 +6,7 @@ import Layout from '../components/Layout';
 import Icone from '../components/Icone';
 import { EstadoCarregar, EstadoErro, EstadoVazio } from '../components/Estados';
 import { useEventos } from '../api/hooks';
+import { cn } from '../lib/cn';
 import type { Evento } from '../types/contract';
 
 function nomeDoDia(d: Date) {
@@ -51,6 +53,57 @@ function LinhaEvento({ e }: { e: Evento }) {
   );
 }
 
+/**
+ * Um dia do histórico, recolhível: o cabeçalho (nome do dia e número de eventos) abre e fecha a
+ * lista. Só o "Hoje" começa aberto. Abre a deslizar (a altura anima de 0fr a 1fr); fechado, o
+ * conteúdo fica `inert`, para o Tab e o leitor de ecrã não entrarem nas linhas escondidas.
+ */
+function Dia({ dia, eventos }: { dia: string; eventos: Evento[] }) {
+  const [aberto, setAberto] = useState(dia === 'Hoje');
+  const lista = useId();
+  return (
+    <section>
+      <h2>
+        <button
+          type="button"
+          aria-expanded={aberto}
+          aria-controls={lista}
+          onClick={() => setAberto(a => !a)}
+          className="flex min-h-12 w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="text-xl font-semibold first-letter:uppercase">
+            {dia}
+            <span className="text-base font-medium text-muted"> ({eventos.length})</span>
+          </span>
+          <Icone
+            nome="expand_more"
+            className={cn(
+              'size-6 text-muted transition-transform duration-300 ease-emphasized motion-reduce:transition-none',
+              aberto && 'rotate-180'
+            )}
+          />
+        </button>
+      </h2>
+      <div
+        id={lista}
+        inert={!aberto}
+        className={cn(
+          'grid transition-[grid-template-rows] duration-300 ease-emphasized motion-reduce:transition-none',
+          aberto ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="mt-1 mb-3 divide-y divide-outline-variant rounded-2xl bg-surface-container px-4">
+            {eventos.map(e => (
+              <LinhaEvento key={e.id} e={e} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Historico() {
   const { data, isPending, isError, refetch } = useEventos();
 
@@ -63,18 +116,10 @@ export default function Historico() {
       ) : data.length === 0 ? (
         <EstadoVazio icon="history" texto="Ainda não há eventos" descricao="Os eventos dos dispositivos aparecem aqui." />
       ) : (
-        <div className="space-y-6">
+        // Os dias entram em cascata (ver .cascata em index.css).
+        <div className="cascata space-y-1">
           {agruparPorDia(data).map(([dia, eventos]) => (
-            <section key={dia}>
-              <h2 className="mb-3 text-xl font-semibold first-letter:uppercase">
-                {dia}
-              </h2>
-              <div className="divide-y divide-outline-variant rounded-2xl bg-surface-container px-4">
-                {eventos.map(e => (
-                  <LinhaEvento key={e.id} e={e} />
-                ))}
-              </div>
-            </section>
+            <Dia key={dia} dia={dia} eventos={eventos} />
           ))}
         </div>
       )}

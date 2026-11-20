@@ -15,9 +15,11 @@ class ModeloFixo:
     def __init__(self, resposta: dict | None):
         self.resposta = resposta
         self.chamadas: list[tuple[str, str]] = []
+        self.historicos: list[list[dict]] = []  # o histórico de cada chamada, em paralelo a `chamadas`
 
-    def completar_json(self, sistema: str, mensagem: str) -> dict | None:
+    def completar_json(self, sistema: str, mensagem: str, historico=()) -> dict | None:
         self.chamadas.append((sistema, mensagem))
+        self.historicos.append(list(historico))
         return self.resposta
 
 

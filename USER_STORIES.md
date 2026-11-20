@@ -7,7 +7,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 ## Personagens
 
 - **Responsável da casa:** a única pessoa com acesso à aplicação de uma casa. Normalmente vive lá, mas pode não viver: na casa de uma mãe idosa que vive sozinha, o responsável é o filho.
-- **Contacto externo:** pessoa de fora que o responsável escolheu para receber alertas quando ele não responde (por exemplo, um vizinho ou outro familiar). Não tem a aplicação; recebe os alertas por SMS, com um link para uma página com o alerta, sem instalar nada.
+- **Contacto externo:** pessoa de fora que o responsável escolheu para receber alertas quando ele não responde (por exemplo, um vizinho ou outro familiar). Não tem a aplicação; recebe os alertas por SMS, sem instalar nada.
 
 ## Resumo
 
@@ -78,9 +78,7 @@ Foco: a casa que repara, centrada na deteção de anomalias. As decisões em que
 
 **Critérios de aceitação**
 - **Dado** que há uma anomalia que me deve chegar, **então** recebo uma SMS com o que aconteceu, a que horas e o que é habitual.
-- **Dado** que recebo a SMS, **então** ela traz um link para uma página com o alerta e o estado atual, que abro sem instalar nada. A página é só de leitura.
-- **Dado** que abro o link depois de a anomalia se resolver, **então** a página mostra que está resolvida e como ("a porta fechou às 14:12").
-- **Dado** que passaram mais de 24 horas desde a SMS, **então** o link já não mostra o alerta, só que expirou.
+- **Dado** que recebo a SMS, **então** ela basta: não traz link nem pede para abrir nada.
 - **Dado** que a anomalia é de segurança ou de bem-estar e rotina, **quando** o responsável não responde dentro do tempo de espera da casa (cinco minutos por omissão), **então** recebo a mensagem.
 - **Dado** que o tempo de espera da casa é zero, **então** recebo a mensagem ao mesmo tempo que o responsável.
 - **Dado** que a anomalia é de eficiência energética ou de saúde e conforto, **então** não recebo nada.

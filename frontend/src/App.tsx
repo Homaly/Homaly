@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { esconderArranque } from './lib/arranque';
 import BottomNav from './components/BottomNav';
 import Inicio from './pages/Inicio';
 import Anomalia from './pages/Anomalia';
@@ -9,6 +11,8 @@ import Calendario from './pages/Calendario';
 import RemoverCalendario from './pages/RemoverCalendario';
 
 export default function App() {
+  // O primeiro ecrã já está desenhado: a animação de arranque pode sair (depois de a linha acabar).
+  useEffect(esconderArranque, []);
   return (
     <BrowserRouter>
       <Routes>

@@ -87,3 +87,57 @@ def test_pergunta_recebe_o_estado_da_casa(cliente):
     sistema, _ = modelo.chamadas[0]
     assert "Porta da rua aberta" in sistema
     assert "aquecedor" in sistema
+
+
+def _com_modelo(modelo):
+    app.dependency_overrides[obter_modelo_dep] = lambda: modelo
+    app.dependency_overrides[obter_agora] = lambda: AGORA
+
+
+def test_a_segunda_mensagem_leva_a_conversa_anterior(cliente):
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "Está bem, sou o Jarvis."})
+    _com_modelo(modelo)
+
+    cliente.post("/conversa", json={"texto": "chama-te Jarvis"})
+    cliente.post("/conversa", json={"texto": "como te chamas?"})
+
+    assert modelo.historicos[0] == []
+    assert modelo.historicos[1] == [
+        {"role": "user", "content": "chama-te Jarvis"},
+        {"role": "assistant", "content": "Está bem, sou o Jarvis."},
+    ]
+    assert modelo.chamadas[1][1] == "como te chamas?"
+    # a mensagem atual vai uma só vez, como a última, e não também no histórico
+    assert all(m["content"] != "como te chamas?" for m in modelo.historicos[1])
+
+
+def test_o_contexto_acumula_pela_ordem_das_trocas(cliente):
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "Anotado."})
+    _com_modelo(modelo)
+
+    for texto in ("a empregada vem às terças", "e às quintas também", "obrigado"):
+        cliente.post("/conversa", json={"texto": texto})
+
+    assert [m["content"] for m in modelo.historicos[2]] == [
+        "a empregada vem às terças",
+        "Anotado.",
+        "e às quintas também",
+        "Anotado.",
+    ]
+
+
+def test_o_contexto_vem_das_mensagens_ja_guardadas(cliente):
+    from backend.contexto import repositorio
+    from backend.contrato import MensagemConversa
+
+    repositorio.guardar_mensagem(MensagemConversa(autor="pessoa", texto="vou a Lisboa na sexta", em=AGORA))
+    repositorio.guardar_mensagem(MensagemConversa(autor="casa", texto="Boa viagem!", em=AGORA))
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "Até domingo."})
+    _com_modelo(modelo)
+
+    cliente.post("/conversa", json={"texto": "e volto no domingo"})
+
+    assert modelo.historicos[0] == [
+        {"role": "user", "content": "vou a Lisboa na sexta"},
+        {"role": "assistant", "content": "Boa viagem!"},
+    ]

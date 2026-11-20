@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -16,16 +17,20 @@ import { cn } from '../lib/cn';
 /** Um toque resolve o aviso; a casa não pede justificações (é ela que repara no que se repete). */
 const RESPOSTA = 'Está tudo bem';
 
-/** Ações presas ao fundo, ao alcance do polegar: o detalhe não tem barra de baixo. */
+/**
+ * Ações presas ao fundo, ao alcance do polegar: o detalhe não tem barra de baixo.
+ * Por portal no body, fora do ecrã que entra animado (ver Layout); aparece sem deslizar.
+ */
 function BarraAcoes({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useReservarFundo(ref);
-  return (
-    <div ref={ref} className="fixed inset-x-0 bottom-0 z-30 bg-surface/95 backdrop-blur-md">
+  return createPortal(
+    <div ref={ref} className="animate-aparecer fixed inset-x-0 bottom-0 z-30 bg-surface/95 backdrop-blur-md">
       <div className="mx-auto max-w-md space-y-3 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

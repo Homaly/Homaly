@@ -19,8 +19,77 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Animação de arranque: aqui e não no React, para aparecer antes de o JavaScript carregar.
+         A casa do logótipo aparece e a linha do eletrocardiograma desenha-se da esquerda para a
+         direita (cerca de 1 s, como pedem as regras do ecrã de arranque do Android). Fica até a
+         app estar pronta e sai a desvanecer (src/lib/arranque.ts). Cores do tema da app:
+         a casa na cor do texto, a linha no turquesa da marca (#00e0c6) nos dois temas. -->
+    <style>
+      #arranque {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        background: #f4f5f9;
+        color: #131321;
+        transition: opacity 250ms cubic-bezier(0.3, 0, 0.8, 0.15);
+      }
+      .dark #arranque {
+        background: #131321;
+        color: #f4f6f8;
+      }
+      #arranque.a-sair {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #arranque svg {
+        width: 128px;
+        height: auto;
+        overflow: visible;
+        fill: none;
+        stroke-width: 26;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      #arranque .casa {
+        stroke: currentColor;
+        transform-box: fill-box;
+        transform-origin: 50% 100%;
+        animation: arranque-casa 300ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+      }
+      #arranque .linha {
+        stroke: #00e0c6;
+        stroke-dasharray: 1 1.5;
+        stroke-dashoffset: 1.02;
+        animation: arranque-linha 650ms cubic-bezier(0.65, 0, 0.35, 1) 250ms forwards;
+      }
+      @keyframes arranque-casa {
+        from { opacity: 0; transform: scale(0.9); }
+      }
+      @keyframes arranque-linha {
+        to { stroke-dashoffset: 0; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #arranque .casa,
+        #arranque .linha {
+          animation: none;
+          stroke-dashoffset: 0;
+        }
+      }
+    </style>
   </head>
   <body class="bg-surface text-on-surface antialiased">
+    <div id="arranque" aria-hidden="true">
+      <!-- Casa e linha redesenhadas a partir de assets/marca/logo-fundo-escuro.jpeg. -->
+      <svg viewBox="150 147 320 260" xmlns="http://www.w3.org/2000/svg">
+        <g class="casa">
+          <path d="M200 268 L316 162 L372 213 V180 H396 V235 L432 268" />
+          <path d="M231 315 V392 H400 V315" />
+        </g>
+        <path class="linha" pathLength="1" d="M165 315 H258 L270 284 L292 355 L320 240 L343 342 L355 315 H455" />
+      </svg>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

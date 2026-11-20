@@ -16,7 +16,6 @@ CONTACTO = Contacto(nome="Vizinha Ana", telemovel="912345678")
 
 @pytest.fixture(autouse=True)
 def preparar(monkeypatch):
-    monkeypatch.setenv("HOMALY_URL_PUBLICO", "http://192.168.1.20:8000/")
     enviadas: list[tuple[str, str]] = []
     monkeypatch.setattr(sms, "enviar", lambda para, texto: enviadas.append((para, texto)))
     definicoes.guardar(Definicoes(contacto=CONTACTO, espera_minutos=5, nome_casa="Casa da D. Maria"))
@@ -74,7 +73,8 @@ def test_seguranca_sem_resposta_avisa_no_fim_do_tempo_de_espera(enviadas):
     assert linhas[0] == "Homaly - Casa da D. Maria"
     assert linhas[1] == "Alerta de segurança às 15:00:"
     assert linhas[2] == "A porta da rua está aberta há mais de 5 minutos, desde as 14:55."
-    assert linhas[3].startswith("Ver: http://192.168.1.20:8000/a/")
+    assert len(linhas) == 3  # sem link: a mensagem basta (decisão de 2026-11-20)
+    assert "http" not in texto
 
 
 def test_bem_estar_tambem_chega_ao_contacto(enviadas):
@@ -203,14 +203,13 @@ def test_ja_avisado_recebe_a_sms_de_resolvido(enviadas):
     a = anomalia()
     agendar(a)
     contacto_externo.verificar(minuto(5))
-    link = enviadas[0][1].splitlines()[-1]
 
     resolver(a, "a porta fechou às 15:12", minuto(12))
     contacto_externo.verificar(minuto(12))
 
     para, texto = enviadas[1]
     assert para == "+351912345678"
-    assert texto.splitlines() == ["Homaly - Casa da D. Maria", "Resolvido às 15:12: a porta fechou às 15:12.", link]
+    assert texto.splitlines() == ["Homaly - Casa da D. Maria", "Resolvido às 15:12: a porta fechou às 15:12."]
 
 
 def test_resolvida_pelo_responsavel_sem_texto(enviadas):
@@ -304,29 +303,6 @@ def test_a_thread_envia_e_para(enviadas):
         parar()
 
     assert len(enviadas) == 1
-
-
-@pytest.mark.parametrize("url", ["", "http://localhost:8000", "http://127.0.0.1:8000"])
-def test_com_textbee_e_link_local_avisa_no_arranque(monkeypatch, caplog, url):
-    # O telemóvel do contacto não abre um link para localhost (é o próprio telemóvel).
-    monkeypatch.setenv("TEXTBEE_API_KEY", "chave")
-    monkeypatch.setenv("HOMALY_URL_PUBLICO", url)
-
-    contacto_externo.avisar_se_link_local()
-
-    assert "HOMALY_URL_PUBLICO" in caplog.text
-
-
-@pytest.mark.parametrize(
-    "chave, url", [("", "http://localhost:8000"), ("chave", "http://192.168.1.20:8000")]
-)
-def test_sem_textbee_ou_com_ip_da_rede_nao_avisa(monkeypatch, caplog, chave, url):
-    monkeypatch.setenv("TEXTBEE_API_KEY", chave)
-    monkeypatch.setenv("HOMALY_URL_PUBLICO", url)
-
-    contacto_externo.avisar_se_link_local()
-
-    assert "HOMALY_URL_PUBLICO" not in caplog.text
 
 
 # Revisão: reinício, corridas e falhas
@@ -456,10 +432,10 @@ def test_um_envio_que_rebenta_nao_trava_os_outros(monkeypatch, enviadas):
     agendar(boa)
     original = contacto_externo.mensagens.alerta
 
-    def alerta(a, nome_casa, codigo):
+    def alerta(a, nome_casa):
         if a.id == estragada.id:
             raise RuntimeError("um erro inesperado")
-        return original(a, nome_casa, codigo)
+        return original(a, nome_casa)
 
     monkeypatch.setattr(contacto_externo.mensagens, "alerta", alerta)
     contacto_externo.verificar(minuto(5))

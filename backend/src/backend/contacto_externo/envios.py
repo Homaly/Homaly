@@ -21,8 +21,8 @@ db.esquema(
         motivo               TEXT,              -- porque foi cancelada ou falhou
         tentativas           INTEGER NOT NULL DEFAULT 0,
         telemovel            TEXT,              -- para onde foi o alerta (e vai o resolvido)
-        codigo               TEXT UNIQUE,       -- o do link /a/{codigo}; nunca o id da anomalia
-        ultima_sms_em        TEXT,              -- a página vale 24 horas a partir daqui
+        codigo               TEXT UNIQUE,       -- marca o alerta como enviado (era o do link da página, que saiu)
+        ultima_sms_em        TEXT,              -- a hora da última SMS
         resolvido            TEXT,              -- NULL, pendente, enviada, falhou
         resolvido_em         TEXT,
         tentativas_resolvido INTEGER NOT NULL DEFAULT 0
