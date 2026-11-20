@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCalendario } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
-import { ligarCalendario } from '../lib/calendario';
+import { anonimizarEmail, ligarCalendario } from '../lib/calendario';
 import Grupo from './Grupo';
 import Linha, { Seta } from './Linha';
 
-/** Mostra "Calendário ligado" ou o erro quando a Google devolve a pessoa (?calendario=ligado|erro). */
+/** Mostra "Calendário conectado" ou o erro quando a Google devolve a pessoa (?calendario=ligado|erro). */
 function useResultadoDaLigacao() {
   const [params, setParams] = useSearchParams();
   const { showToast } = useToast();
@@ -16,8 +16,8 @@ function useResultadoDaLigacao() {
   useEffect(() => {
     if (!resultado || mostrado.current) return;
     mostrado.current = true;
-    if (resultado === 'ligado') showToast('Calendário ligado', 'success');
-    else showToast('Não foi possível ligar ao calendário', 'error');
+    if (resultado === 'ligado') showToast('Calendário conectado', 'success');
+    else showToast('Não foi possível conectar o calendário', 'error');
     setParams({}, { replace: true });
   }, [resultado, setParams, showToast]);
 }
@@ -26,7 +26,8 @@ const TITULO = 'Google Calendar';
 
 /**
  * Definições → Calendário: uma só linha, como as contas nas definições do telemóvel.
- * Ligado, abre o detalhe (`/definicoes/calendario`); por ligar, a linha toda liga.
+ * Conectado, abre o detalhe (`/definicoes/calendario`); por conectar, a linha toda conecta.
+ * O e-mail aparece anonimizado (`anonimizarEmail`).
  */
 export default function SecaoCalendario() {
   useResultadoDaLigacao();
@@ -40,7 +41,7 @@ export default function SecaoCalendario() {
       <Linha
         icone="calendar"
         titulo={TITULO}
-        descricao={<span className="text-danger">Não foi possível saber se está ligado</span>}
+        descricao={<span className="text-danger">Não foi possível saber se está conectado</span>}
       />
     );
   } else if (data.ligado) {
@@ -53,7 +54,7 @@ export default function SecaoCalendario() {
             data.erro ? (
               <span className="text-danger">Não foi possível ler o calendário</span>
             ) : (
-              (data.email ?? 'Ligado')
+              (data.email ? anonimizarEmail(data.email) : 'Conectado')
             )
           }
           fim={<Seta />}
@@ -66,8 +67,8 @@ export default function SecaoCalendario() {
         <Linha
           icone="calendar"
           titulo={TITULO}
-          descricao="Não ligado"
-          fim={<span className="font-semibold text-primary-ink">Ligar</span>}
+          descricao="Não conectado"
+          fim={<span className="font-semibold text-primary-ink">Conectar</span>}
         />
       </button>
     );

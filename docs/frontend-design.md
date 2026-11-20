@@ -22,7 +22,7 @@ Barra em baixo com quatro separadores:
 
 O detalhe da anomalia (`/anomalias/:id`) abre a partir do Início ou do Histórico, com a seta de voltar e sem a barra de baixo. A barra de topo fica só com a seta: o título do ecrã é o da anomalia. Mostra a explicação, deixa responder, aceitar ou recusar a ação proposta e a proposta de silêncio, e mostra a imagem quando a há (US02, US03, US13). Os botões ficam presos ao fundo do ecrã, ao alcance do polegar; depois de responder ou de aceitar a ação, passam a "Voltar ao início".
 
-O calendário tem dois ecrãs abaixo das Definições, com a seta de voltar e a barra de baixo: o detalhe (`/definicoes/calendario`), com a conta (e-mail, hora da última leitura, "Atualizar" e, se a leitura falhou, o erro e "Ligar outra vez") e "Remover calendário" num grupo à parte, e a confirmação de remover (`/definicoes/calendario/remover`). Depois de remover, a app volta às Definições sem passar pelo detalhe, que sem calendário já não tem nada.
+O calendário tem dois ecrãs abaixo das Definições, com a seta de voltar e a barra de baixo: o detalhe (`/definicoes/calendario`), com a conta (e-mail, hora da última leitura, "Atualizar" e, se a leitura falhou, o erro e "Conectar outra vez") e "Remover calendário" num grupo à parte, e a confirmação de remover (`/definicoes/calendario/remover`). Depois de remover, a app volta às Definições sem passar pelo detalhe, que sem calendário já não tem nada.
 
 O separador do Início mostra na barra de baixo quantos avisos estão por responder, para se ver a partir de qualquer separador.
 
@@ -169,7 +169,8 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 
 Os dois primeiros grupos (contacto externo, com o tempo de espera, e casa) guardam-se com o botão Guardar; o calendário e a aparência mudam logo. Há um só botão turquesa, o Guardar.
 
-- **Calendário:** uma só linha, como as contas nas definições do telemóvel. Por ligar: "Google Calendar · Não ligado", com "Ligar" à direita, e a linha toda leva à Google. Ligado: o e-mail da conta e uma seta para o detalhe; se a última leitura falhou, a linha di-lo a vermelho. O detalhe não lista o que a casa sabe pelo calendário; o número de coisas aparece só na confirmação de remover.
+- **Calendário:** uma só linha, como as contas nas definições do telemóvel. Por conectar: "Google Calendar · Não conectado", com "Conectar" à direita, e a linha toda leva à Google. Conectado: o e-mail da conta e uma seta para o detalhe; se a última leitura falhou, a linha di-lo a vermelho. Nos textos do calendário usa-se o verbo conectar (conectar, conectado), não ligar.
+- **E-mail anonimizado** (`anonimizarEmail` em `lib/calendario.ts`), na linha, no detalhe e na confirmação de remover: antes do @, os 2 primeiros e os 2 últimos caracteres com asteriscos no meio, sempre com 8 caracteres (`an****va@gmail.com`), para não se saber quão longo é; o que vem depois do @ fica. Nomes de 3 ou 4 caracteres mostram só o primeiro e o último (`a******a@gmail.com`), e de 1 ou 2 só o primeiro, para não ficarem inteiros à vista. O backend continua a devolver o e-mail completo. O detalhe não lista o que a casa sabe pelo calendário; o número de coisas aparece só na confirmação de remover.
 
 - **Tempo de espera:** opções fixas (30 s, 5 min, 15 min, 30 min). Os 30 segundos vão como `esperaMinutos: 0.5`. Um valor guardado fora da lista (o backend aceita de 0, que avisa logo, a 1440) aparece como mais uma opção.
 - **Aparência:** Automático, Claro ou Escuro. Automático segue o tema do telemóvel, mesmo com a app aberta, e é o valor por omissão. A escolha fica no telemóvel (`localStorage`, chave `homaly-theme`), não vai para o backend. Não há botão de tema na barra de topo.
