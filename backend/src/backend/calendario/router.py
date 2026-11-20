@@ -2,7 +2,8 @@
 
 Ligar é uma navegação, não um pedido da PWA: `GET /calendario/google/ligar` manda o browser para
 a Google e `GET /calendario/google/retorno` volta para `APP_URL/definicoes?calendario=ligado`
-(ou `=erro`), onde a PWA mostra a mensagem.
+(ou `=erro`), onde a PWA mostra a mensagem. `?voltar=/boas-vindas` faz voltar ao onboarding;
+só se aceitam os ecrãs de `DESTINOS`, para o retorno não servir de redirecionamento aberto.
 
 O retorno só aceita o browser que começou: o `state` vai também num cookie, e o código só se
 troca com o verificador PKCE que ficou no servidor. Assim ninguém liga à casa o calendário dele
@@ -32,14 +33,15 @@ APP_URL_POR_OMISSAO = "http://localhost:5173"
 VALIDADE_STATE_S = 10 * 60
 COOKIE_STATE = "homaly_calendario_state"
 INTERVALO_LER_AGORA_S = 30  # "Atualizar" gasta a Google e a IA: no máximo uma vez por meio minuto
+DESTINOS = ("/definicoes", "/boas-vindas")  # para onde a Google pode devolver a pessoa
 MESES = [
     "janeiro", "fevereiro", "março", "abril", "maio", "junho",
     "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ]  # fmt: skip
 
-# state → (quando expira, verificador PKCE), em hora real. Um processo só; perde-se ao reiniciar,
+# state → (quando expira, verificador PKCE, destino), em hora real. Um processo só; perde-se ao reiniciar,
 # e aí liga-se outra vez.
-_pedidos: dict[str, tuple[float, str]] = {}
+_pedidos: dict[str, tuple[float, str, str]] = {}
 _ultima_leitura_pedida: float | None = None  # hora real (monotónica) do último "Atualizar"
 
 router = APIRouter(prefix="/calendario", tags=["calendário"])
@@ -56,15 +58,16 @@ def pedir_estado(agora: datetime = Depends(obter_agora)) -> dict:
 
 
 @router.get("/google/ligar")
-def ligar() -> RedirectResponse:
+def ligar(voltar: str = DESTINOS[0]) -> RedirectResponse:
+    destino = voltar if voltar in DESTINOS else DESTINOS[0]
     credenciais = google.credenciais()
     if credenciais is None:
         registo.warning("Calendário: faltam GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env")
-        return _voltar("erro")
+        return _voltar("erro", destino)
     state = secrets.token_urlsafe(24)
     verificador = google.novo_verificador()
     _limpar_pedidos()
-    _pedidos[state] = (relogio_real.monotonic() + VALIDADE_STATE_S, verificador)
+    _pedidos[state] = (relogio_real.monotonic() + VALIDADE_STATE_S, verificador, destino)
     resposta = RedirectResponse(google.url_autorizar(credenciais, state, verificador), status_code=303)
     resposta.set_cookie(
         COOKIE_STATE,
@@ -91,23 +94,24 @@ def retorno(
     mesmo_browser = bool(state) and secrets.compare_digest(state, homaly_calendario_state)
     pedido = _pedidos.pop(state, None) if mesmo_browser else None
     valido = pedido is not None and pedido[0] > relogio_real.monotonic()
+    destino = pedido[2] if pedido is not None else DESTINOS[0]
     if error or not code or not valido or credenciais is None:
         registo.warning(
             "Calendário: ligação recusada (erro=%r, mesmo browser=%s, state válido=%s)", error, mesmo_browser, valido
         )
-        return _voltar("erro")
+        return _voltar("erro", destino)
     try:
         ligacao = google.trocar_codigo(credenciais, code, pedido[1], cliente=cliente)
     except google.ErroGoogle as erro:
         registo.warning("Calendário: %s", erro)
-        return _voltar("erro")
+        return _voltar("erro", destino)
     armazem.guardar_ligacao(ligacao.email, ligacao.refresh_token, agora)
     try:
         sincronizar(agora, modelo, cliente=cliente)  # se falhar, fica ligado e o erro aparece
     except Exception:  # noqa: BLE001 — já está ligado; a próxima leitura tenta outra vez
         registo.exception("Calendário: a primeira leitura falhou")
         armazem.guardar_erro("Não foi possível ler o calendário. A casa tenta outra vez dentro de uma hora.")
-    return _voltar("ligado")
+    return _voltar("ligado", destino)
 
 
 @router.post("/sincronizar")
@@ -191,14 +195,14 @@ def _dia(d: datetime) -> str:
     return f"{d.day} de {MESES[d.month - 1]}"
 
 
-def _voltar(resultado: str) -> RedirectResponse:
+def _voltar(resultado: str, destino: str = DESTINOS[0]) -> RedirectResponse:
     app_url = (os.environ.get("APP_URL") or APP_URL_POR_OMISSAO).rstrip("/")
-    resposta = RedirectResponse(f"{app_url}/definicoes?calendario={resultado}", status_code=303)
+    resposta = RedirectResponse(f"{app_url}{destino}?calendario={resultado}", status_code=303)
     resposta.delete_cookie(COOKIE_STATE)
     return resposta
 
 
 def _limpar_pedidos() -> None:
     agora = relogio_real.monotonic()
-    for state in [s for s, (expira, _) in _pedidos.items() if expira <= agora]:
+    for state in [s for s, (expira, *_) in _pedidos.items() if expira <= agora]:
         del _pedidos[state]

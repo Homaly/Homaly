@@ -60,7 +60,7 @@ export default function Calendario() {
                 <p role="alert" className="text-sm text-danger first-letter:uppercase">
                   {data.erro}
                 </p>
-                <Botao largo variante="contorno" onClick={ligarCalendario}>
+                <Botao largo variante="contorno" onClick={() => ligarCalendario()}>
                   Conectar outra vez
                 </Botao>
               </div>

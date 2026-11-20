@@ -63,7 +63,7 @@ export default function SecaoCalendario() {
     );
   } else if (data.configurado) {
     linha = (
-      <button type="button" onClick={ligarCalendario} className="block w-full">
+      <button type="button" onClick={() => ligarCalendario()} className="block w-full">
         <Linha
           icone="calendar"
           titulo={TITULO}
