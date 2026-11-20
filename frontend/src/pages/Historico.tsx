@@ -12,7 +12,8 @@ import type { Evento } from '../types/contract';
 function nomeDoDia(d: Date) {
   if (isToday(d)) return 'Hoje';
   if (isYesterday(d)) return 'Ontem';
-  return format(d, "EEEE, d 'de' MMMM", { locale: pt });
+  // "quarta-feira, 18/11": a data curta, como no telemóvel.
+  return format(d, 'EEEE, dd/MM', { locale: pt });
 }
 
 function agruparPorDia(eventos: Evento[]) {
