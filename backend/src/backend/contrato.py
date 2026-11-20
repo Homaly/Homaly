@@ -133,7 +133,8 @@ class Definicoes(Modelo):
     """US04. Sem `nome_casa`, a SMS ao contacto externo diz só "Homaly"."""
 
     contacto: Contacto | None
-    espera_minutos: Annotated[int, Field(ge=0, le=1440)]  # até um dia
+    # Em minutos, até um dia; aceita frações: 0.5 são os 30 segundos das Definições.
+    espera_minutos: Annotated[float, Field(ge=0, le=1440)]
     nome_casa: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] | None = None
 
     @field_validator("nome_casa")

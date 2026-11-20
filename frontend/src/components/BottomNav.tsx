@@ -12,7 +12,7 @@ const SEPARADORES: { to: string; icon: NomeIcone; label: string }[] = [
 
 /**
  * Barra de baixo: 64 px de altura mais o contorno. A caixa da Conversa assenta em bottom-16.
- * O separador ativo tem uma pílula turquesa clara atrás do ícone, letra a negrito e traço mais grosso.
+ * O separador ativo tem o ícone cheio (ver Icone) e a letra a negrito, na cor do texto principal.
  * O Início mostra quantos avisos estão por responder, para se ver a partir de qualquer separador.
  */
 export default function BottomNav() {
@@ -42,12 +42,7 @@ export default function BottomNav() {
               >
                 {({ isActive }) => (
                   <>
-                    <span
-                      className={cn(
-                        'relative flex h-8 w-14 items-center justify-center rounded-full transition-colors',
-                        isActive && 'bg-primary/25'
-                      )}
-                    >
+                    <span className="relative flex h-8 w-14 items-center justify-center">
                       <Icone nome={s.icon} ativo={isActive} />
                       {contador > 0 && (
                         // Laranja: pede atenção. O contorno separa-o do ícone.

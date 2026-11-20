@@ -11,11 +11,14 @@ import { useTheme, type Theme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import type { Definicoes as Defs } from '../types/contract';
 
-/** Tempos de espera à escolha, em minutos. */
-const ESPERAS = [0, 5, 15, 30];
+/** Tempos de espera à escolha, em minutos: 0.5 são 30 segundos. */
+const ESPERAS = [0.5, 5, 15, 30];
 
-const rotuloEspera = (min: number) =>
-  min === 0 ? 'Logo' : min % 60 === 0 ? `${min / 60} h` : `${min} min`;
+function rotuloEspera(min: number) {
+  if (min === 0) return 'Logo';
+  if (min < 1) return `${Math.round(min * 60)} s`;
+  return min % 60 === 0 ? `${min / 60} h` : `${min} min`;
+}
 
 /** Um valor guardado fora da lista (o backend aceita até 1440) junta-se a ela, para não se perder. */
 function opcoesEspera(guardado: number): OpcaoSegmentado<number>[] {

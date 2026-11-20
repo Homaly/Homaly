@@ -33,6 +33,13 @@ def test_espera_zero_e_valida():
     assert api.put("/definicoes", json={"contacto": None, "esperaMinutos": 0}).status_code == 200
 
 
+def test_espera_de_trinta_segundos_guarda_se_como_meio_minuto():
+    corpo = {"contacto": None, "esperaMinutos": 0.5}
+
+    assert api.put("/definicoes", json=corpo).json() == corpo
+    assert definicoes.obter().espera_minutos == 0.5
+
+
 @pytest.mark.parametrize(
     "escrito, guardado",
     [
