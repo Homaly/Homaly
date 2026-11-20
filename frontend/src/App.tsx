@@ -9,6 +9,8 @@ import Historico from './pages/Historico';
 import Definicoes from './pages/Definicoes';
 import Calendario from './pages/Calendario';
 import RemoverCalendario from './pages/RemoverCalendario';
+import BoasVindas from './pages/BoasVindas';
+import IrParaBoasVindas from './components/IrParaBoasVindas';
 
 export default function App() {
   // O primeiro ecrã já está desenhado: a animação de arranque pode sair (depois de a linha acabar).
@@ -16,7 +18,16 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Inicio />} />
+        <Route
+          path="/"
+          element={
+            <>
+              <IrParaBoasVindas />
+              <Inicio />
+            </>
+          }
+        />
+        <Route path="/boas-vindas" element={<BoasVindas />} />
         <Route path="/anomalias/:id" element={<Anomalia />} />
         <Route path="/conversa" element={<Conversa />} />
         <Route path="/historico" element={<Historico />} />

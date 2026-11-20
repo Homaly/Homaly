@@ -20,5 +20,6 @@ export const realApi: Api = {
   obterCalendario: () => apiFetch<Calendario>('/calendario'),
   sincronizarCalendario: () => apiFetch<Calendario>('/calendario/sincronizar', { method: 'POST' }),
   removerCalendario: () => apiFetch<Calendario>('/calendario', { method: 'DELETE' }),
-  urlLigarCalendario: () => `${API_URL}/calendario/google/ligar`,
+  urlLigarCalendario: (voltar = '/definicoes') =>
+    `${API_URL}/calendario/google/ligar?voltar=${encodeURIComponent(voltar)}`,
 };

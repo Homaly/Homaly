@@ -173,9 +173,9 @@ export const mockApi: Api = {
   obterCalendario: () => espera(lerCalendario()),
   sincronizarCalendario: () => espera(lerCalendario()),
   removerCalendario: () => espera(gravarCalendario(SEM_CALENDARIO)),
-  // Sem Google: "liga" logo e volta às Definições como o backend faria.
-  urlLigarCalendario: () => {
+  // Sem Google: "liga" logo e volta ao ecrã de onde veio, como o backend faria.
+  urlLigarCalendario: (voltar = '/definicoes') => {
     gravarCalendario({ ...CALENDARIO_LIGADO, lidoEm: new Date().toISOString() });
-    return '/definicoes?calendario=ligado';
+    return `${voltar}?calendario=ligado`;
   },
 };

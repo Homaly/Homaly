@@ -1,7 +1,9 @@
 import { api } from '../api';
+import type { DestinoCalendario } from '../api/types';
 
-/** Leva a pessoa à Google para conectar o calendário; a Google devolve-a às Definições (?calendario=ligado|erro). */
-export const ligarCalendario = () => window.location.assign(api.urlLigarCalendario());
+/** Leva a pessoa à Google para conectar o calendário; a Google devolve-a a `voltar` (?calendario=ligado|erro). */
+export const ligarCalendario = (voltar: DestinoCalendario = '/definicoes') =>
+  window.location.assign(api.urlLigarCalendario(voltar));
 
 /** Tamanho do nome (antes do @) depois de anonimizado: igual para todos, para não dizer quão longo é. */
 const TAMANHO_NOME = 8;

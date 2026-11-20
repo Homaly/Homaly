@@ -250,3 +250,33 @@ def test_ler_agora_logo_depois_de_a_maquina_arrancar(cliente, google_falsa, monk
     antes = len(google_falsa.pedidos)
     cliente.post("/calendario/sincronizar")
     assert len(google_falsa.pedidos) - antes == 2
+
+
+def _ligar_a_partir_de(cliente, voltar: str, **retorno) -> httpx.Response:
+    r = cliente.get("/calendario/google/ligar", params={"voltar": voltar})
+    state = parse_qs(urlparse(r.headers["location"]).query)["state"][0]
+    return cliente.get("/calendario/google/retorno", params={"state": state, **retorno})
+
+
+def test_ligar_a_partir_das_boas_vindas_volta_as_boas_vindas(cliente, google_falsa):
+    r = _ligar_a_partir_de(cliente, "/boas-vindas", code="codigo")
+    assert r.headers["location"] == "https://homaly.test/boas-vindas?calendario=ligado"
+
+
+def test_cancelar_a_partir_das_boas_vindas_volta_as_boas_vindas(cliente, google_falsa):
+    r = _ligar_a_partir_de(cliente, "/boas-vindas", error="access_denied")
+    assert r.headers["location"] == "https://homaly.test/boas-vindas?calendario=erro"
+
+
+@pytest.mark.parametrize("voltar", ["https://mau.example/x", "//mau.example", "/outra", ""])
+def test_destino_desconhecido_volta_as_definicoes(cliente, google_falsa, voltar):
+    """Só se volta a ecrãs da app conhecidos: nada de redirecionamentos abertos."""
+    r = _ligar_a_partir_de(cliente, voltar, code="codigo")
+    assert r.headers["location"] == "https://homaly.test/definicoes?calendario=ligado"
+
+
+def test_sem_chaves_volta_com_erro_ao_destino(cliente, monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("APP_URL", raising=False)
+    r = cliente.get("/calendario/google/ligar", params={"voltar": "/boas-vindas"})
+    assert r.headers["location"] == "http://localhost:5173/boas-vindas?calendario=erro"
