@@ -19,12 +19,14 @@ const ERROS_DITADO: Record<ErroDitado, [string, ToastType]> = {
 };
 
 /**
- * Começos de frase para o que a casa percebe (férias, rotinas, o aparelho na tomada, perguntas).
- * Tocar põe o começo na caixa e a pessoa acaba a frase; nada é enviado sozinho.
+ * Sugestões por cima da caixa, para o que a casa percebe (férias, rotinas, o aparelho na tomada,
+ * perguntas). As que acabam em "…" põem o começo da frase na caixa, para a pessoa a acabar; as
+ * outras enviam logo o texto. A casa lê cada mensagem sozinha, por isso "Vamos de férias" sem
+ * datas pode receber um "Não percebi bem".
  */
 const SUGESTOES = [
-  { rotulo: 'Vamos de férias', texto: 'Vamos de férias de ' },
-  { rotulo: 'Vem cá alguém', texto: 'Vem cá alguém às ' },
+  { rotulo: 'Vamos de férias', texto: 'Vamos de férias' },
+  { rotulo: 'Vem cá alguém', texto: 'Vem cá alguém' },
   { rotulo: 'Na tomada está…', texto: 'Na tomada está o ' },
   { rotulo: 'O que aconteceu hoje?', texto: 'O que aconteceu hoje?' },
 ];
@@ -66,13 +68,20 @@ export default function Conversa() {
     fim.current?.scrollIntoView({ behavior: 'smooth' });
   }, [data?.length, enviar.isPending]);
 
-  const usarSugestao = (inicio: string) => {
-    setTexto(inicio);
-    // Foco com o cursor no fim, para continuar a escrever.
+  const enviarTexto = (t: string) => {
+    ditado.cancelar();
+    setTexto('');
+    enviar.mutate(t, { onError: () => showToast('A mensagem não chegou à casa', 'error') });
+  };
+
+  const usarSugestao = ({ rotulo, texto: frase }: (typeof SUGESTOES)[number]) => {
+    if (!rotulo.endsWith('…')) return enviarTexto(frase);
+    setTexto(frase);
+    // Foco com o cursor no fim, para acabar a frase.
     requestAnimationFrame(() => {
       const c = caixa.current;
       c?.focus();
-      c?.setSelectionRange(inicio.length, inicio.length);
+      c?.setSelectionRange(frase.length, frase.length);
     });
   };
 
@@ -81,10 +90,7 @@ export default function Conversa() {
   const submeter = (e: FormEvent) => {
     e.preventDefault();
     const t = texto.trim();
-    if (!t) return;
-    ditado.cancelar();
-    setTexto('');
-    enviar.mutate(t, { onError: () => showToast('A mensagem não chegou à casa', 'error') });
+    if (t) enviarTexto(t);
   };
 
   return (
@@ -138,8 +144,9 @@ export default function Conversa() {
               key={s.rotulo}
               type="button"
               tabIndex={mostrarSugestoes ? 0 : -1}
-              onClick={() => usarSugestao(s.texto)}
-              className="group flex min-h-12 shrink-0 items-center"
+              disabled={enviar.isPending}
+              onClick={() => usarSugestao(s)}
+              className="group flex min-h-12 shrink-0 items-center disabled:opacity-50"
             >
               <span className="rounded-full bg-surface-tonal px-3.5 py-2 text-sm font-medium text-on-surface transition-colors group-hover:bg-outline-variant">
                 {s.rotulo}

@@ -4,6 +4,7 @@ import Botao from '../components/Botao';
 import Icone from '../components/Icone';
 import { useCalendario, useRemoverCalendario } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
+import { anonimizarEmail } from '../lib/calendario';
 
 /** Confirmação antes de remover o calendário: apaga tudo o que a casa sabe por ele. */
 export default function RemoverCalendario() {
@@ -38,7 +39,7 @@ export default function RemoverCalendario() {
           {quantos > 0 && <> ({quantos === 1 ? '1 coisa' : `${quantos} coisas`})</>}: férias, rotinas e compromissos.
           O que disse na conversa fica.
         </p>
-        {data?.email && <p className="text-sm text-muted">Conta: {data.email}</p>}
+        {data?.email && <p className="text-sm text-muted">Conta: {anonimizarEmail(data.email)}</p>}
       </div>
       <div className="space-y-3">
         <Botao largo variante="contorno" className="border-danger text-danger" disabled={remover.isPending} onClick={apagar}>

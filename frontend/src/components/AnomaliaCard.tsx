@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { cn } from '../lib/cn';
 import type { Anomalia, Classe } from '../types/contract';
 import Icone, { type NomeIcone } from './Icone';
 
@@ -35,32 +36,48 @@ function haQuanto(iso: string) {
   return `há ${d} ${d === 1 ? 'dia' : 'dias'}`;
 }
 
-/** Ícone da classe num círculo, à esquerda: a classe lê-se de relance sem passar à frente do título. */
+/**
+ * Ícone da classe num círculo, à esquerda: a classe lê-se de relance sem passar à frente do título.
+ * Nos urgentes (os que chegam ao contacto externo) é laranja, a cor de "pede atenção": a cor diz a
+ * urgência, não a classe, por isso segurança e bem-estar têm a mesma. Os outros ficam neutros.
+ */
 function IconeClasse({ classe }: { classe: Classe }) {
   return (
-    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-tonal text-on-surface">
+    <span
+      className={cn(
+        'flex size-10 shrink-0 items-center justify-center rounded-full',
+        CLASSES[classe].urgente ? 'bg-accent-orange/15 text-accent-orange' : 'bg-surface-tonal text-on-surface'
+      )}
+    >
       <Icone nome={CLASSES[classe].icon} className="size-5" />
     </span>
   );
 }
 
-/** Classe e hora numa linha discreta, por baixo do resto. */
-function Meta({ anomalia }: { anomalia: Anomalia }) {
+/**
+ * Cabeçalho pequeno por cima do título, como o de uma notificação no telemóvel: a classe e a hora.
+ * Em cima, e não por baixo, para não ficar colado à explicação, que também é cinzenta.
+ * "Avisou" diz de que hora se trata: o título pode trazer outro tempo ("Porta da rua aberta há 7 minutos").
+ */
+function Cabecalho({ anomalia }: { anomalia: Anomalia }) {
   return (
-    <p className="text-xs text-muted">
-      {CLASSES[anomalia.classe].nome} · {haQuanto(anomalia.detetadaEm)}
+    <p className="text-xs leading-4 text-muted">
+      <span className="font-semibold text-on-surface-variant">{CLASSES[anomalia.classe].nome}</span>
+      {' · '}avisou {haQuanto(anomalia.detetadaEm)}
     </p>
   );
 }
 
-function AcaoProposta({ anomalia }: { anomalia: Anomalia }) {
+function AcaoProposta({ anomalia, className }: { anomalia: Anomalia; className?: string }) {
   if (!anomalia.acaoProposta) return null;
-  return <p className="text-sm text-primary-ink">Ação proposta: {anomalia.acaoProposta.descricao}</p>;
+  return (
+    <p className={cn('text-sm text-primary-ink', className)}>Ação proposta: {anomalia.acaoProposta.descricao}</p>
+  );
 }
 
 /**
  * Aviso urgente: cartão próprio, título maior e o começo da explicação, para decidir sem abrir.
- * Ordem de leitura: o quê (título), porquê (explicação), e só depois a classe e a hora.
+ * Três níveis: cabeçalho pequeno (classe e hora), título forte, explicação em texto de apoio.
  */
 export default function AnomaliaCard({ anomalia }: { anomalia: Anomalia }) {
   return (
@@ -69,13 +86,11 @@ export default function AnomaliaCard({ anomalia }: { anomalia: Anomalia }) {
       className="flex gap-3 rounded-2xl bg-surface-container p-4 transition-transform motion-safe:active:scale-[0.99]"
     >
       <IconeClasse classe={anomalia.classe} />
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-lg font-semibold leading-snug">{anomalia.titulo}</p>
-        <p className="line-clamp-2 text-sm text-on-surface-variant">{anomalia.explicacao}</p>
-        <AcaoProposta anomalia={anomalia} />
-        <div className="pt-1">
-          <Meta anomalia={anomalia} />
-        </div>
+      <div className="min-w-0 flex-1">
+        <Cabecalho anomalia={anomalia} />
+        <p className="mt-1 text-lg font-semibold leading-snug">{anomalia.titulo}</p>
+        <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-on-surface-variant">{anomalia.explicacao}</p>
+        <AcaoProposta anomalia={anomalia} className="mt-1.5" />
       </div>
     </Link>
   );
@@ -86,10 +101,10 @@ export function AnomaliaLinha({ anomalia }: { anomalia: Anomalia }) {
   return (
     <Link to={`/anomalias/${anomalia.id}`} className="flex min-h-14 gap-3 py-3">
       <IconeClasse classe={anomalia.classe} />
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="font-medium leading-snug">{anomalia.titulo}</p>
-        <AcaoProposta anomalia={anomalia} />
-        <Meta anomalia={anomalia} />
+      <div className="min-w-0 flex-1">
+        <Cabecalho anomalia={anomalia} />
+        <p className="mt-0.5 font-medium leading-snug">{anomalia.titulo}</p>
+        <AcaoProposta anomalia={anomalia} className="mt-0.5" />
       </div>
     </Link>
   );

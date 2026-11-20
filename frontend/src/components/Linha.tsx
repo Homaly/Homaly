@@ -15,7 +15,7 @@ export default function Linha({
   icone?: NomeIcone;
   titulo: ReactNode;
   descricao?: ReactNode;
-  /** À direita: `<Seta />`, uma ação ("Ligar") ou nada. */
+  /** À direita: `<Seta />`, uma ação ("Conectar") ou nada. */
   fim?: ReactNode;
 }) {
   return (

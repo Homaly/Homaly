@@ -6,10 +6,10 @@ import Linha from '../components/Linha';
 import { EstadoCarregar, EstadoErro } from '../components/Estados';
 import { useCalendario, useSincronizarCalendario } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
-import { hora, ligarCalendario } from '../lib/calendario';
+import { anonimizarEmail, hora, ligarCalendario } from '../lib/calendario';
 
 /**
- * Definições → Calendário: a conta ligada e, à parte, remover.
+ * Definições → Calendário: a conta conectada (e-mail anonimizado) e, à parte, remover.
  * Como o detalhe de uma conta nas definições do telemóvel: grupos de linhas e a ação destrutiva à parte.
  */
 export default function Calendario() {
@@ -36,7 +36,7 @@ export default function Calendario() {
           <Grupo titulo="Conta" lista>
             <Linha
               icone="calendar"
-              titulo={data.email ?? 'Conta Google'}
+              titulo={data.email ? anonimizarEmail(data.email) : 'Conta Google'}
               descricao={
                 sincronizar.isPending
                   ? 'A ler…'
@@ -61,7 +61,7 @@ export default function Calendario() {
                   {data.erro}
                 </p>
                 <Botao largo variante="contorno" onClick={ligarCalendario}>
-                  Ligar outra vez
+                  Conectar outra vez
                 </Botao>
               </div>
             )}

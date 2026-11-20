@@ -15,14 +15,14 @@ Barra em baixo com quatro separadores:
 
 | Separador | Rota | Ecrã | História |
 |-----------|------|------|----------|
-| Início | `/` | Anomalias ativas em dois grupos: "Urgente" (segurança e bem-estar, as que chegam ao contacto externo), cada uma no seu cartão com o começo da explicação; "Outros avisos" (saúde e conforto, eficiência), em linhas num só cartão. Dentro do grupo, por classe e depois a mais recente primeiro. Sem avisos, "Está tudo normal" | US02 |
+| Início | `/` | Anomalias ativas em dois grupos: "Urgente" (segurança e bem-estar, as que chegam ao contacto externo), cada uma no seu cartão com o começo da explicação; "Outros avisos" (saúde e conforto, eficiência), em linhas num só cartão. Dentro do grupo, por classe e depois a mais recente primeiro. O título de cada grupo leva o número de avisos ("Urgente · 2"). Sem avisos, "Está tudo normal" | US02 |
 | Conversa | `/conversa` | Conversa por texto com a casa; o texto pode ser ditado | US01 |
 | Histórico | `/historico` | Eventos e anomalias, do mais recente para o mais antigo | US06 |
 | Definições | `/definicoes` | Contacto externo e tempo de espera, nome da casa, calendário e aparência (tema) | US04 |
 
 O detalhe da anomalia (`/anomalias/:id`) abre a partir do Início ou do Histórico, com a seta de voltar e sem a barra de baixo. A barra de topo fica só com a seta: o título do ecrã é o da anomalia. Mostra a explicação, deixa responder, aceitar ou recusar a ação proposta e a proposta de silêncio, e mostra a imagem quando a há (US02, US03, US13). Os botões ficam presos ao fundo do ecrã, ao alcance do polegar; depois de responder ou de aceitar a ação, passam a "Voltar ao início".
 
-O calendário tem dois ecrãs abaixo das Definições, com a seta de voltar e a barra de baixo: o detalhe (`/definicoes/calendario`), com a conta (e-mail, hora da última leitura, "Atualizar" e, se a leitura falhou, o erro e "Ligar outra vez") e "Remover calendário" num grupo à parte, e a confirmação de remover (`/definicoes/calendario/remover`). Depois de remover, a app volta às Definições sem passar pelo detalhe, que sem calendário já não tem nada.
+O calendário tem dois ecrãs abaixo das Definições, com a seta de voltar e a barra de baixo: o detalhe (`/definicoes/calendario`), com a conta (e-mail, hora da última leitura, "Atualizar" e, se a leitura falhou, o erro e "Conectar outra vez") e "Remover calendário" num grupo à parte, e a confirmação de remover (`/definicoes/calendario/remover`). Depois de remover, a app volta às Definições sem passar pelo detalhe, que sem calendário já não tem nada.
 
 O separador do Início mostra na barra de baixo quantos avisos estão por responder, para se ver a partir de qualquer separador.
 
@@ -116,7 +116,7 @@ O botão do microfone, dentro da caixa da Conversa, passa a voz a texto com a We
 
 ## Sugestões na Conversa
 
-Por cima da caixa, enquanto ela está vazia, há começos de frase para o que a casa percebe: "Vamos de férias", "Vem cá alguém", "Na tomada está…" e "O que aconteceu hoje?". Tocar põe o começo na caixa, com o cursor no fim, e a pessoa acaba a frase; nada é enviado sozinho, como no ditado. O espaço das sugestões fica reservado mesmo escondido, para a caixa não saltar ao escrever. As mensagens encostam-se ao fundo, junto à caixa.
+Por cima da caixa, enquanto ela está vazia, há sugestões para o que a casa percebe: "Vamos de férias", "Vem cá alguém", "Na tomada está…" e "O que aconteceu hoje?". As que acabam em "…" põem o começo da frase na caixa, com o cursor no fim, e a pessoa acaba-a; as outras enviam logo o texto. A casa lê cada mensagem sozinha, sem as anteriores, por isso "Vamos de férias" ou "Vem cá alguém" sem datas nem dias podem receber "Não percebi bem". O espaço das sugestões fica reservado mesmo escondido, para a caixa não saltar ao escrever. As mensagens encostam-se ao fundo, junto à caixa.
 
 ## Mocks
 
@@ -145,7 +145,7 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 | `bg-accent-orange` + `text-on-accent-orange` | Número de avisos por responder, na barra de baixo |
 
 - **Cor de estado:** `text-accent-green` (correu bem), `text-accent-orange` (pede atenção), `text-danger` (erro, perigo ou destrutivo; rosa no escuro), `text-primary-ink` (ligação ou ação). Passam também sobre o fundo claro da mesma cor (`bg-danger/10`, `bg-accent-green/15`).
-- **As classes de anomalia não têm cor.** Distinguem-se pelo ícone e pelo nome; a cor fica para o estado.
+- **As classes de anomalia não têm cor.** Distinguem-se pelo ícone e pelo nome; a cor fica para o estado. No Início, os ícones dos avisos urgentes ficam a laranja (`bg-accent-orange/15` e `text-accent-orange`, "pede atenção"): a cor diz a urgência, não a classe, por isso segurança e bem-estar têm a mesma.
 - **Não usar `text-primary`:** o turquesa tem 1,6:1 sobre fundo claro. O contorno de foco é global; não usar `outline-none`.
 
 ## Peças base
@@ -154,7 +154,7 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 - **`Campo`** (`components/Campo.tsx`): 48 px, cantos de 12 px, letra de 16 px (o iOS não faz zoom). A caixa da conversa é em pílula, como os botões.
 - **`Icone`** (`components/Icone.tsx`): Lucide com traço de 1,75, escondido do leitor de ecrã. Quando o ícone é a única informação, juntar texto em `sr-only`. Com `ativo`, mostra a versão cheia: desenhada no mesmo ficheiro sobre os contornos do Lucide (que só tem ícones de traço), para os quatro ícones da barra de baixo; os pormenores (porta, ponteiros, furo) ficam recortados. No Histórico, o anel com a seta fica de traço e só o mostrador do relógio enche, porque encher o anel apagava a seta. Sem versão cheia, o traço passa a 2,25.
 - **Cartões:** `rounded-2xl bg-surface-container`, sem contorno. Listas (Histórico, avisos que não são urgentes) num só cartão, com divisórias que não chegam às bordas.
-- **Avisos no Início** (`components/AnomaliaCard.tsx`): ícone da classe num círculo à esquerda, título, e por baixo a classe e a hora numa linha discreta ("Segurança · há 9 h"). O título vem primeiro; a classe não passa à frente dele. Os urgentes têm título maior e duas linhas da explicação.
+- **Avisos no Início** (`components/AnomaliaCard.tsx`): ícone da classe num círculo à esquerda (laranja nos urgentes, neutro nos outros) e três níveis de texto. Em cima, um cabeçalho pequeno com a classe a negrito e a hora ("**Segurança** · avisou há 9 h"), como o de uma notificação no telemóvel. Depois, o título, forte. Por fim, a explicação, em texto de apoio (só nos urgentes, duas linhas). O cabeçalho vai em cima para não ficar colado à explicação, que também é cinzenta. O "avisou" diz que é a hora do aviso, porque o título pode trazer outro tempo ("Porta da rua aberta há 7 minutos").
 - **`Segmentado`** (`components/Segmentado.tsx`): escolha de uma opção entre poucas, lado a lado, com 48 px de altura (tema, tempo de espera). Por dentro são botões de rádio.
 - **`Grupo`** (`components/Grupo.tsx`): grupo das Definições, como nas definições do telemóvel: título pequeno, conteúdo num cartão e uma nota por baixo.
 - **Alvos de toque:** 48 px no mínimo. A seta de voltar é um círculo de contorno de 40 px dentro de 48 px de toque.
@@ -169,7 +169,8 @@ As cores estão em `src/index.css`, como papéis. Os componentes usam os papéis
 
 Os dois primeiros grupos (contacto externo, com o tempo de espera, e casa) guardam-se com o botão Guardar; o calendário e a aparência mudam logo. Há um só botão turquesa, o Guardar.
 
-- **Calendário:** uma só linha, como as contas nas definições do telemóvel. Por ligar: "Google Calendar · Não ligado", com "Ligar" à direita, e a linha toda leva à Google. Ligado: o e-mail da conta e uma seta para o detalhe; se a última leitura falhou, a linha di-lo a vermelho. O detalhe não lista o que a casa sabe pelo calendário; o número de coisas aparece só na confirmação de remover.
+- **Calendário:** uma só linha, como as contas nas definições do telemóvel. Por conectar: "Google Calendar · Não conectado", com "Conectar" à direita, e a linha toda leva à Google. Conectado: o e-mail da conta e uma seta para o detalhe; se a última leitura falhou, a linha di-lo a vermelho. Nos textos do calendário usa-se o verbo conectar (conectar, conectado), não ligar.
+- **E-mail anonimizado** (`anonimizarEmail` em `lib/calendario.ts`), na linha, no detalhe e na confirmação de remover: antes do @, os 2 primeiros e os 2 últimos caracteres com asteriscos no meio, sempre com 8 caracteres (`an****va@gmail.com`), para não se saber quão longo é; o que vem depois do @ fica. Nomes de 3 ou 4 caracteres mostram só o primeiro e o último (`a******a@gmail.com`), e de 1 ou 2 só o primeiro, para não ficarem inteiros à vista. O backend continua a devolver o e-mail completo. O detalhe não lista o que a casa sabe pelo calendário; o número de coisas aparece só na confirmação de remover.
 
 - **Tempo de espera:** opções fixas (30 s, 5 min, 15 min, 30 min). Os 30 segundos vão como `esperaMinutos: 0.5`. Um valor guardado fora da lista (o backend aceita de 0, que avisa logo, a 1440) aparece como mais uma opção.
 - **Aparência:** Automático, Claro ou Escuro. Automático segue o tema do telemóvel, mesmo com a app aberta, e é o valor por omissão. A escolha fica no telemóvel (`localStorage`, chave `homaly-theme`), não vai para o backend. Não há botão de tema na barra de topo.
@@ -219,14 +220,15 @@ O `--mode development` faz a build ler `frontend/.env.development` e `frontend/.
 | Classes de anomalia sem cor | Uma cor por classe | As cores das classes repetiam as de estado: eficiência parecia "correu bem", segurança parecia erro |
 | Cores como papéis trocados pelo `.dark` | `dark:` em cada componente | Um só sítio por cor; o tema escuro não se esquece em nenhum componente |
 | Tema em Definições → Aparência, com Automático | Botão na barra de topo de todos os ecrãs | Muda-se uma vez; o botão ocupava o lugar de mais destaque e, depois de um toque, a app deixava de seguir o telemóvel sem forma de voltar |
+| Ícones dos urgentes a laranja e número em cada grupo | Uma cor por classe; número por classe | A cor de "pede atenção" reforça o grupo Urgente sem repetir as cores de estado; com dois ou três avisos, um número por classe era ruído, e o total já está na barra de baixo |
 | Início em dois grupos, Urgente e Outros avisos | Lista única só por hora; uma cor por classe | Um alerta de segurança não fica abaixo de uma luz acesa e pesa mais do que ela; a diferença vem do tamanho e do agrupamento, e as classes continuam sem cor |
 | Separador ativo com o ícone cheio | Pílula turquesa atrás do ícone; só traço mais grosso | É o padrão do iOS e do Android; a pílula fazia um brilho a competir com o número de avisos |
 | Calendário como uma linha de conta, com detalhe à parte | Tudo no ecrã das Definições (conta, lista, Atualizar, Remover) | É o padrão das definições do telemóvel e deixa as Definições curtas; o detalhe só interessa a quem o abre |
-| Hora curta nos avisos ("há 9 h") | `formatDistanceToNow` ("há aproximadamente 9 horas") | É um dado de apoio; a frase longa disputava o lugar ao título |
+| Hora curta nos avisos, com "avisou" ("avisou há 9 h") | `formatDistanceToNow` ("há aproximadamente 9 horas") | É um dado de apoio; a frase longa disputava o lugar ao título. Sem "avisou", confundia-se com o tempo do título |
 | Ações do detalhe presas ao fundo | A seguir ao texto | Ficam ao alcance do polegar, mesmo com explicações longas ou com imagem |
 | Tempo de espera em opções fixas | Campo numérico | Sem teclado e sem valores inválidos |
 | Definições em grupos com título pequeno | Formulário com títulos grandes | Mais curto e mais parecido com as definições do telemóvel |
-| Sugestões na Conversa põem o começo da frase na caixa | Enviar logo | A pessoa acaba e revê a frase, como no ditado |
+| Sugestões na Conversa enviam logo, menos as que acabam em "…" | Pôr sempre o começo na caixa; enviar só as frases completas | Pedido da equipa: um toque chega. As que acabam em "…" precisam de ser acabadas pela pessoa |
 
 ## Em aberto
 
