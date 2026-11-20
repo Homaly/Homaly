@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   Calendar,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   CircleCheck,
@@ -32,6 +33,7 @@ const ICONES = {
   chat: MessageCircle,
   check_circle: CircleCheck,
   chevron_right: ChevronRight,
+  expand_more: ChevronDown,
   close: X,
   cloud_off: CloudOff,
   error: CircleAlert,

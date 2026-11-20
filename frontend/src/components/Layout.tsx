@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, type ReactNode } from 'react';
 import { useRealtimeLigado } from '../context/RealtimeContext';
 import { useTransicaoDeEcra } from '../hooks/useTransicaoDeEcra';
 import { cn } from '../lib/cn';
@@ -15,6 +15,12 @@ type LayoutProps = {
 export default function Layout({ title, showBack, children }: LayoutProps) {
   const ligado = useRealtimeLigado();
   const transicao = useTransicaoDeEcra();
+  // Cada ecrã abre no topo: o deslocamento é da janela e passava de um ecrã para o outro (descer na
+  // Conversa abria o Histórico no fundo). Antes de pintar, para não se ver o salto; a Conversa desce
+  // depois, no seu próprio efeito.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   return (
     // O ecrã inteiro entra animado (ver useTransicaoDeEcra); a barra de baixo fica parada, fora daqui.
     // Nada com `fixed` pode ficar cá dentro: a animação usa transform, que o prenderia a este div.
