@@ -12,8 +12,12 @@ services:
   backend:
     build: ./backend
     ports:
-      - "${BACKEND_PORT:-8000}:8000"   # BACKEND_PORT no .env se a 8000 estiver ocupada
-    env_file: .env          # credenciais do MCP; nunca entra na imagem
+      # So nesta maquina: a API e as rotas /dev nao pedem login. BACKEND_HOST=0.0.0.0 no .env abre-a
+      # a rede local (o telemovel da demo); BACKEND_PORT no .env se a 8000 estiver ocupada.
+      - "${BACKEND_HOST:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
+    env_file:               # credenciais do MCP; nunca entra na imagem
+      - path: .env
+        required: false     # sem .env arranca na mesma, sem credenciais (ver README.md)
     environment:
       APP_MODULE: backend.main:app
       HOMALY_DEV: "1"       # pedidos /dev para pôr dados à mão (ver backend/README.md)
