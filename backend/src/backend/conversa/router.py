@@ -38,8 +38,11 @@ def enviar(
     modelo: Modelo = Depends(obter_modelo_dep),
     agora: datetime = Depends(obter_agora),
 ) -> MensagemConversa:
+    anteriores = repositorio.listar_mensagens()  # antes de gravar a de agora: vai à parte, em `texto`
     repositorio.guardar_mensagem(MensagemConversa(autor="pessoa", texto=corpo.texto, em=agora))
-    interpretacao = interpretar(corpo.texto, agora, modelo, estado=estado_da_casa(agora))
+    interpretacao = interpretar(
+        corpo.texto, agora, modelo, estado=estado_da_casa(agora), historico=anteriores
+    )
     if interpretacao.periodo:
         repositorio.guardar_periodo(interpretacao.periodo)
     if interpretacao.rotina:

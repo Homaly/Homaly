@@ -1,6 +1,7 @@
 from datetime import date, datetime, time
 
-from backend.conversa.interpretar import NAO_PERCEBI, interpretar
+from backend.contrato import MensagemConversa
+from backend.conversa.interpretar import MAX_CARACTERES, MAX_HISTORICO, NAO_PERCEBI, interpretar
 from backend.formatos import Rotina
 from tests.conftest import AGORA, LX, ModeloFixo
 
@@ -98,7 +99,7 @@ def test_modelo_sem_resposta():
 
 def test_modelo_que_falha():
     class Avariado:
-        def completar_json(self, sistema, mensagem):
+        def completar_json(self, sistema, mensagem, historico=()):
             raise RuntimeError("sem rede")
 
     assert interpretar("olá", AGORA, Avariado()).resposta == NAO_PERCEBI
@@ -188,3 +189,52 @@ def test_o_prompt_proibe_dizer_que_fez_alguma_coisa():
     interpretar("apaga a luz", AGORA, modelo)
     sistema, _ = modelo.chamadas[0]
     assert "Nunca digas que fizeste" in sistema
+
+
+def _conversa(*textos: str) -> list[MensagemConversa]:
+    """Mensagens alternadas, a primeira da pessoa."""
+    return [
+        MensagemConversa(autor="pessoa" if i % 2 == 0 else "casa", texto=t, em=AGORA)
+        for i, t in enumerate(textos)
+    ]
+
+
+def test_sem_historico_o_modelo_recebe_lista_vazia():
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "Olá!"})
+    interpretar("olá", AGORA, modelo)
+    assert modelo.historicos == [[]]
+
+
+def test_historico_converte_autores_em_papeis_pela_ordem():
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "Olá!"})
+    interpretar("e amanhã?", AGORA, modelo, historico=_conversa("a empregada vem hoje", "Anotado."))
+    assert modelo.historicos[0] == [
+        {"role": "user", "content": "a empregada vem hoje"},
+        {"role": "assistant", "content": "Anotado."},
+    ]
+    assert modelo.chamadas[0][1] == "e amanhã?"
+
+
+def test_historico_fica_so_com_as_ultimas_mensagens():
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "Olá!"})
+    textos = [f"mensagem {i}" for i in range(30)]
+    interpretar("agora", AGORA, modelo, historico=_conversa(*textos))
+    enviado = [m["content"] for m in modelo.historicos[0]]
+    assert enviado == textos[-MAX_HISTORICO:]
+
+
+def test_historico_corta_mensagens_compridas():
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "Olá!"})
+    interpretar("agora", AGORA, modelo, historico=_conversa("x" * 2000, "ok"))
+    assert len(modelo.historicos[0][0]["content"]) <= MAX_CARACTERES
+    assert modelo.historicos[0][1]["content"] == "ok"
+
+
+def test_historico_nunca_abre_com_a_casa():
+    modelo = ModeloFixo({"tipo": "resposta", "resposta": "Olá!"})
+    historico = [
+        MensagemConversa(autor="casa", texto="solta", em=AGORA),
+        *_conversa("olá", "Olá!"),
+    ]
+    interpretar("e agora?", AGORA, modelo, historico=historico)
+    assert [m["role"] for m in modelo.historicos[0]] == ["user", "assistant"]
