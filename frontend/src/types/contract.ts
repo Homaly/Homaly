@@ -46,6 +46,7 @@ export interface MensagemConversa {
 
 export interface Definicoes {
   contacto: { nome: string; telemovel: string } | null;
+  /** Minutos antes de avisar o contacto externo (0 a 1440); aceita frações: 0.5 são 30 segundos. */
   esperaMinutos: number;
   /** Como o contacto externo reconhece a casa na SMS (ex.: "Casa da D. Maria"); sem ele, só "Homaly". */
   nomeCasa?: string;

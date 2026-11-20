@@ -8,6 +8,12 @@
       "port": 5173
     },
     {
+      "name": "frontend-mocks",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "run", "--rm", "--no-deps", "-p", "5173:5173", "-e", "VITE_USE_MOCKS=true", "frontend"],
+      "port": 5173
+    },
+    {
       "name": "docker",
       "runtimeExecutable": "docker",
       "runtimeArgs": ["compose", "up", "--build"],

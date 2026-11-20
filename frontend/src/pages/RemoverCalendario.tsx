@@ -17,7 +17,11 @@ export default function RemoverCalendario() {
     remover.mutate(undefined, {
       onSuccess: () => {
         showToast('Calendário removido', 'success');
-        navigate('/definicoes', { replace: true });
+        // Volta às Definições saltando o detalhe, que sem calendário já não tem nada; aberto
+        // diretamente por endereço (sem as duas entradas antes), vai para lá e substitui este.
+        const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+        if (idx >= 2) navigate(-2);
+        else navigate('/definicoes', { replace: true });
       },
       onError: () => showToast('Não foi possível remover o calendário. Tente de novo.', 'error'),
     });
@@ -40,7 +44,12 @@ export default function RemoverCalendario() {
         <Botao largo variante="contorno" className="border-danger text-danger" disabled={remover.isPending} onClick={apagar}>
           {remover.isPending ? 'A apagar…' : 'Apagar'}
         </Botao>
-        <Botao largo variante="secundario" disabled={remover.isPending} onClick={() => navigate('/definicoes')}>
+        <Botao largo variante="secundario" disabled={remover.isPending} onClick={() =>
+            ((window.history.state as { idx?: number } | null)?.idx ?? 0) >= 1
+              ? navigate(-1)
+              : navigate('/definicoes/calendario', { replace: true })
+          }
+        >
           Cancelar
         </Botao>
       </div>

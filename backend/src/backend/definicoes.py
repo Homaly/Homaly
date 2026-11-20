@@ -18,7 +18,7 @@ db.esquema(
         id                 INTEGER PRIMARY KEY CHECK (id = 1),  -- uma casa por conta
         contacto_nome      TEXT,
         contacto_telemovel TEXT,  -- formato internacional, ex.: +351912345678
-        espera_minutos     INTEGER NOT NULL,
+        espera_minutos     INTEGER NOT NULL,  -- o SQLite guarda 0.5 (30 s) como REAL, sem migração
         nome_casa          TEXT
     )
     """

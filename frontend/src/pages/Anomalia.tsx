@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useRef, useState, type ReactNode } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import Layout from '../components/Layout';
@@ -9,14 +9,29 @@ import Botao from '../components/Botao';
 import Icone from '../components/Icone';
 import { useAnomalia, useDecidirAcao, useDecidirSilencio, useResponderAnomalia } from '../api/hooks';
 import { useToast } from '../context/ToastContext';
+import { useReservarFundo } from '../hooks/useReservarFundo';
 import type { PropostaSilencio } from '../types/contract';
 import { cn } from '../lib/cn';
 
 /** Um toque resolve o aviso; a casa não pede justificações (é ela que repara no que se repete). */
 const RESPOSTA = 'Está tudo bem';
 
+/** Ações presas ao fundo, ao alcance do polegar: o detalhe não tem barra de baixo. */
+function BarraAcoes({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useReservarFundo(ref);
+  return (
+    <div ref={ref} className="fixed inset-x-0 bottom-0 z-30 bg-surface/95 backdrop-blur-md">
+      <div className="mx-auto max-w-md space-y-3 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function Anomalia() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const { data: a, isPending, isError, refetch } = useAnomalia(id);
   const responder = useResponderAnomalia(id);
   const decidir = useDecidirAcao(id);
@@ -24,6 +39,8 @@ export default function Anomalia() {
   const { showToast } = useToast();
   /** Só depois de responder neste ecrã: mostra o agradecimento e o que acontece a seguir. */
   const [enviado, setEnviado] = useState(false);
+  /** A ação proposta foi feita neste ecrã. */
+  const [agiu, setAgiu] = useState(false);
 
   const ocupado = responder.isPending || decidir.isPending || silencio.isPending;
 
@@ -35,7 +52,10 @@ export default function Anomalia() {
 
   const fazerAcao = () =>
     decidir.mutate(true, {
-      onSuccess: () => showToast('Feito', 'success'),
+      onSuccess: () => {
+        setAgiu(true);
+        showToast('Feito', 'success');
+      },
       onError: () => showToast('A casa não conseguiu confirmar. Nada foi alterado.', 'error'),
     });
 
@@ -45,13 +65,15 @@ export default function Anomalia() {
     });
 
   return (
-    <Layout title="Anomalia" showBack>
+    // Sem título na barra: o título é o da anomalia, no conteúdo.
+    <Layout showBack>
       {isPending ? (
         <EstadoCarregar />
       ) : isError ? (
         <EstadoErro onRetry={refetch} />
       ) : (
-        <article className="space-y-5">
+        // Espaço em baixo para o fim do texto não ficar por trás das ações presas ao fundo.
+        <article className={cn('space-y-5', (a.estado === 'ativa' || enviado || agiu) && 'pb-16')}>
           <header className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <ClasseBadge classe={a.classe} />
@@ -59,8 +81,8 @@ export default function Anomalia() {
                 {format(new Date(a.detetadaEm), "d MMM, HH:mm", { locale: pt })}
               </span>
             </div>
-            {/* O título da anomalia é o mais importante do ecrã: maior do que o "Anomalia" da barra. */}
-            <h2 className="text-2xl font-bold leading-tight">{a.titulo}</h2>
+            {/* O título da anomalia é o título do ecrã. */}
+            <h1 className="text-2xl font-bold leading-tight">{a.titulo}</h1>
           </header>
 
           {a.imagemUrl && (
@@ -113,9 +135,19 @@ export default function Anomalia() {
                   onDecidir={enviarSilencio}
                 />
               )}
+
+              {/* Respondeu agora: o passo seguinte é voltar. Com a proposta de silêncio por
+                  decidir, fica o Sim/Não; aberta a partir do Histórico, chega a seta. */}
+              {(enviado || agiu) && a.propostaSilencio?.estado !== 'pendente' && (
+                <BarraAcoes>
+                  <Botao largo onClick={() => navigate('/')}>
+                    Voltar ao início
+                  </Botao>
+                </BarraAcoes>
+              )}
             </div>
           ) : (
-            <>
+            <BarraAcoes>
               {/* Dois botões, não três: a ação que a casa propõe (com o nome dela) e "Está tudo
                   bem". Um "Recusar" à parte dizia o mesmo que "Está tudo bem". */}
               {a.acaoProposta && (
@@ -133,7 +165,7 @@ export default function Anomalia() {
               >
                 {responder.isPending ? 'A enviar…' : RESPOSTA}
               </Botao>
-            </>
+            </BarraAcoes>
           )}
         </article>
       )}

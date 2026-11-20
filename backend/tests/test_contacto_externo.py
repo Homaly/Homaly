@@ -100,6 +100,17 @@ def test_tempo_de_espera_zero_avisa_logo(enviadas):
     assert len(enviadas) == 1
 
 
+def test_tempo_de_espera_de_trinta_segundos(enviadas):
+    definicoes.guardar(Definicoes(contacto=CONTACTO, espera_minutos=0.5))
+    agendar(anomalia())
+
+    contacto_externo.verificar(AGORA + timedelta(seconds=29))
+    assert enviadas == []
+
+    contacto_externo.verificar(AGORA + timedelta(seconds=30))
+    assert len(enviadas) == 1
+
+
 def test_casa_vazia_avisa_logo_sem_esperar(enviadas):
     agendar(anomalia(), imediato=True)
 

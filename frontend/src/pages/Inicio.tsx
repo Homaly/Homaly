@@ -1,10 +1,25 @@
 import Layout from '../components/Layout';
-import AnomaliaCard from '../components/AnomaliaCard';
+import AnomaliaCard, { AnomaliaLinha, CLASSES } from '../components/AnomaliaCard';
 import { EstadoCarregar, EstadoErro, EstadoVazio } from '../components/Estados';
 import { useAnomaliasAtivas } from '../api/hooks';
+import type { Anomalia } from '../types/contract';
+
+/** Mais urgentes primeiro; na mesma classe, a mais recente primeiro. */
+const porUrgencia = (a: Anomalia, b: Anomalia) =>
+  CLASSES[a.classe].urgencia - CLASSES[b.classe].urgencia ||
+  new Date(b.detetadaEm).getTime() - new Date(a.detetadaEm).getTime();
+
+/** Título de grupo pequeno, como os das Definições: o título grande do ecrã é o "Homaly". */
+function TituloGrupo({ children }: { children: string }) {
+  return <h2 className="px-1 text-sm font-semibold text-on-surface-variant">{children}</h2>;
+}
 
 export default function Inicio() {
   const { data, isPending, isError, refetch } = useAnomaliasAtivas();
+  // Por urgência e não só por hora: um alerta de segurança não fica abaixo de uma luz acesa.
+  const ordenadas = [...(data ?? [])].sort(porUrgencia);
+  const urgentes = ordenadas.filter(a => CLASSES[a.classe].urgente);
+  const outras = ordenadas.filter(a => !CLASSES[a.classe].urgente);
 
   return (
     <Layout title="Homaly">
@@ -20,14 +35,30 @@ export default function Inicio() {
           tudoBem
         />
       ) : (
-        <section className="space-y-3">
-          <h2 className="text-xl font-semibold">
-            {data.length === 1 ? '1 coisa por responder' : `${data.length} coisas por responder`}
-          </h2>
-          {data.map(a => (
-            <AnomaliaCard key={a.id} anomalia={a} />
-          ))}
-        </section>
+        // A hierarquia vem do tamanho e do agrupamento, não da cor: os urgentes (os que chegam ao
+        // contacto externo) têm cartão próprio; os outros ficam em linhas, num só cartão.
+        <div className="space-y-6">
+          {urgentes.length > 0 && (
+            <section className="space-y-2">
+              <TituloGrupo>Urgente</TituloGrupo>
+              <div className="space-y-3">
+                {urgentes.map(a => (
+                  <AnomaliaCard key={a.id} anomalia={a} />
+                ))}
+              </div>
+            </section>
+          )}
+          {outras.length > 0 && (
+            <section className="space-y-2">
+              <TituloGrupo>{urgentes.length > 0 ? 'Outros avisos' : 'Avisos'}</TituloGrupo>
+              <div className="divide-y divide-outline-variant rounded-2xl bg-surface-container px-4">
+                {outras.map(a => (
+                  <AnomaliaLinha key={a.id} anomalia={a} />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
       )}
     </Layout>
   );
