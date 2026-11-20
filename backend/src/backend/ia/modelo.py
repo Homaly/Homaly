@@ -8,6 +8,7 @@ do desvio. `groq`, `gemini` e `openrouter` usam a API no formato da OpenAI, com 
 import json
 import logging
 import os
+from collections.abc import Sequence
 from typing import Protocol
 
 import httpx
@@ -37,13 +38,21 @@ FORNECEDORES = {
 
 
 class Modelo(Protocol):
-    def completar_json(self, sistema: str, mensagem: str) -> dict | None:
-        """A resposta do modelo como dicionário, ou `None` se falhou ou não há modelo."""
+    def completar_json(
+        self, sistema: str, mensagem: str, historico: Sequence[dict[str, str]] = ()
+    ) -> dict | None:
+        """A resposta do modelo como dicionário, ou `None` se falhou ou não há modelo.
+
+        `historico` são as mensagens anteriores da conversa (`{"role": "user"|"assistant",
+        "content": ...}`), que vão entre o sistema e `mensagem`.
+        """
         ...
 
 
 class ModeloFalso:
-    def completar_json(self, sistema: str, mensagem: str) -> dict | None:
+    def completar_json(
+        self, sistema: str, mensagem: str, historico: Sequence[dict[str, str]] = ()
+    ) -> dict | None:
         return None
 
 
@@ -56,12 +65,15 @@ class ModeloOpenAI:
         self._chave = chave
         self._cliente = cliente
 
-    def completar_json(self, sistema: str, mensagem: str) -> dict | None:
+    def completar_json(
+        self, sistema: str, mensagem: str, historico: Sequence[dict[str, str]] = ()
+    ) -> dict | None:
         corpo = {
             "model": self.modelo,
             "response_format": {"type": "json_object"},
             "messages": [
                 {"role": "system", "content": sistema},
+                *historico,
                 {"role": "user", "content": mensagem},
             ],
         }

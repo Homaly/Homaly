@@ -94,6 +94,23 @@ def test_pedido_e_resposta():
     ]
 
 
+def test_historico_vai_entre_o_sistema_e_a_mensagem():
+    cliente, pedidos = _cliente(_com_conteudo('{"tipo": "resposta"}'))
+    m = ModeloOpenAI("https://exemplo/v1/chat/completions", "segredo", "m1", cliente=cliente)
+    historico = [
+        {"role": "user", "content": "chama-te Jarvis"},
+        {"role": "assistant", "content": "Combinado."},
+    ]
+
+    m.completar_json("o sistema", "como te chamas?", historico)
+
+    assert json.loads(pedidos[0].content)["messages"] == [
+        {"role": "system", "content": "o sistema"},
+        *historico,
+        {"role": "user", "content": "como te chamas?"},
+    ]
+
+
 @pytest.mark.parametrize(
     "resposta",
     [
