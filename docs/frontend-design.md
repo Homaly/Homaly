@@ -116,7 +116,7 @@ O botão do microfone, dentro da caixa da Conversa, passa a voz a texto com a We
 
 ## Sugestões na Conversa
 
-Por cima da caixa, enquanto ela está vazia, há sugestões para o que a casa percebe: "Vamos de férias", "Vem cá alguém", "Na tomada está…" e "O que aconteceu hoje?". As que acabam em "…" põem o começo da frase na caixa, com o cursor no fim, e a pessoa acaba-a; as outras enviam logo o texto. A casa lê cada mensagem sozinha, sem as anteriores, por isso "Vamos de férias" ou "Vem cá alguém" sem datas nem dias podem receber "Não percebi bem". O espaço das sugestões fica reservado mesmo escondido, para a caixa não saltar ao escrever. As mensagens encostam-se ao fundo, junto à caixa.
+Por cima da caixa, enquanto ela está vazia, há sugestões para o que a casa percebe: "Vamos de férias", "Vem cá alguém", "Na tomada está…" e "O que aconteceu hoje?". As que acabam em "…" põem o começo da frase na caixa, com o cursor no fim, e a pessoa acaba-a; as outras enviam logo o texto. A casa lembra-se das últimas 10 mensagens (memória curta do backend, `MAX_HISTORICO`). Por isso, a "Vamos de férias" ou "Vem cá alguém" sem datas nem dias pode perguntar o que falta e perceber a resposta seguinte. O espaço das sugestões fica reservado mesmo escondido, para a caixa não saltar ao escrever. As mensagens encostam-se ao fundo, junto à caixa.
 
 ## Mocks
 
